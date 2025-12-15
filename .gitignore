@@ -9,7 +9,12 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+<<<<<<< HEAD
 dist
 
 *.bkp
 src/ERA助手/doc/介绍说明.md
+=======
+auto-imports.d.ts
+components.d.ts
+>>>>>>> 0e948b9223792b104f49d1f93f2cc513d8f9ca8d
