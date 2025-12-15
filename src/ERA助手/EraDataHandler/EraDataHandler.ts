@@ -504,8 +504,12 @@ export const EraDataHandler = {
     const snapV = DSLHandler.getValue(snap, currentPath);
 
     // Limit 处理
-    if (rule.limit && rule.limit.length === 2
-    && typeof rule.limit[0] === 'number' && typeof rule.limit[1] === 'number') {
+    if (
+      rule.limit &&
+      rule.limit.length === 2 &&
+      typeof rule.limit[0] === 'number' &&
+      typeof rule.limit[1] === 'number'
+    ) {
       if (typeof currentV === 'number' && typeof snapV === 'number') {
         const [minDelta, maxDelta] = rule.limit;
         const delta = currentV - snapV;
@@ -532,8 +536,12 @@ export const EraDataHandler = {
     }
 
     // Range 处理
-    if (rule.range && rule.range.length === 2
-    && typeof rule.range[0] === 'number' && typeof rule.range[1] === 'number') {
+    if (
+      rule.range &&
+      rule.range.length === 2 &&
+      typeof rule.range[0] === 'number' &&
+      typeof rule.range[1] === 'number'
+    ) {
       const valAfterLimit = DSLHandler.getValue(data, currentPath);
 
       if (typeof valAfterLimit === 'number') {
