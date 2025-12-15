@@ -370,10 +370,10 @@ const handleNames = ref<Record<string, string>>({});
 const uiStore = useUiStore();
 const isPathCollectionExpanded = ref(false);
 
-const draftRangeMin = ref<number | null>(null);
-const draftRangeMax = ref<number | null>(null);
-const draftLimitNeg = ref<number | null>(null);
-const draftLimitPos = ref<number | null>(null);
+const draftRangeMin = ref<number | null | string>(null);
+const draftRangeMax = ref<number | null | string>(null);
+const draftLimitNeg = ref<number | null | string>(null);
+const draftLimitPos = ref<number | null | string>(null);
 
 const activeTab = ref<'data' | 'rule' | 'test' | 'list'>('data');
 const showDeleteConfirm = ref(false);
@@ -497,6 +497,8 @@ function confirmSave() {
 function saveRuleWithoutCancelEdit() {
   // 修复范围限制检查
   if (draftRangeMin.value !== null && draftRangeMax.value !== null &&
+    draftRangeMin.value !== undefined && draftRangeMax.value !== undefined &&
+    draftRangeMin.value !== "" && draftRangeMax.value !== "" &&
     !isNaN(Number(draftRangeMin.value)) && !isNaN(Number(draftRangeMax.value))) {
     draft.value.range = [Number(draftRangeMin.value), Number(draftRangeMax.value)];
   } else {
@@ -505,6 +507,8 @@ function saveRuleWithoutCancelEdit() {
 
 // 修复变化值限制检查
   if (draftLimitNeg.value !== null && draftLimitPos.value !== null &&
+    draftLimitNeg.value !== undefined && draftLimitPos.value !== undefined &&
+    draftLimitNeg.value !== "" && draftLimitPos.value !== "" &&
     !isNaN(Number(draftLimitNeg.value)) && !isNaN(Number(draftLimitPos.value))) {
     draft.value.limit = [Number(draftLimitNeg.value), Number(draftLimitPos.value)];
   } else {
