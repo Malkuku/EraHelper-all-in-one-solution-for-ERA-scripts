@@ -28,7 +28,7 @@ export function exportRulesToJson(rules: Record<string, any>, pretty: boolean = 
     }
 
     const exportData = {
-      rules: orderedRules
+      rules: orderedRules,
     };
     return pretty ? JSON.stringify(exportData, null, 2) : JSON.stringify(exportData);
   } catch (error) {
