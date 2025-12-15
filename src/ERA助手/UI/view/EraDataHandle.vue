@@ -496,32 +496,20 @@ function confirmSave() {
 
 function saveRuleWithoutCancelEdit() {
   // 修复范围限制检查
-  if (
-    draftRangeMin.value !== null &&
-    draftRangeMax.value !== null &&
-    draftRangeMin.value !== undefined &&
-    draftRangeMax.value !== undefined &&
-    draftRangeMin.value !== '' &&
-    draftRangeMax.value !== '' &&
-    !isNaN(Number(draftRangeMin.value)) &&
-    !isNaN(Number(draftRangeMax.value))
-  ) {
+  if (draftRangeMin.value !== null && draftRangeMax.value !== null &&
+    draftRangeMin.value !== undefined && draftRangeMax.value !== undefined &&
+    draftRangeMin.value !== "" && draftRangeMax.value !== "" &&
+    !isNaN(Number(draftRangeMin.value)) && !isNaN(Number(draftRangeMax.value))) {
     draft.value.range = [Number(draftRangeMin.value), Number(draftRangeMax.value)];
   } else {
     draft.value.range = [];
   }
 
-  // 修复变化值限制检查
-  if (
-    draftLimitNeg.value !== null &&
-    draftLimitPos.value !== null &&
-    draftLimitNeg.value !== undefined &&
-    draftLimitPos.value !== undefined &&
-    draftLimitNeg.value !== '' &&
-    draftLimitPos.value !== '' &&
-    !isNaN(Number(draftLimitNeg.value)) &&
-    !isNaN(Number(draftLimitPos.value))
-  ) {
+// 修复变化值限制检查
+  if (draftLimitNeg.value !== null && draftLimitPos.value !== null &&
+    draftLimitNeg.value !== undefined && draftLimitPos.value !== undefined &&
+    draftLimitNeg.value !== "" && draftLimitPos.value !== "" &&
+    !isNaN(Number(draftLimitNeg.value)) && !isNaN(Number(draftLimitPos.value))) {
     draft.value.limit = [Number(draftLimitNeg.value), Number(draftLimitPos.value)];
   } else {
     draft.value.limit = [];
