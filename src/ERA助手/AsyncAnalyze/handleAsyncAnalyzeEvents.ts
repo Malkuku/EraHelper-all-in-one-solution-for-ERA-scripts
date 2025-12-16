@@ -113,6 +113,7 @@ export const handleEraRulesOnMessageReceived = async (message_id: number) => {
   const msg = chat_message.message;
   const result = await handleEraRules(msg);
   await setChatMessages([{ message_id, message: result }]);
+  await eventEmit(ERAEvents.FORCE_SYNC);
 };
 
 /**

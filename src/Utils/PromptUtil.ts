@@ -7,11 +7,9 @@ const sendPrompt = async (
   profileSetting: any,
 ) => {
   //因为部分预设会用到 {{lastUserMessage}}，因此进行修正。
-  console.log('Before RegisterMacro');
   SillyTavern.registerMacro('lastUserMessage', () => {
     return user_input;
   });
-  console.log('After RegisterMacro');
 
   //如果profileSetting不为空，先切换预设
   let tempProfileSetting;
@@ -49,6 +47,8 @@ const sendPrompt = async (
     if (profileSetting) {
       await (window as any).SillyTavern.executeSlashCommands(`/profile ${tempProfileSetting}`);
     }
+    //关闭替换
+    SillyTavern.unregisterMacro('lastUserMessage');
   }
 };
 
