@@ -1,0 +1,12 @@
+# yaml-language-server: $schema=https://testingcf.jsdelivr.net/gh/StageDog/tavern_sync/dist/schema/worldbook.zh.json
+锚点: {}
+
+条目:
+  - 名称: '[initvar]变量初始化勿开'
+    启用: false
+    激活策略:
+      类型: 蓝灯
+    插入位置:
+      类型: 角色定义之后
+      顺序: 100
+    文件: initvar
