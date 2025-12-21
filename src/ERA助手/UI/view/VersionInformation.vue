@@ -23,10 +23,7 @@ const versionHistory = ref([
   {
     version: 'v1.0.1',
     date: '2025-12-15',
-    changes: [
-      '修复 limit 和 range 可能保存为包含空字符串的问题',
-      '调整优化了rule的导出顺序'
-    ],
+    changes: ['修复 limit 和 range 可能保存为包含空字符串的问题', '调整优化了rule的导出顺序'],
   },
   {
     version: 'v1.0.0',
