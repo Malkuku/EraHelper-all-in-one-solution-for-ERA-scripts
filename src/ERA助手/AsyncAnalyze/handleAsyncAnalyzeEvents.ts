@@ -32,6 +32,7 @@ const isReversed = ref(false);
 const modelSource = computed(() => getAsyncAnalyzeStore()?.modelSource);
 const customModelSettings = computed(() => getAsyncAnalyzeStore()?.customModelSettings);
 const profileSetting = computed(() => getAsyncAnalyzeStore()?.profileSetting);
+const simplePresetName = computed(() => getAsyncAnalyzeStore()?.simplePresetName);
 
 const waitTime = 1000;
 
@@ -200,6 +201,8 @@ export const handleKatEraUpdate = async () => {
   }
   // 给ERA事件让行，错开可能存在的ERA变量更新
   await eraAwareSleep(waitTime);
+
+  const originalPresetName = getLoadedPresetName();
   /**
    * 构建提示词并请求AI分析
    */
@@ -220,6 +223,24 @@ export const handleKatEraUpdate = async () => {
       },
     ];
     eraLogger.log('模型来源: ', modelSource.value);
+    //1.sample 或者 external的预设模型与in_use不一致时，先切换预设
+    if(modelSource.value == 'sample' && simplePresetName.value !== "in_use" && originalPresetName !== simplePresetName.value){
+      const isLoadPresetSuccess = loadPreset(simplePresetName.value);
+      if (!isLoadPresetSuccess) {
+        toastr.error(`预设切换失败: ${simplePresetName.value} 请检查预设是否存在`);
+      } else {
+        toastr.info(`已切换预设至: ${simplePresetName.value}`);
+      }
+    }
+    if(modelSource.value == 'external' && customModelSettings.value.presetName !== "in_use" && originalPresetName !== customModelSettings.value.presetName){
+      const isLoadPresetSuccess = loadPreset(customModelSettings.value.presetName);
+      if (!isLoadPresetSuccess) {
+        toastr.error(`预设切换失败: ${customModelSettings.value.presetName} 请检查预设是否存在`);
+      } else {
+        toastr.info(`已切换预设至: ${customModelSettings.value.presetName}`);
+      }
+    }
+
     const result =
       modelSource.value == 'sample'
         ? await PromptUtil.sendPrompt(user_input, promptInjects, max_chat_history, is_should_stream, null, null)
@@ -251,6 +272,11 @@ export const handleKatEraUpdate = async () => {
     eraLogger.error('分步分析处理失败: ', e);
   } finally {
     await eventEmit(ERAEvents.FORCE_SYNC);
+    if((modelSource.value == 'sample' && simplePresetName.value !== "in_use" && originalPresetName !== simplePresetName.value)
+      || (modelSource.value == 'external' && customModelSettings.value.presetName !== "in_use" && originalPresetName !== customModelSettings.value.presetName)){
+      loadPreset(originalPresetName);
+      toastr.info(`切回预设: ${originalPresetName}`, );
+    }
     getAsyncAnalyzeStore().isUpdateEra = false;
   }
 };

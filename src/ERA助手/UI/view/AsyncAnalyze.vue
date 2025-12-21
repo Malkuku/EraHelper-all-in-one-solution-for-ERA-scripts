@@ -44,11 +44,21 @@
       <!--        因为ERA和提示词模板的替换问题，目前不可用😑-->
       <!--      </div>-->
 
-      <!--       TODO 因为ERA的替换问题，目前不可用  预设模型选择（仅 profile 时显示） -->
+      <!-- 预设模型选择（仅 profile 时显示） -->
       <div v-if="modelSource === 'profile'" class="row">
         <span>预设模型</span>
         <select v-model="profileSetting">
           <option v-for="p in profileList" :key="p" :value="p" :title="p">
+            {{ shortName(p) }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Simple模式下的预设选择 -->
+      <div v-if="modelSource === 'sample'" class="row">
+        <span>使用的预设</span>
+        <select v-model="simplePresetName">
+          <option v-for="p in presetList" :key="p" :value="p" :title="p">
             {{ shortName(p) }}
           </option>
         </select>
@@ -80,18 +90,27 @@
             </select>
           </div>
         </div>
+        <!-- External模式下的预设选择 -->
+        <div class="row">
+          <span>使用的预设</span>
+          <select v-model="settings.presetName">
+            <option v-for="p in presetList" :key="p" :value="p" :title="p">
+              {{ shortName(p) }}
+            </option>
+          </select>
+        </div>
         <div class="row">
           <span>温度</span>
           <input v-model="settings.temperature" type="number" step="0.1" min="0" max="2" />
         </div>
-        <div class="row">
-          <span>频率惩罚</span>
-          <input v-model="settings.frequencyPenalty" type="number" step="0.1" min="-2" max="2" />
-        </div>
-        <div class="row">
-          <span>存在惩罚</span>
-          <input v-model="settings.presencePenalty" type="number" step="0.1" min="-2" max="2" />
-        </div>
+<!--        <div class="row">-->
+<!--          <span>频率惩罚</span>-->
+<!--          <input v-model="settings.frequencyPenalty" type="number" step="0.1" min="-2" max="2" />-->
+<!--        </div>-->
+<!--        <div class="row">-->
+<!--          <span>存在惩罚</span>-->
+<!--          <input v-model="settings.presencePenalty" type="number" step="0.1" min="-2" max="2" />-->
+<!--        </div>-->
         <div class="row">
           <span>最大Token数</span>
           <input v-model="settings.maxTokens" type="number" min="1" />
@@ -101,6 +120,7 @@
       <div class="row" style="justify-content: flex-start; gap: 12px">
         <button class="btn small" @click="testConnect">测试连接</button>
         <button v-if="modelSource === 'external'" class="btn small" @click="getRemoteModels">获取模型列表</button>
+        <button v-if="modelSource === 'external' || modelSource === 'sample'" class="btn small" @click="getPresetList">获取预设列表</button>
       </div>
     </div>
 
@@ -142,14 +162,15 @@ const shortName = (full: string, max = 36) => (full.length > max ? full.slice(0,
 const modelSource = ref<'sample' | 'external' | 'profile'>('sample');
 const profileSetting = ref(''); // 当前选中的预设
 const profileList = ref<string[]>([]); // 预设名称列表
+const presetList = ref<string[]>([]); // 所有预设列表
+const simplePresetName = ref('');
 const settings = reactive({
   baseURL: '',
   apiKey: '',
   modelName: '',
   temperature: 0.7,
-  frequencyPenalty: 0,
-  presencePenalty: 0,
   maxTokens: 20000,
+  presetName: '', // 添加presetName到设置中
 });
 
 const onModelSourceChange = async () => {
@@ -171,6 +192,25 @@ const refreshProfileList = async () => {
   }
 };
 
+/* 获取所有预设名称 */
+const refreshPresetList = async () => {
+  try {
+    presetList.value = getPresetNames();
+    presetList.value.join("in_use")
+    eraLogger.log('所有预设名称:', presetList.value);
+  } catch (e) {
+    toastr.error('获取预设列表失败');
+    eraLogger.error('获取预设列表失败', e);
+    presetList.value = [];
+  }
+};
+
+/* 刷新所有预设列表 */
+const getPresetList = async () => {
+  await refreshPresetList();
+  toastr.success(`共获取 ${presetList.value.length} 个预设`);
+};
+
 /* 打开弹窗时同步 store 数据 */
 watch(
   () => uiStore.showUI,
@@ -179,7 +219,13 @@ watch(
     modelSource.value = asyncAnalyzeStore.modelSource as any;
     profileSetting.value = asyncAnalyzeStore.profileSetting || '';
     Object.assign(settings, asyncAnalyzeStore.customModelSettings);
+    // 确保设置中的presetName有默认值
+    if (!settings.presetName) {
+      settings.presetName = getLoadedPresetName();
+    }
+    simplePresetName.value = asyncAnalyzeStore.simplePresetName || getLoadedPresetName();
     await refreshProfileList();
+    await refreshPresetList();
   },
   { immediate: true },
 );
@@ -191,6 +237,7 @@ const handleSave = async () => {
     asyncAnalyzeStore.modelSource = modelSource.value;
     asyncAnalyzeStore.profileSetting = profileSetting.value;
     asyncAnalyzeStore.customModelSettings = { ...settings } as any;
+    asyncAnalyzeStore.simplePresetName = simplePresetName.value;
     await asyncAnalyzeStore.saveModelSettings();
     toastr.success('设置已保存');
   }
@@ -205,6 +252,7 @@ const handleClear = async () => {
     modelSource.value = asyncAnalyzeStore.modelSource as any;
     profileSetting.value = asyncAnalyzeStore.profileSetting || '';
     Object.assign(settings, asyncAnalyzeStore.customModelSettings);
+    simplePresetName.value = asyncAnalyzeStore.simplePresetName || getLoadedPresetName();
     toastr.info('已清空设置');
   }
   // 如果在世界书与正则配置页面，则由子组件负责清空

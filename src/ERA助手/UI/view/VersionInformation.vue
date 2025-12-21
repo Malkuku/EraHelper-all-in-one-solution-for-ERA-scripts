@@ -2,7 +2,7 @@
 import { ref } from 'vue';
 
 // 当前版本号
-const currentVersion = ref('v1.0.0');
+const currentVersion = ref('v1.1.0');
 
 // 作者信息
 const author = ref({
@@ -12,6 +12,14 @@ const author = ref({
 
 // 版本更新历史记录
 const versionHistory = ref([
+  {
+    version: 'v1.1.0',
+    date: '2025-12-21',
+    changes: [
+      '移除了top_k相关的设置以兼容gemini直连',
+      '现在默认模型和额外模型模式也可以选择预设了'
+    ],
+  },
   {
     version: 'v1.0.1',
     date: '2025-12-15',

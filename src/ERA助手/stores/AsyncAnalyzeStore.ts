@@ -7,14 +7,18 @@ export const useAsyncAnalyzeStore = defineStore('KatAsyncAnalyze', () => {
   //是否为分析模式
   const isUpdateEra = ref(false);
   const modelSource = ref('sample'); //sample | external | profile
+  //simple模式下选择的预设设置
+  const simplePresetName = ref(getLoadedPresetName());
+  //自定义模型设置
   const customModelSettings = ref({
     baseURL: '',
     apiKey: '',
     modelName: '',
     temperature: 0.7,
-    frequencyPenalty: 0,
-    presencePenalty: 0,
+    //frequencyPenalty: 0,
+    //presencePenalty: 0,
     maxTokens: 20000,
+    presetName : getLoadedPresetName(),
   });
   //预设模型设置
   const profileSetting = ref('');
@@ -29,6 +33,7 @@ export const useAsyncAnalyzeStore = defineStore('KatAsyncAnalyze', () => {
       customModelSettings.value = era_api_config.customModelSettings;
       isAsync.value = era_api_config.isAsync;
       profileSetting.value = era_api_config.profileSetting;
+      simplePresetName.value = era_api_config.simplePresetName;
     }
     eraLogger.log('获取异步分析设置: ', era_api_config);
   };
@@ -41,6 +46,7 @@ export const useAsyncAnalyzeStore = defineStore('KatAsyncAnalyze', () => {
       modelSource: modelSource.value,
       customModelSettings: customModelSettings.value,
       profileSetting: profileSetting.value,
+      simplePresetName: simplePresetName.value,
     };
     const cleaned = JSON.parse(JSON.stringify(saveVariables));
     await updateVariablesWith(
@@ -57,14 +63,16 @@ export const useAsyncAnalyzeStore = defineStore('KatAsyncAnalyze', () => {
    */
   const clearModelSettings = async () => {
     modelSource.value = 'sample';
+    simplePresetName.value = getLoadedPresetName();
     customModelSettings.value = {
       baseURL: '',
       apiKey: '',
       modelName: '',
       temperature: 0.7,
-      frequencyPenalty: 0,
-      presencePenalty: 0,
+      //frequencyPenalty: 0,
+      //presencePenalty: 0,
       maxTokens: 20000,
+      presetName : getLoadedPresetName(),
     };
     profileSetting.value = '';
     await saveModelSettings();
@@ -164,6 +172,7 @@ export const useAsyncAnalyzeStore = defineStore('KatAsyncAnalyze', () => {
     modelSource,
     customModelSettings,
     profileSetting,
+    simplePresetName,
     getModelSettings,
     saveModelSettings,
     clearModelSettings,
