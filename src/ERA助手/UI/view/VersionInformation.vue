@@ -15,10 +15,7 @@ const versionHistory = ref([
   {
     version: 'v1.1.0',
     date: '2025-12-21',
-    changes: [
-      '移除了top_k相关的设置以兼容gemini直连',
-      '现在默认模型和额外模型模式也可以选择预设了'
-    ],
+    changes: ['移除了top_k相关的设置以兼容gemini直连', '现在默认模型和额外模型模式也可以选择预设了'],
   },
   {
     version: 'v1.0.1',
