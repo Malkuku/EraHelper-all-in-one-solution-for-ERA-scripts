@@ -29,10 +29,11 @@
             <h4>比较运算符</h4>
             <div class="operator-grid">
               <button class="btn small" @click="addComponent('?[==]')">等于 (==)</button>
+              <button class="btn small" @click="addComponent('?[!=]')">不等于 (!=)</button>
               <button class="btn small" @click="addComponent('?[>]')">大于 (>)</button>
               <button class="btn small" @click="addComponent('?[<]')">小于 (&lt;)</button>
-              <button class="btn small" @click="addComponent('?[>=]')">大于等于 (>=)</button>
-              <button class="btn small" @click="addComponent('?[<=]')">小于等于 (&ge;)</button>
+              <button class="btn small" @click="addComponent('?[>=]')">大于等于 (&ge;)</button>
+              <button class="btn small" @click="addComponent('?[<=]')">小于等于 (&le;)</button>
             </div>
           </div>
 
