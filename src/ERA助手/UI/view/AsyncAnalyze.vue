@@ -100,14 +100,14 @@
           <span>温度</span>
           <input v-model="settings.temperature" type="number" step="0.1" min="0" max="2" />
         </div>
-<!--        <div class="row">-->
-<!--          <span>频率惩罚</span>-->
-<!--          <input v-model="settings.frequencyPenalty" type="number" step="0.1" min="-2" max="2" />-->
-<!--        </div>-->
-<!--        <div class="row">-->
-<!--          <span>存在惩罚</span>-->
-<!--          <input v-model="settings.presencePenalty" type="number" step="0.1" min="-2" max="2" />-->
-<!--        </div>-->
+        <!--        <div class="row">-->
+        <!--          <span>频率惩罚</span>-->
+        <!--          <input v-model="settings.frequencyPenalty" type="number" step="0.1" min="-2" max="2" />-->
+        <!--        </div>-->
+        <!--        <div class="row">-->
+        <!--          <span>存在惩罚</span>-->
+        <!--          <input v-model="settings.presencePenalty" type="number" step="0.1" min="-2" max="2" />-->
+        <!--        </div>-->
         <div class="row">
           <span>最大Token数</span>
           <input v-model="settings.maxTokens" type="number" min="1" />
@@ -117,7 +117,9 @@
       <div class="row" style="justify-content: flex-start; gap: 12px">
         <button class="btn small" @click="testConnect">测试连接</button>
         <button v-if="modelSource === 'external'" class="btn small" @click="getRemoteModels">获取模型列表</button>
-        <button v-if="modelSource === 'external' || modelSource === 'sample'" class="btn small" @click="getPresetList">获取预设列表</button>
+        <button v-if="modelSource === 'external' || modelSource === 'sample'" class="btn small" @click="getPresetList">
+          获取预设列表
+        </button>
       </div>
     </div>
 
@@ -193,7 +195,7 @@ const refreshProfileList = async () => {
 const refreshPresetList = async () => {
   try {
     presetList.value = getPresetNames();
-    presetList.value.join("in_use")
+    presetList.value.join('in_use');
     eraLogger.log('所有预设名称:', presetList.value);
   } catch (e) {
     toastr.error('获取预设列表失败');

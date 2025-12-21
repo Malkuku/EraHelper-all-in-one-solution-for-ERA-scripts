@@ -18,7 +18,7 @@ export const useAsyncAnalyzeStore = defineStore('KatAsyncAnalyze', () => {
     //frequencyPenalty: 0,
     //presencePenalty: 0,
     maxTokens: 20000,
-    presetName : getLoadedPresetName(),
+    presetName: getLoadedPresetName(),
   });
   //预设模型设置
   const profileSetting = ref('');
@@ -76,7 +76,7 @@ export const useAsyncAnalyzeStore = defineStore('KatAsyncAnalyze', () => {
       //frequencyPenalty: 0,
       //presencePenalty: 0,
       maxTokens: 20000,
-      presetName : getLoadedPresetName(),
+      presetName: getLoadedPresetName(),
     };
     profileSetting.value = '';
     maxMessageFloor.value = 2;
