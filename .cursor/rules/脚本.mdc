@@ -1,5 +1,9 @@
 ---
 description: 当需要编写脚本时, 你应该参考本文件
+<<<<<<< HEAD
+=======
+alwaysApply: false
+>>>>>>> 716752b8f21fc75a91a1604ff7eb277d5de3327e
 ---
 # 脚本
 
