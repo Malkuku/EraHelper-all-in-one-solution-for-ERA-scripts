@@ -1,5 +1,9 @@
 ---
 description: 当需要编写前端界面时, 你应该参考本文件
+<<<<<<< HEAD
+=======
+alwaysApply: false
+>>>>>>> fa6f61d75970bed3668f8d9d1d044052890e077a
 ---
 # 前端界面
 
