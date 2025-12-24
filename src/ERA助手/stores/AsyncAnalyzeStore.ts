@@ -22,6 +22,8 @@ export const useAsyncAnalyzeStore = defineStore('KatAsyncAnalyze', () => {
   });
   //预设模型设置
   const profileSetting = ref('');
+  //最大上下文楼层
+  const maxMessageFloor = ref(2);
   /**
    * 尝试从变量中获取模型设置
    */
@@ -34,6 +36,7 @@ export const useAsyncAnalyzeStore = defineStore('KatAsyncAnalyze', () => {
       isAsync.value = era_api_config.isAsync;
       profileSetting.value = era_api_config.profileSetting;
       simplePresetName.value = era_api_config.simplePresetName;
+      maxMessageFloor.value = era_api_config.maxMessageFloor | 2;
     }
     eraLogger.log('获取异步分析设置: ', era_api_config);
   };
@@ -47,6 +50,7 @@ export const useAsyncAnalyzeStore = defineStore('KatAsyncAnalyze', () => {
       customModelSettings: customModelSettings.value,
       profileSetting: profileSetting.value,
       simplePresetName: simplePresetName.value,
+      maxMessageFloor: maxMessageFloor.value,
     };
     const cleaned = JSON.parse(JSON.stringify(saveVariables));
     await updateVariablesWith(
@@ -75,6 +79,7 @@ export const useAsyncAnalyzeStore = defineStore('KatAsyncAnalyze', () => {
       presetName : getLoadedPresetName(),
     };
     profileSetting.value = '';
+    maxMessageFloor.value = 2;
     await saveModelSettings();
   };
 
@@ -173,6 +178,7 @@ export const useAsyncAnalyzeStore = defineStore('KatAsyncAnalyze', () => {
     customModelSettings,
     profileSetting,
     simplePresetName,
+    maxMessageFloor,
     getModelSettings,
     saveModelSettings,
     clearModelSettings,

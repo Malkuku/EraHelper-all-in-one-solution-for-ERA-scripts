@@ -33,6 +33,7 @@ const modelSource = computed(() => getAsyncAnalyzeStore()?.modelSource);
 const customModelSettings = computed(() => getAsyncAnalyzeStore()?.customModelSettings);
 const profileSetting = computed(() => getAsyncAnalyzeStore()?.profileSetting);
 const simplePresetName = computed(() => getAsyncAnalyzeStore()?.simplePresetName);
+const maxMessageFloor = computed(() => getAsyncAnalyzeStore()?.maxMessageFloor);
 
 const waitTime = 1000;
 
@@ -210,7 +211,6 @@ export const handleKatEraUpdate = async () => {
     toastr.info('正在构建提示词并请求AI分析');
     eraLogger.info('正在构建提示词并请求AI分析');
     const user_input = `本次不生成故事，处理ERA变量`;
-    const max_chat_history = 2;
     const is_should_stream = false;
     const promptInjects = [
       {
@@ -243,12 +243,18 @@ export const handleKatEraUpdate = async () => {
 
     const result =
       modelSource.value == 'sample'
-        ? await PromptUtil.sendPrompt(user_input, promptInjects, max_chat_history, is_should_stream, null, null)
+        ? await PromptUtil.sendPrompt(
+          user_input,
+          promptInjects,
+          maxMessageFloor.value,
+          is_should_stream,
+          null,
+          null)
         : modelSource.value == 'profile'
           ? await PromptUtil.sendPrompt(
               user_input,
               promptInjects,
-              max_chat_history,
+              maxMessageFloor.value,
               is_should_stream,
               null,
               profileSetting.value,
@@ -256,7 +262,7 @@ export const handleKatEraUpdate = async () => {
           : await PromptUtil.sendPrompt(
               user_input,
               promptInjects,
-              max_chat_history,
+              maxMessageFloor.value,
               is_should_stream,
               customModelSettings.value,
               null,
