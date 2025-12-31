@@ -23,6 +23,12 @@ importers:
       '@vueuse/shared':
         specifier: ^13.9.0
         version: 13.9.0(vue@3.5.26(typescript@6.0.0-dev.20250807))
+<<<<<<< HEAD
+=======
+      async-wait-until:
+        specifier: ^2.0.31
+        version: 2.0.31
+>>>>>>> 514257e2a9529751513707b6ae5efcc984e49328
       compare-versions:
         specifier: ^6.1.1
         version: 6.1.1
@@ -1222,6 +1228,13 @@ packages:
     resolution: {integrity: sha512-hsU18Ae8CDTR6Kgu9DYf0EbCr/a5iGL0rytQDobUcdpYOKokk8LEjVphnXkDkgpi0wYVsqrXuP0bZxJaTqdgoA==}
     engines: {node: '>= 0.4'}
 
+<<<<<<< HEAD
+=======
+  async-wait-until@2.0.31:
+    resolution: {integrity: sha512-9VCfHvc4f36oT6sG5p16aKc9zojf3wF4FrjNDxU3Db51SJ1bQ5lWAWtQDDZPysTwSLKBDzNZ083qPkTIj6XnrA==}
+    engines: {node: '>= 0.14.0', npm: '>= 1.0.0'}
+
+>>>>>>> 514257e2a9529751513707b6ae5efcc984e49328
   asynckit@0.4.0:
     resolution: {integrity: sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q==}
 
@@ -4990,6 +5003,11 @@ snapshots:
 
   async-function@1.0.0: {}
 
+<<<<<<< HEAD
+=======
+  async-wait-until@2.0.31: {}
+
+>>>>>>> 514257e2a9529751513707b6ae5efcc984e49328
   asynckit@0.4.0: {}
 
   atomically@2.1.0:
