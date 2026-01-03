@@ -3,7 +3,11 @@ import HtmlInlineScriptWebpackPlugin from 'html-inline-script-webpack-plugin';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
 import _ from 'lodash';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
+<<<<<<< HEAD
 import { exec } from 'node:child_process';
+=======
+import { ChildProcess, exec, spawn } from 'node:child_process';
+>>>>>>> 8a490405107f2fc458a2d9e2d1ad4101cf9dbb6f
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
@@ -81,29 +85,54 @@ const config: Config = {
 };
 
 let io: Server;
+<<<<<<< HEAD
 function watch_it(compiler: webpack.Compiler) {
+=======
+function watch_tavern_helper(compiler: webpack.Compiler) {
+>>>>>>> 8a490405107f2fc458a2d9e2d1ad4101cf9dbb6f
   if (compiler.options.watch) {
     if (!io) {
       const port = config.port ?? 6621;
       io = new Server(port, { cors: { origin: '*' } });
+<<<<<<< HEAD
       console.info(`[Listener] 已启动酒馆监听服务, 正在监听: http://0.0.0.0:${port}`);
       io.on('connect', socket => {
         console.info(`[Listener] 成功连接到酒馆网页 '${socket.id}', 初始化推送...`);
         io.emit('iframe_updated');
         socket.on('disconnect', reason => {
           console.info(`[Listener] 与酒馆网页 '${socket.id}' 断开连接: ${reason}`);
+=======
+      console.info(`\x1b[36m[tavern_helper]\x1b[0m 已启动酒馆监听服务`);
+      io.on('connect', socket => {
+        console.info(`\x1b[36m[tavern_helper]\x1b[0m 成功连接到酒馆网页 '${socket.id}', 初始化推送...`);
+        io.emit('iframe_updated');
+        socket.on('disconnect', reason => {
+          console.info(`\x1b[36m[tavern_helper]\x1b[0m 与酒馆网页 '${socket.id}' 断开连接: ${reason}`);
+>>>>>>> 8a490405107f2fc458a2d9e2d1ad4101cf9dbb6f
         });
       });
     }
 
+<<<<<<< HEAD
     compiler.hooks.done.tap('updater', () => {
       console.info('\n[Listener] 检测到完成编译, 推送更新事件...');
       io.emit('iframe_updated');
+=======
+    compiler.hooks.done.tap('watch_tavern_helper', () => {
+      console.info('\n\x1b[36m[tavern_helper]\x1b[0m 检测到完成编译, 推送更新事件...');
+      io.emit('iframe_updated');
+      if (compiler.options.plugins.find(plugin => plugin instanceof HtmlWebpackPlugin)) {
+        io.emit('message_iframe_updated');
+      } else {
+        io.emit('script_iframe_updated');
+      }
+>>>>>>> 8a490405107f2fc458a2d9e2d1ad4101cf9dbb6f
     });
   }
 }
 
 let watcher: FSWatcher;
+<<<<<<< HEAD
 function dump_schema(compiler: webpack.Compiler) {
   const execute = () => {
     exec('pnpm dump', { cwd: import.meta.dirname });
@@ -111,6 +140,16 @@ function dump_schema(compiler: webpack.Compiler) {
   const execute_debounced = _.debounce(execute, 500, { leading: true, trailing: false });
   if (!compiler.options.watch) {
     execute();
+=======
+const execute = () => {
+  exec('pnpm dump', { cwd: import.meta.dirname });
+  console.info('\x1b[36m[schema_dump]\x1b[0m 已将所有 schema.ts 转换为 schema.json');
+};
+const execute_debounced = _.debounce(execute, 500, { leading: true, trailing: false });
+function dump_schema(compiler: webpack.Compiler) {
+  if (!compiler.options.watch) {
+    execute_debounced();
+>>>>>>> 8a490405107f2fc458a2d9e2d1ad4101cf9dbb6f
   } else if (!watcher) {
     watcher = watch('src', {
       awaitWriteFinish: true,
@@ -122,6 +161,56 @@ function dump_schema(compiler: webpack.Compiler) {
   }
 }
 
+<<<<<<< HEAD
+=======
+let child_process: ChildProcess;
+function watch_tavern_sync(compiler: webpack.Compiler) {
+  if (!compiler.options.watch) {
+    return;
+  }
+  compiler.hooks.watchRun.tap('watch_tavern_sync', () => {
+    if (!child_process) {
+      child_process = spawn('pnpm', ['sync', 'watch', 'all', '-f'], {
+        stdio: ['ignore', 'pipe', 'pipe'],
+        cwd: import.meta.dirname,
+        env: { ...process.env, FORCE_COLOR: '1' },
+      });
+      child_process.stdout?.on('data', (data: Buffer) => {
+        console.info(
+          data
+            .toString()
+            .trimEnd()
+            .split('\n')
+            .map(string => (/^\s*$/s.test(string) ? string : `\x1b[36m[tavern_sync]\x1b[0m ${string}`))
+            .join('\n'),
+        );
+      });
+      child_process.stderr?.on('data', (data: Buffer) => {
+        console.error(
+          data
+            .toString()
+            .trimEnd()
+            .split('\n')
+            .map(string => (/^\s*$/s.test(string) ? string : `\x1b[36m[tavern_sync]\x1b[0m ${string}`))
+            .join('\n'),
+        );
+      });
+      child_process.on('error', error => {
+        console.error(`\x1b[31m[tavern_sync]\x1b[0m Error: ${error.message}`);
+      });
+    }
+  });
+  compiler.hooks.watchClose.tap('watch_tavern_sync', () => {
+    child_process?.kill();
+  });
+  ['SIGINT', 'SIGTERM'].forEach(signal => {
+    process.on(signal, () => {
+      child_process?.kill();
+    });
+  });
+}
+
+>>>>>>> 8a490405107f2fc458a2d9e2d1ad4101cf9dbb6f
 function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Configuration {
   const should_obfuscate = fs
     .readFileSync(path.join(import.meta.dirname, entry.script), 'utf-8')
@@ -367,8 +456,14 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
         ]
     )
       .concat(
+<<<<<<< HEAD
         { apply: watch_it },
         { apply: dump_schema },
+=======
+        { apply: watch_tavern_helper },
+        { apply: dump_schema },
+        { apply: watch_tavern_sync },
+>>>>>>> 8a490405107f2fc458a2d9e2d1ad4101cf9dbb6f
         new VueLoaderPlugin(),
         unpluginAutoImport({
           dts: true,
@@ -466,6 +561,7 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
         return callback();
       }
 
+<<<<<<< HEAD
       const builtin = ['vue3-pixi', 'vue-demi'];
       if (builtin.includes(request)) {
         return callback();
@@ -474,6 +570,12 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
         return callback();
       }
       if (['react'].some(key => request.includes(key))) {
+=======
+      if (
+        ['vue', 'vue-router', 'pixi.js'].every(key => request !== key) &&
+        ['pixi', 'react', 'vue'].some(key => request.includes(key))
+      ) {
+>>>>>>> 8a490405107f2fc458a2d9e2d1ad4101cf9dbb6f
         return callback();
       }
       const global = {
