@@ -63,6 +63,7 @@
               <button class="btn small" @click="addComponent('#[{neg}]')">取反 (neg)</button>
               <button class="btn small" @click="addComponent('#[{avg}]')">平均值 (avg)</button>
               <button class="btn small" @click="addComponent('#[{sum}]')">求和 (sum)</button>
+              <button class="btn small" @click="addComponent('#[{random}]')">随机数 (random)</button>
             </div>
           </div>
 

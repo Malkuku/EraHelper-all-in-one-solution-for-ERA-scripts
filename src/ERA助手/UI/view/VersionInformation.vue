@@ -13,6 +13,13 @@ const author = ref({
 // 版本更新历史记录
 const versionHistory = ref([
   {
+    version: 'v1.1.1',
+    date: '2025-01-10',
+    changes: [
+      '增加了随机数#[{random}]',
+    ],
+  },
+  {
     version: 'v1.1.0',
     date: '2025-12-21',
     changes: [

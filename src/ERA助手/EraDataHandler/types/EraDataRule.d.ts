@@ -18,7 +18,7 @@ export interface EraDataRule {
         // ?[] 写判断符号,支持== > < <= >= 符号 和 && || 逻辑运算符,()表示优先级
         // $[] 用path表示一个完整路径
         // 用#[]表示操作符号,支持+ - * / % ** =运算符
-        // #[{}],表示一些特殊的符号,支持ln,log2,sqrt,abs,floor,ceil,max,min
+        // #[{}],表示一些特殊的符号,支持ln,log2,sqrt,abs,floor,ceil,max,min,random
         // 比如&[{num}1],符号为{num},{str},{bool},{null}
         if?: string;
         //操作表达式 <<op> >
@@ -81,16 +81,17 @@ export interface EraDataRule {
    * 操作符号 #[+] #[-] #[*] #[/] #[%] #[**] #[=]
    * 操作符号 #[{ln}$[path]] #[{log2}$[path]] #[{sqrt}$[path]] #[{abs}$[path]] #[{floor}$[path]] #[{ceil}$[path]] #[{neg}$[path]]
    * 操作符号 #[{max}$[path1]$[path2]...] #[{min}$[path1]$[path2]...]  #[{avg}$[path1]$[path2]...]  #[{sum}$[path1]$[path2]...]
+   * 操作符号 #[{random}&[{num}min]&[{num}max]] 生成[min, max]范围内的随机整数
    * 临时变量符号 @[{g}name] @[{s}name] g表示全局变量，会在所有rule下生效；s表示临时变量，只在当前rule下生效
    */
 
   /**
    * DSL语法结构优先级 (数字越小优先级越大):
    * 1： 括号 ( )
-   * 2： 函数调用（如 #{ln}、#{max} 等）
+   * 2： 函数调用（如 #{ln}、#{max}、#{random} 等）
    * 3： 标识符（$[path]）和字面量（&[{type}value]）
    * 运算符：
-   * 4： {ln}, {log2}, {sqrt}, {abs}, {floor}, {ceil}（函数运算符）
+   * 4： {ln}, {log2}, {sqrt}, {abs}, {floor}, {ceil}, {random}（函数运算符）
    * 5： **（幂运算）
    * 6： *, /, %（乘除模运算符）
    * 7： +, - （加减运算符）
