@@ -6,3 +6,7 @@
 @.cursor/rules/前端界面.mdc
 @.cursor/rules/脚本.mdc
 @.cursor/rules/mvu变量框架.mdc
+<<<<<<< HEAD
+=======
+@.cursor/rules/mvu角色卡.mdc
+>>>>>>> 4e2a9fc6b9f5ae825823eb357fffa0d0ea284155
