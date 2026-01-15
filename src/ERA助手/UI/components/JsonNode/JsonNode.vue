@@ -1,426 +1,189 @@
 <template>
-  <div class="json-node">
-    <div
-      class="line"
-      :style="{ paddingLeft: node.depth * 20 + 'px' }"
-      :class="{ 'line-leaf': node.isLeaf, 'line-parent': !node.isLeaf }"
-    >
-      <!-- 折叠箭头 / 占位 -->
-      <span v-if="!node.isLeaf" class="arrow" :class="{ expanded: node.expanded }" @click="$emit('toggle', node)">
-        <svg v-if="node.expanded" class="arrow-icon" viewBox="0 0 16 16" fill="currentColor">
-          <path d="M12 10L8 6L4 10H12Z" />
-        </svg>
-        <svg v-else class="arrow-icon" viewBox="0 0 16 16" fill="currentColor">
-          <path d="M6 4L10 8L6 12V4Z" />
-        </svg>
+  <div class="json-node" :style="{ marginLeft: `${node.depth * 20}px` }">
+    <div class="line">
+      <!-- 折叠/展开箭头 -->
+      <span
+        v-if="!node.isLeaf"
+        class="arrow"
+        :class="{ expanded: node.expanded }"
+        @click="onToggle"
+      >
+        ▶
       </span>
       <span v-else class="space" />
 
-      <!-- 键值 -->
+      <!-- Key -->
       <span class="key">{{ node.key }}:</span>
 
-      <!-- 值显示区域 -->
-      <div v-if="node.isLeaf" class="value-area">
-        <span class="val" :class="getValueTypeClass(node.value)">{{ formatValue(node.value) }}</span>
-        <!-- 只有叶子节点出现添加规则按钮 -->
-        <button class="add-btn" title="将此路径添加到规则" @click="$emit('sendPath', node.path)">+</button>
-      </div>
-      <div v-else-if="!node.expanded" class="collapse-preview">
-        <span class="ellipsis">{{ getCollapsePreview(node) }}</span>
+      <!-- 值 / 折叠预览 -->
+      <template v-if="node.isLeaf">
+        <span class="value" :class="getValueTypeClass(node.value)">
+          {{ formatValue(node.value) }}
+        </span>
+      </template>
+      <template v-else-if="!node.expanded">
+        <span class="preview">
+          {{ Array.isArray(node.value) ? `[${node.value.length}]` : `{...}` }}
+        </span>
+      </template>
+
+      <!-- 操作按钮 (悬浮显示) -->
+      <div class="actions">
+        <!-- 保留原有的 sendPath 功能，但样式改为 Edit 风格的按钮 -->
+        <button
+          v-if="node.isLeaf"
+          class="btn-action"
+          title="添加此路径"
+          @click="$emit('sendPath', node.path)"
+        >
+          +
+        </button>
       </div>
     </div>
 
-    <!-- 子节点 -->
-    <template v-if="node.children && node.expanded">
+    <!-- 子节点递归 -->
+    <div v-if="node.expanded && node.children" class="children-container">
       <JsonNode
-        v-for="c in node.children"
-        :key="c.path"
-        :node="c"
+        v-for="(child, i) in node.children"
+        :key="i"
+        :node="child"
         @toggle="$emit('toggle', $event)"
         @send-path="$emit('sendPath', $event)"
       />
-    </template>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { JsonNodeType } from '../../types/JsonNode';
 
-defineProps<{ node: JsonNodeType }>();
-defineEmits<{
+const props = defineProps<{ node: JsonNodeType }>();
+const emit = defineEmits<{
   toggle: [node: JsonNodeType];
   sendPath: [path: string];
 }>();
 
+function onToggle() {
+  emit('toggle', props.node);
+}
+
 // 格式化显示值
 function formatValue(value: any): string {
-  const type = typeof value;
-
-  switch (type) {
-    case 'string':
-      return `"${value}"`;
-    case 'number':
-      return `${value}`;
-    case 'boolean':
-      return `${value}`;
-    case 'object':
-      if (value === null) return 'null';
-      if (Array.isArray(value)) return `[${value.length} items]`;
-      return `{${Object.keys(value).length} keys}`;
-    default:
-      return String(value);
-  }
+  if (typeof value === 'string') return `"${value}"`;
+  return String(value);
 }
 
-// 获取值的类型类名
+// 获取值的类型类名 (用于颜色区分)
 function getValueTypeClass(value: any): string {
-  const type = typeof value;
-
-  switch (type) {
-    case 'string':
-      return 'type-string';
-    case 'number':
-      return 'type-number';
-    case 'boolean':
-      return 'type-boolean';
-    case 'object':
-      if (value === null) return 'type-null';
-      if (Array.isArray(value)) return 'type-array';
-      return 'type-object';
-    default:
-      return 'type-other';
-  }
-}
-
-// 获取折叠预览文本
-function getCollapsePreview(node: JsonNodeType): string {
-  if (node.children) {
-    const childCount = node.children.length;
-    const sampleKeys = node.children
-      .slice(0, 2)
-      .map(c => c.key)
-      .join(', ');
-    return `{ ${sampleKeys}${childCount > 2 ? `, ... +${childCount - 2}` : ''} }`;
-  }
-  return '{ ... }';
+  if (value === null) return 'type-null';
+  return `type-${typeof value}`;
 }
 </script>
 
 <style scoped lang="scss">
 .json-node {
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'JetBrains Mono', monospace;
-  font-size: 11px;
-  line-height: 1.5;
   position: relative;
+  font-family: monospace;
+  font-size: 12px;
+}
 
-  // 添加连接线
-  &::before {
-    content: '';
-    position: absolute;
-    left: 12px;
-    top: 0;
-    bottom: 0;
-    width: 1px;
-    background: linear-gradient(to bottom, transparent 0%, #e5e7eb 10%, #e5e7eb 90%, transparent 100%);
-    z-index: 0;
-  }
+.line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px; /*稍微调整padding使其更紧凑*/
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  min-height: 24px;
 
-  .line {
-    display: flex;
-    align-items: center;
-    min-height: 28px;
-    padding: 4px 0;
-    position: relative;
-    z-index: 1;
-    transition: background-color 0.15s ease;
-
-    &:hover {
-      background-color: rgba(99, 102, 241, 0.05);
-      border-radius: 4px;
-
-      .arrow {
-        opacity: 1;
-      }
-    }
-
-    &.line-leaf {
-      .key {
-        color: #111827;
-      }
-    }
-
-    &.line-parent {
-      .key {
-        font-weight: 600;
-        color: #111827;
-      }
-    }
-  }
-
-  .arrow {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 16px;
-    height: 16px;
-    margin-right: 4px;
-    cursor: pointer;
-    opacity: 0.6;
-    transition: all 0.2s ease;
-    border-radius: 3px;
-    flex-shrink: 0;
-
-    &:hover {
+  &:hover {
+    background-color: #f1f5f9;
+    .actions {
       opacity: 1;
-      background-color: rgba(99, 102, 241, 0.1);
-      transform: scale(1.1);
     }
-
-    .arrow-icon {
-      width: 15px;
-      height: 15px;
-      color: #6b7280;
-      transition: transform 0.2s ease;
-    }
-
-    &.expanded {
-      .arrow-icon {
-        color: #6366f1;
-      }
-    }
-  }
-
-  .space {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-  }
-
-  .key {
-    color: #4b5563;
-    margin-right: 8px;
-    font-weight: 500;
-    user-select: none;
-    flex-shrink: 0;
-  }
-
-  .value-area {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex: 1;
-    min-width: 0;
-  }
-
-  .val {
-    color: #111827;
-    font-weight: 400;
-    padding: 2px 6px;
-    background-color: #f9fafb;
-    border-radius: 4px;
-    border: 1px solid #f3f4f6;
-    line-height: 1.3;
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 400px;
-    white-space: normal;
-    word-break: break-all;
-    word-wrap: break-word;
-
-    // 不同类型值的颜色
-    &.type-string {
-      color: #059669;
-      background-color: #f0fdf4;
-      border-color: #bbf7d0;
-    }
-
-    &.type-number {
-      color: #dc2626;
-      background-color: #fef2f2;
-      border-color: #fecaca;
-    }
-
-    &.type-boolean {
-      color: #7c3aed;
-      background-color: #f5f3ff;
-      border-color: #ddd6fe;
-    }
-
-    &.type-null {
-      color: #6b7280;
-      background-color: #f9fafb;
-      border-color: #e5e7eb;
-      font-style: italic;
-    }
-
-    &.type-object {
-      color: #0ea5e9;
-      background-color: #f0f9ff;
-      border-color: #bae6fd;
-    }
-
-    &.type-array {
-      color: #f59e0b;
-      background-color: #fffbeb;
-      border-color: #fde68a;
-    }
-
-    &:empty {
-      display: none;
-    }
-  }
-
-  .add-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 15px;
-    height: 15px;
-    padding: 0;
-    border: none;
-    border-radius: 6px;
-    color: #fffbfb;
-    cursor: pointer;
-    opacity: 0;
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-    background-color: #b6ffbb;
-    box-shadow: 0 1px 2px rgba(99, 102, 241, 0.2);
-
-    // 修正选择器：从 .line:hover & 改为直接父元素选择器
-    &:not(:hover) {
-      opacity: 0.8;
-    }
-
-    &:hover {
-      background: #75b8f1;
-      border-color: #75b8f1;
-    }
-
-    &:active {
-      transform: translateY(0);
-    }
-
-    .add-icon {
-      width: 14px;
-      height: 14px;
-      stroke-width: 2;
-    }
-  }
-
-  .collapse-preview {
-    color: #6b7280;
-    font-size: 11px;
-    font-style: italic;
-    padding: 2px 6px;
-    background-color: #f9fafb;
-    border-radius: 4px;
-    border: 1px dashed #e5e7eb;
-    line-height: 1.3;
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 400px;
-    white-space: normal;
-    word-break: break-all;
-    word-wrap: break-word;
-
-    .ellipsis {
-      display: inline-block;
-      max-width: 100%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-  }
-
-  // 最后一个节点的连接线调整
-  &:last-child::before {
-    bottom: 50%;
-  }
-
-  // 第一个节点的连接线调整
-  &:first-child::before {
-    top: 50%;
   }
 }
 
-// 深色模式支持
-@media (prefers-color-scheme: dark) {
-  .json-node {
-    &::before {
-      background: linear-gradient(to bottom, transparent 0%, #374151 10%, #374151 90%, transparent 100%);
-    }
+.arrow {
+  cursor: pointer;
+  width: 16px;
+  text-align: center;
+  font-size: 10px;
+  color: #94a3b8;
+  transition: transform 0.2s;
+  user-select: none;
 
-    .line {
-      &:hover {
-        background-color: rgba(99, 102, 241, 0.1);
-      }
-    }
-
-    .key {
-      color: #9ca3af;
-    }
-
-    .val {
-      color: #f3f4f6;
-      background-color: #1f2937;
-      border-color: #374151;
-
-      &.type-string {
-        color: #34d399;
-        background-color: #064e3b;
-        border-color: #047857;
-      }
-
-      &.type-number {
-        color: #f87171;
-        background-color: #7f1d1d;
-        border-color: #991b1b;
-      }
-
-      &.type-boolean {
-        color: #a78bfa;
-        background-color: #4c1d95;
-        border-color: #5b21b6;
-      }
-
-      &.type-null {
-        color: #9ca3af;
-        background-color: #374151;
-        border-color: #4b5563;
-      }
-
-      &.type-object {
-        color: #38bdf8;
-        background-color: #0c4a6e;
-        border-color: #0369a1;
-      }
-
-      &.type-array {
-        color: #fbbf24;
-        background-color: #78350f;
-        border-color: #d97706;
-      }
-    }
-
-    .collapse-preview {
-      color: #9ca3af;
-      background-color: #1f2937;
-      border-color: #374151;
-    }
-
-    .arrow {
-      .arrow-icon {
-        color: #9ca3af;
-      }
-
-      &:hover {
-        background-color: rgba(99, 102, 241, 0.2);
-      }
-    }
+  &.expanded {
+    transform: rotate(90deg);
   }
+
+  &:hover {
+    color: #475569;
+  }
+}
+
+.space {
+  width: 16px;
+}
+
+.key {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.value {
+  &.type-string {
+    color: #059669;
+  }
+  &.type-number {
+    color: #dc2626;
+  }
+  &.type-boolean {
+    color: #7c3aed;
+  }
+  &.type-null {
+    color: #64748b;
+    font-style: italic;
+  }
+}
+
+.preview {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* 操作按钮区域 */
+.actions {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.btn-action {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #64748b;
+  font-size: 14px;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background-color: #e2e8f0;
+    color: #0f172a;
+  }
+}
+
+.children-container {
+  /* 移除左侧边框线，保持 Edit 风格的简洁 */
+  /* 如果需要虚线指引，可以取消下面注释 */
+  /* padding-left: 10px; */
+  /* border-left: 1px dashed #e2e8f0; */
 }
 </style>

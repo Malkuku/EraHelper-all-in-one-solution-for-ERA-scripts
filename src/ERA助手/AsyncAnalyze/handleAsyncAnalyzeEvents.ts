@@ -66,6 +66,7 @@ export const reSendEraUpdate = async () => {
   } finally {
     getAsyncAnalyzeStore().isAsync = isAsyncTemp;
     getAsyncAnalyzeStore().isUpdateEra = false;
+    await eventEmit('kat:handle_era_finished');
   }
 };
 
@@ -73,34 +74,39 @@ export const reSendEraUpdate = async () => {
  * 处理接收到的massage_received事件
  */
 export const handleMessageReceived = async (message_id: number) => {
-  if (getLastMessageId() == 0 || message_id == 0) {
-    //不处理0层
-    return;
-  }
-  if (!isAsync.value) {
-    return;
-  }
-  if (isUpdateEra.value) {
-    toastr.warning('已有正在处理的分步分析');
-    return;
-  }
-  if (MessageUtil.getMessageById(message_id).length < 200) {
-    toastr.error('空回了喵~请重roll喵~');
-    throw new Error('空回了喵~请重roll喵~');
-  }
-  toastr.info('开始分步分析，等待era事件完成');
-  eraLogger.info('开始分步分析，等待era事件完成');
+  try{
+    if (getLastMessageId() == 0 || message_id == 0) {
+      //不处理0层
+      return;
+    }
+    if (!isAsync.value) {
+      return;
+    }
+    if (isUpdateEra.value) {
+      toastr.warning('已有正在处理的分步分析');
+      return;
+    }
+    if (MessageUtil.getMessageById(message_id).length < 200) {
+      toastr.error('空回了喵~请重roll喵~');
+      throw new Error('空回了喵~请重roll喵~');
+    }
+    toastr.info('开始分步分析，等待era事件完成');
+    eraLogger.info('开始分步分析，等待era事件完成');
 
-  getAsyncAnalyzeStore().isUpdateEra = true;
+    getAsyncAnalyzeStore().isUpdateEra = true;
 
-  await handleKatEraUpdate();
-  /**
-   * TODO有时候ejs和era不会把宏正确替换
-   * 目前：额外非流ok，额外解析ok
-   *  同源非流ok,同源解析ok，同源流
-   *  流式：全寄 ejs有问题
-   *  预设：全寄
-   */
+    handleKatEraUpdate(); //让正文先显示出来
+    /**
+     * TODO有时候ejs和era不会把宏正确替换
+     * 目前：额外非流ok，额外解析ok
+     *  同源非流ok,同源解析ok，同源流
+     *  流式：全寄 ejs有问题
+     *  预设：全寄
+     */
+  }finally {
+    //发送事件-声明该部分消息已处理完毕
+    await eventEmit('kat:handle_era_finished');
+  }
 };
 
 /**
@@ -116,6 +122,7 @@ export const handleEraRulesOnMessageReceived = async (message_id: number) => {
   const result = await handleEraRules(msg);
   await setChatMessages([{ message_id, message: result }]);
   await eventEmit(ERAEvents.FORCE_SYNC);
+  await eventEmit('kat:handle_era_finished');
 };
 
 /**

@@ -137,6 +137,15 @@
 
 ![编辑规则.png](./src/ERA助手/doc/img/编辑规则.png)![dsl编辑器.png](./src/ERA助手/doc/img/dsl编辑器.png)
 
+### v1.2.0更新后
+在消息处理完毕后，会发送一个`kat:handle_era_finished`事件作为完成标记，其对标的是酒馆的`message_received`事件
+你可以监听该事件继续下一步的处理,如：
+```js
+eventOn('kat:handle_era_finished', () => {
+eraLogger.log('监听到kat:handle_era_finished');
+})
+```
+
 #### 通过AI生成rule规则提供的文档和类型定义，你需要把它们喂给ai：
 [写给AI的EraDataRule规则.md](./src/ERA助手/doc/给AI用/写给AI的EraDataRule规则.md)
 

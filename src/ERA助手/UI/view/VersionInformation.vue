@@ -2,7 +2,7 @@
 import { ref } from 'vue';
 
 // 当前版本号
-const currentVersion = ref('v1.1.0');
+const currentVersion = ref('v1.2.0');
 
 // 作者信息
 const author = ref({
@@ -13,10 +13,13 @@ const author = ref({
 // 版本更新历史记录
 const versionHistory = ref([
   {
-    version: 'v1.1.1',
-    date: '2025-01-10',
+    version: 'v1.2.0',
+    date: '2026-01-15',
     changes: [
-      '增加了随机数#[{random}]',
+      '增加了随机数`#[{random}]`规则',
+      '现在在era助手处理完成后，会发送一个事件标记完成（具体请看文档中的更新）',
+      '现在正文不需要等待变量分析就可以直接显示',
+      '调整了era规则编辑中的JsonTree的美化样式'
     ],
   },
   {

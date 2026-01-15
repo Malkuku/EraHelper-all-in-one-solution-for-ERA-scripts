@@ -7,6 +7,7 @@
       @toggle="onToggle"
       @send-path="(p: string) => $emit('sendPath', p)"
     />
+    <div v-if="roots.length === 0" class="empty-tree">No data</div>
   </div>
 </template>
 
@@ -22,7 +23,7 @@ const emit = defineEmits<{
   sendPath: [path: string];
 }>();
 
-/* ---------- 递归建树 ---------- */
+/* ---------- 递归建树 (保持原有逻辑) ---------- */
 function buildTree(obj: any, depth = 0, path = '', expanded = false): JsonNodeType[] {
   if (obj === null || typeof obj !== 'object') return [];
   return Object.keys(obj).map(k => {
@@ -50,11 +51,20 @@ function onToggle(n: JsonNodeType) {
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .json-tree {
   font-family: monospace;
-  font-size: 11px;
-  overflow-x: auto; /* 添加横向滚动 */
-  white-space: nowrap; /* 防止换行 */
+  font-size: 12px;
+  overflow-x: auto;
+  padding: 10px;
+  background-color: #fff; /* 保持与 Edit 风格一致的背景 */
+  white-space: nowrap;
+}
+
+.empty-tree {
+  padding: 20px;
+  color: #9ca3af;
+  text-align: center;
+  font-style: italic;
 }
 </style>
