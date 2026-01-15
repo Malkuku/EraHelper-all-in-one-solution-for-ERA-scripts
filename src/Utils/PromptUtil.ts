@@ -20,9 +20,6 @@ const sendPrompt = async (
       await (window as any).SillyTavern.executeSlashCommands(`/profile ${profileSetting}`);
     }
 
-    await (window as any).EjsTemplate.refreshWorldInfo();
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
     // 发送请求以获取结果
     const result = await generate({
       user_input: user_input,
