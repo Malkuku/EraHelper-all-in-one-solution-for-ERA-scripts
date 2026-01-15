@@ -19,18 +19,24 @@ const versionHistory = ref([
       '增加了随机数`#[{random}]`规则',
       '现在在era助手处理完成后，会发送一个事件标记完成（具体请看文档中的更新）',
       '现在正文不需要等待变量分析就可以直接显示',
-      '调整了era规则编辑中的JsonTree的美化样式',
+      '调整了era规则编辑中的JsonTree的美化样式'
     ],
   },
   {
     version: 'v1.1.0',
     date: '2025-12-21',
-    changes: ['移除了top_k相关的设置以兼容gemini直连', '现在默认模型和额外模型模式也可以选择预设了'],
+    changes: [
+      '移除了top_k相关的设置以兼容gemini直连',
+      '现在默认模型和额外模型模式也可以选择预设了'
+    ],
   },
   {
     version: 'v1.0.1',
     date: '2025-12-15',
-    changes: ['修复 limit 和 range 可能保存为包含空字符串的问题', '调整优化了rule的导出顺序'],
+    changes: [
+      '修复 limit 和 range 可能保存为包含空字符串的问题',
+      '调整优化了rule的导出顺序'
+    ],
   },
   {
     version: 'v1.0.0',
