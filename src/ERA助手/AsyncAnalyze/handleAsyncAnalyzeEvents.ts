@@ -74,7 +74,7 @@ export const reSendEraUpdate = async () => {
  * 处理接收到的massage_received事件
  */
 export const handleMessageReceived = async (message_id: number) => {
-  try{
+  try {
     if (getLastMessageId() == 0 || message_id == 0) {
       //不处理0层
       return;
@@ -103,7 +103,7 @@ export const handleMessageReceived = async (message_id: number) => {
      *  流式：全寄 ejs有问题
      *  预设：全寄
      */
-  }finally {
+  } finally {
     //发送事件-声明该部分消息已处理完毕
     await eventEmit('kat:handle_era_finished');
   }
@@ -258,13 +258,7 @@ export const handleKatEraUpdate = async () => {
 
     const result =
       modelSource.value == 'sample'
-        ? await PromptUtil.sendPrompt(
-          user_input,
-          promptInjects,
-          maxMessageFloor.value,
-          is_should_stream,
-          null,
-          null)
+        ? await PromptUtil.sendPrompt(user_input, promptInjects, maxMessageFloor.value, is_should_stream, null, null)
         : modelSource.value == 'profile'
           ? await PromptUtil.sendPrompt(
               user_input,
