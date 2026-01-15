@@ -151,15 +151,17 @@ export class DSLEvaluator {
         return Math.max(...args.map(Number));
       case 'min':
         return Math.min(...args.map(Number));
-      case 'random':
-        // 随机数函数：#[{random}&[{num}min]&[{num}max]] 从范围内生成一个随机数
-        { if (args.length !== 2) {
+      case 'random': // 随机数函数：#[{random}&[{num}min]&[{num}max]] 从范围内生成一个随机数
+      {
+        if (args.length !== 2) {
           throw new Error(`函数 'random' 需要恰好2个参数，但提供了 ${args.length} 个参数`);
         }
         const min = Number(args[0]);
         const max = Number(args[1]);
         if (isNaN(min) || isNaN(max)) {
-          throw new Error(`函数 'random' 的参数必须是数字，但得到了 ${typeof args[0]} (${JSON.stringify(args[0])}) 和 ${typeof args[1]} (${JSON.stringify(args[1])})`);
+          throw new Error(
+            `函数 'random' 的参数必须是数字，但得到了 ${typeof args[0]} (${JSON.stringify(args[0])}) 和 ${typeof args[1]} (${JSON.stringify(args[1])})`,
+          );
         }
         // 确保 min <= max
         if (min > max) {
@@ -167,7 +169,8 @@ export class DSLEvaluator {
         }
 
         // 生成 [min, max] 范围内的随机数，不需要取整
-        return Math.random() * (max - min) + min; }
+        return Math.random() * (max - min) + min;
+      }
 
       default:
         throw new Error(`未知的函数: ${node.name}`);
