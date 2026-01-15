@@ -1,7 +1,8 @@
-import { WorldInfoUtil } from '@/Utils/WorldInfoUtil';
-import { PromptUtil } from '@/Utils/PromptUtil';
-import { MessageUtil } from '@/Utils/MessageUtil';
-import { ERAEvents } from '@/Constants/ERAEvent';
+import { WorldInfoUtil } from '../../Utils/WorldInfoUtil';
+import { PromptUtil } from '../../Utils/PromptUtil';
+import { MessageUtil } from '../../Utils/MessageUtil';
+import { eraAwareSleep } from '../utils/era-aware-sleep';
+import { ERAEvents } from '../../Constants/ERAEvent';
 import { useAsyncAnalyzeStore } from '../stores/AsyncAnalyzeStore';
 import { eraLogger } from '../utils/EraHelperLogger';
 import { EraDataHandler } from '../EraDataHandler/EraDataHandler';
@@ -34,7 +35,7 @@ const profileSetting = computed(() => getAsyncAnalyzeStore()?.profileSetting);
 const simplePresetName = computed(() => getAsyncAnalyzeStore()?.simplePresetName);
 const maxMessageFloor = computed(() => getAsyncAnalyzeStore()?.maxMessageFloor);
 
-const waitTime = 100;
+const waitTime = 1000;
 
 /**
  * 重发变量更新
@@ -95,7 +96,17 @@ export const handleMessageReceived = async (message_id: number) => {
     getAsyncAnalyzeStore().isUpdateEra = true;
 
     handleKatEraUpdate(); //让正文先显示出来
-  }finally { /* empty */ }
+    /**
+     * TODO有时候ejs和era不会把宏正确替换
+     * 目前：额外非流ok，额外解析ok
+     *  同源非流ok,同源解析ok，同源流
+     *  流式：全寄 ejs有问题
+     *  预设：全寄
+     */
+  }finally {
+    //发送事件-声明该部分消息已处理完毕
+    await eventEmit('kat:handle_era_finished');
+  }
 };
 
 /**
@@ -196,9 +207,8 @@ export const handleKatEraUpdate = async () => {
     eraLogger.error('[isUpdateEra]标识异常');
     return;
   }
-
-  //await (window as any).EjsTemplate.refreshWorldInfo();
-  await new Promise(resolve => setTimeout(resolve, waitTime));
+  // 给ERA事件让行，错开可能存在的ERA变量更新
+  await eraAwareSleep(waitTime);
 
   const originalPresetName = getLoadedPresetName();
   /**
@@ -274,18 +284,13 @@ export const handleKatEraUpdate = async () => {
     toastr.error('分步分析处理失败');
     eraLogger.error('分步分析处理失败: ', e);
   } finally {
+    await eventEmit(ERAEvents.FORCE_SYNC);
     if((modelSource.value == 'sample' && simplePresetName.value !== "in_use" && originalPresetName !== simplePresetName.value)
       || (modelSource.value == 'external' && customModelSettings.value.presetName !== "in_use" && originalPresetName !== customModelSettings.value.presetName)){
       loadPreset(originalPresetName);
       toastr.info(`切回预设: ${originalPresetName}`, );
     }
     getAsyncAnalyzeStore().isUpdateEra = false;
-
-    //await eventEmit(ERAEvents.FORCE_SYNC);
-
-    await setChatMessages([{message_id: getLastMessageId()}]);
-    //发送事件-声明该部分消息已处理完毕
-    await eventEmit('kat:handle_era_finished');
   }
 };
 
