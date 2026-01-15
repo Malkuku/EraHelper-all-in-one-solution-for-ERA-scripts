@@ -2,14 +2,7 @@
   <div class="json-node" :style="{ marginLeft: `${node.depth * 20}px` }">
     <div class="line">
       <!-- 折叠/展开箭头 -->
-      <span
-        v-if="!node.isLeaf"
-        class="arrow"
-        :class="{ expanded: node.expanded }"
-        @click="onToggle"
-      >
-        ▶
-      </span>
+      <span v-if="!node.isLeaf" class="arrow" :class="{ expanded: node.expanded }" @click="onToggle"> ▶ </span>
       <span v-else class="space" />
 
       <!-- Key -->
@@ -30,12 +23,7 @@
       <!-- 操作按钮 (悬浮显示) -->
       <div class="actions">
         <!-- 保留原有的 sendPath 功能，但样式改为 Edit 风格的按钮 -->
-        <button
-          v-if="node.isLeaf"
-          class="btn-action"
-          title="添加此路径"
-          @click="$emit('sendPath', node.path)"
-        >
+        <button v-if="node.isLeaf" class="btn-action" title="添加此路径" @click="$emit('sendPath', node.path)">
           +
         </button>
       </div>
