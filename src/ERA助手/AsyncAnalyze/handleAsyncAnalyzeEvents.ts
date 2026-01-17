@@ -34,7 +34,7 @@ const profileSetting = computed(() => getAsyncAnalyzeStore()?.profileSetting);
 const simplePresetName = computed(() => getAsyncAnalyzeStore()?.simplePresetName);
 const maxMessageFloor = computed(() => getAsyncAnalyzeStore()?.maxMessageFloor);
 
-const waitTime = 4000;
+const waitTime = 100;
 
 /**
  * 重发变量更新
@@ -95,13 +95,6 @@ export const handleMessageReceived = async (message_id: number) => {
     getAsyncAnalyzeStore().isUpdateEra = true;
 
     handleKatEraUpdate(); //让正文先显示出来
-    /**
-     * TODO有时候ejs和era不会把宏正确替换
-     * 目前：额外非流ok，额外解析ok
-     *  同源非流ok,同源解析ok，同源流
-     *  流式：全寄 ejs有问题
-     *  预设：全寄
-     */
   }finally {
     //发送事件-声明该部分消息已处理完毕
     await eventEmit('kat:handle_era_finished');
@@ -207,7 +200,7 @@ export const handleKatEraUpdate = async () => {
     return;
   }
 
-  await (window as any).EjsTemplate.refreshWorldInfo();
+  //await (window as any).EjsTemplate.refreshWorldInfo();
   await new Promise(resolve => setTimeout(resolve, waitTime));
 
   const originalPresetName = getLoadedPresetName();

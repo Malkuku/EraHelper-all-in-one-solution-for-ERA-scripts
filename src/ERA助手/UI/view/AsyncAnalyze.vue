@@ -28,7 +28,7 @@
         <span class="switch"></span>
       </label>
 
-      <span class="tip-card"> ⚠️ 目前流式生成的分析的 ejs 替换有 bug，分步模式请不要打开流式 </span>
+      <span class="tip-card">⚠️请将提示词模板版本至少升级到【v1.15.15.0】，以避免ejs替换bug</span>
 
       <!-- 模型来源 -->
       <div class="row">
@@ -39,10 +39,6 @@
           <option value="external">额外模型</option>
         </select>
       </div>
-      <!--      <div v-if="modelSource === 'profile'" class="row">-->
-      <!--        <span>预设模型</span>-->
-      <!--        因为ERA和提示词模板的替换问题，目前不可用😑-->
-      <!--      </div>-->
 
       <!-- 预设模型选择（仅 profile 时显示） -->
       <div v-if="modelSource === 'profile'" class="row">
@@ -66,6 +62,7 @@
 
       <!-- 额外模型参数（仅 external 时显示） -->
       <div v-if="modelSource === 'external'" class="form">
+        <span class="tip-card">⚠️导出角色卡时，注意清除API密钥，否则将会泄露您的密钥</span>
         <div class="row">
           <span>接口地址</span>
           <input v-model="settings.baseURL" placeholder="https://api.openai.com/v1" />
