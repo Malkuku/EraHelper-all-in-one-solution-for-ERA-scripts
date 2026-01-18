@@ -95,10 +95,7 @@ export const handleMessageReceived = async (message_id: number) => {
     getAsyncAnalyzeStore().isUpdateEra = true;
 
     handleKatEraUpdate(); //让正文先显示出来
-  }finally {
-    //发送事件-声明该部分消息已处理完毕
-    await eventEmit('kat:handle_era_finished');
-  }
+  }finally { /* empty */ }
 };
 
 /**
@@ -277,13 +274,18 @@ export const handleKatEraUpdate = async () => {
     toastr.error('分步分析处理失败');
     eraLogger.error('分步分析处理失败: ', e);
   } finally {
-    await eventEmit(ERAEvents.FORCE_SYNC);
     if((modelSource.value == 'sample' && simplePresetName.value !== "in_use" && originalPresetName !== simplePresetName.value)
       || (modelSource.value == 'external' && customModelSettings.value.presetName !== "in_use" && originalPresetName !== customModelSettings.value.presetName)){
       loadPreset(originalPresetName);
       toastr.info(`切回预设: ${originalPresetName}`, );
     }
     getAsyncAnalyzeStore().isUpdateEra = false;
+
+    //await eventEmit(ERAEvents.FORCE_SYNC);
+
+    await setChatMessages([{message_id: getLastMessageId()}]);
+    //发送事件-声明该部分消息已处理完毕
+    await eventEmit('kat:handle_era_finished');
   }
 };
 
