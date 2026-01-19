@@ -5,7 +5,7 @@ import { useUiStore } from '@/ERA助手/stores/UIStore';
 const uiStore = useUiStore();
 
 // 当前版本号
-const currentVersion = ref('v1.2.1');
+const currentVersion = ref('v1.2.2');
 
 // 作者信息
 const author = ref({
@@ -15,6 +15,14 @@ const author = ref({
 
 // 版本更新历史记录
 const versionHistory = ref([
+  {
+    version: 'v1.2.2',
+    date: '2026-01-19',
+    changes: [
+      '（fix）分步模式的era差异同步问题',
+      '添加黑夜模式主题'
+    ],
+  },
   {
     version: 'v1.2.1',
     date: '2026-01-18',
