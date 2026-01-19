@@ -1,5 +1,5 @@
 <template>
-  <div class="simulation-test">
+  <div class="simulation-test" :class="{ 'dark-mode': uiStore.darkMode }">
     <div class="section-header">
       <h2>测试模拟</h2>
     </div>
@@ -37,6 +37,9 @@ import DslTesterModal from './DSLTesterModal.vue';
 import SimulationTestModal from './SimulationTestModal.vue';
 import { EraDataHandler } from '../../../EraDataHandler/EraDataHandler';
 import { EraDataRule } from '../../../EraDataHandler/types/EraDataRule';
+import { useUiStore } from '@/ERA助手/stores/UIStore';
+
+const uiStore = useUiStore();
 
 const props = defineProps({
   rules: {
@@ -193,5 +196,29 @@ defineExpose({
 .btn.small {
   padding: 3px 8px;
   font-size: 11px;
+}
+
+/* 黑夜模式 */
+.dark-mode {
+  .btn {
+    background: #4b5563;
+    color: #e2e8f0;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+
+    &:hover {
+      background: #6b7280;
+      color: #f8fafc;
+    }
+
+    &.primary {
+      background: #4f46e5;
+      color: #f8fafc;
+
+      &:hover {
+        background: #6366f1;
+        color: #f8fafc;
+      }
+    }
+  }
 }
 </style>

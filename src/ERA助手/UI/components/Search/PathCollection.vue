@@ -1,5 +1,5 @@
 <template>
-  <div v-show="uiStore.collectedPaths.length > 0" class="path-collection-box">
+  <div v-show="uiStore.collectedPaths.length > 0" class="path-collection-box" :class="{ 'dark-mode': uiStore.darkMode }">
     <div class="path-collection-header" @click="toggleCollection">
       <span>已收集路径 ({{ uiStore.collectedPaths.length }})</span>
       <span class="toggle-icon">{{ isExpanded ? '▲' : '▼' }}</span>
@@ -137,5 +137,61 @@ const clearAllPaths = () => {
 .btn.danger:hover {
   background: #b91c1c;
   color: #ffffff;
+}
+
+/* 黑夜模式 */
+.dark-mode{
+  .path-collection-box {
+    border-color: #4b5563;
+    background: #1f2937;
+  }
+
+  .path-collection-header {
+    background: #374151;
+    border-bottom: 1px solid #4b5563;
+    color: #e2e8f0;
+  }
+
+  .path-collection-content {
+    /* 滚动条样式 */
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+    &::-webkit-scrollbar-track {
+      background: #374151;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: #4b5563;
+      border-radius: 3px;
+    }
+    &::-webkit-scrollbar-thumb:hover {
+      background: #6b7280;
+    }
+  }
+
+  .path-item {
+    border-bottom: 1px solid #374151;
+    color: #cbd5e1;
+  }
+
+  .btn {
+    background: #4b5563;
+    color: #e2e8f0;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+
+    &:hover {
+      background: #6b7280;
+      color: #f8fafc;
+    }
+
+    &.danger {
+      background: #dc2626;
+      color: #f8fafc;
+
+      &:hover {
+        background: #ef4444;
+      }
+    }
+  }
 }
 </style>

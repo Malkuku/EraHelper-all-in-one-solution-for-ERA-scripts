@@ -1,5 +1,5 @@
 <template>
-  <div v-if="visible" class="simulation-test-modal" @click.self="handleClose">
+  <div v-if="visible" class="simulation-test-modal" :class="{ 'dark-mode': uiStore.darkMode }" @click.self="handleClose">
     <div class="simulation-test-content">
       <div class="tester-header">
         <h3>模拟测试</h3>
@@ -66,6 +66,9 @@
 import { ref, watch } from 'vue';
 import JsonTree from '../JsonNode/JsonTree.vue';
 import FileImportExport from '../File/FileImportExport.vue';
+import { useUiStore } from '@/ERA助手/stores/UIStore';
+
+const uiStore = useUiStore();
 
 interface Props {
   visible: boolean;
@@ -362,6 +365,77 @@ function handleClose() {
   .tester-inputs {
     border-right: none;
     border-bottom: 1px solid #e2e8f0;
+  }
+}
+
+/* 黑夜模式 */
+.dark-mode {
+  .simulation-test-modal {
+    background: rgba(0, 0, 0, 0.75);
+  }
+
+  .simulation-test-content {
+    background: #1f2937;
+    color: #e2e8f0;
+  }
+
+  .tester-header {
+    background: #374151;
+    border-bottom: 1px solid #4b5563;
+    color: #e2e8f0;
+  }
+
+  .tester-inputs {
+    border-right: 1px solid #4b5563;
+    color: #e2e8f0;
+  }
+
+  .tester-inputs .field label {
+    color: #cbd5e1;
+  }
+
+  .tester-inputs textarea {
+    background: #1f2937;
+    color: #e2e8f0;
+    border-color: #4b5563;
+  }
+
+  .tester-inputs textarea.light-theme {
+    background-color: #1f2937 !important;
+    color: #e2e8f0 !important;
+  }
+
+  .tester-output h4 {
+    color: #e2e8f0;
+  }
+
+  .data-section h5 {
+    color: #cbd5e1;
+  }
+
+  .json-display {
+    background: #374151;
+    border-color: #4b5563;
+  }
+
+  .empty-json {
+    color: #6b7280;
+  }
+
+  .btn {
+    background: #4b5563;
+    color: #e2e8f0;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+
+    &:hover {
+      background: #6b7280;
+      color: #f8fafc;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      color: #9ca3af;
+    }
   }
 }
 </style>

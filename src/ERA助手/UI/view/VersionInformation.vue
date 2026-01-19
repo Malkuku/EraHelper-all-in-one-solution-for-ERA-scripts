@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useUiStore } from '@/ERA助手/stores/UIStore';
+
+const uiStore = useUiStore();
 
 // 当前版本号
 const currentVersion = ref('v1.2.1');
@@ -50,7 +53,7 @@ const versionHistory = ref([
 </script>
 
 <template>
-  <div class="version-container">
+  <div class="version-container" :class="{ 'dark-mode': uiStore.darkMode }">
     <div class="section">
       <h2 class="section-title">作者信息</h2>
       <p class="author-info">
@@ -200,4 +203,60 @@ const versionHistory = ref([
 .changes-list {
   color: #475569;
 }
+
+
+/* 黑夜模式 */
+.dark-mode {
+  .version-container {
+    color: #cbd5e1;
+  }
+
+  .section-title {
+    color: #e2e8f0;
+    border-bottom: 1px solid #4b5563;
+  }
+
+  .author-info {
+    a {
+      color: #818cf8;
+
+      &:hover {
+        color: #a5b4fc;
+      }
+    }
+  }
+
+  .version-badge {
+    background-color: #4f46e5;
+    color: #f8fafc;
+  }
+
+  .notes-list,
+  .changes-list {
+    color: #9ca3af;
+  }
+
+  .history-item {
+    background: #374151;
+    border: 1px solid #4b5563;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+
+    &:hover {
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+    }
+  }
+
+  .version-number {
+    color: #818cf8;
+  }
+
+  .version-date {
+    color: #9ca3af;
+  }
+
+  .changes-list {
+    color: #cbd5e1;
+  }
+}
+
 </style>

@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div :class="{ 'dark-mode': uiStore.darkMode }">
     <!-- 页面导航 -->
     <div class="page-tabs">
       <button class="tab-button" :class="{ active: currentPage === 'model' }" @click="currentPage = 'model'">
@@ -100,14 +100,6 @@
           <span>温度</span>
           <input v-model="settings.temperature" type="number" step="0.1" min="0" max="2" />
         </div>
-        <!--        <div class="row">-->
-        <!--          <span>频率惩罚</span>-->
-        <!--          <input v-model="settings.frequencyPenalty" type="number" step="0.1" min="-2" max="2" />-->
-        <!--        </div>-->
-        <!--        <div class="row">-->
-        <!--          <span>存在惩罚</span>-->
-        <!--          <input v-model="settings.presencePenalty" type="number" step="0.1" min="-2" max="2" />-->
-        <!--        </div>-->
         <div class="row">
           <span>最大Token数</span>
           <input v-model="settings.maxTokens" type="number" min="1" />
@@ -360,11 +352,11 @@ const getRemoteModels = async () => {
 
 /* 确保标题有足够的上边距 */
 .title {
-  margin: 8px 0 16px; /* 增加上边距 */
+  margin: 8px 0 16px;
   font-size: 18px;
   font-weight: 600;
   color: #111827;
-  padding-top: 4px; /* 额外内边距 */
+  padding-top: 4px;
 }
 
 /************ 开关 ************/
@@ -675,6 +667,150 @@ const getRemoteModels = async () => {
 
   &:hover:not(.active) {
     color: #111827;
+  }
+}
+
+/*
+   修改点3：黑夜模式样式移动到底部，并移除 :deep()，
+   因为 .dark-mode 类现在直接位于组件根元素上。
+*/
+.dark-mode {
+  /* 黑夜模式下的整体样式 */
+  .title {
+    color: #e2e8f0;
+  }
+
+  .tip-card {
+    background: #374151;
+    border-color: #4b5563;
+    color: #fde68a;
+  }
+
+  .row {
+    span:first-child {
+      color: #cbd5e1;
+    }
+
+    input,
+    select {
+      background: #374151 !important; /* 加 !important 确保覆盖 */
+      color: #e2e8f0 !important;
+      border-color: #4b5563;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: #818cf8;
+      box-shadow:
+        0 0 0 3px rgba(99, 102, 241, 0.2),
+        inset 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+  }
+
+  .btn {
+    background: #4b5563;
+    color: #e2e8f0;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+
+    &:hover {
+      background: #6b7280;
+    }
+
+    &.primary {
+      background: #4f46e5;
+      color: #f8fafc;
+
+      &:hover {
+        background: #6366f1;
+      }
+    }
+
+    &.danger {
+      background: #dc2626;
+      color: #f8fafc;
+
+      &:hover {
+        background: #ef4444;
+      }
+    }
+  }
+
+  .list-item {
+    background: #374151;
+    border-color: #4b5563;
+    color: #e2e8f0;
+  }
+
+  .tag {
+    background: #4f46e5;
+    color: #e0e7ff;
+  }
+
+  .message {
+    &.success {
+      background: #065f46;
+      color: #d1fae5;
+      border-color: #065f46;
+    }
+
+    &.error {
+      background: #991b1b;
+      color: #fee2e2;
+      border-color: #991b1b;
+    }
+
+    &.warning {
+      background: #92400e;
+      color: #fef3c7;
+      border-color: #92400e;
+    }
+
+    &.info {
+      background: #1e40af;
+      color: #dbeafe;
+      border-color: #1e40af;
+    }
+  }
+
+  .form-group {
+    label {
+      color: #cbd5e1;
+    }
+  }
+
+  .divider {
+    background: #4b5563;
+  }
+
+  .card-container {
+    background: #374151;
+    border-color: #4b5563;
+  }
+
+  .loading {
+    border: 2px solid #4b5563;
+    border-top: 2px solid #818cf8;
+  }
+
+  .tooltip::after {
+    background: #1f2937;
+  }
+
+  .page-tabs {
+    border-bottom: 1px solid #4b5563;
+  }
+
+  .tab-button {
+    color: #9ca3af;
+
+    &.active {
+      color: #818cf8;
+      border-bottom: 2px solid #818cf8;
+    }
+
+    &:hover:not(.active) {
+      color: #e2e8f0;
+    }
   }
 }
 </style>

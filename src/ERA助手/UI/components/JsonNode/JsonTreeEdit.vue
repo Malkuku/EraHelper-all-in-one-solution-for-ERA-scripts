@@ -1,5 +1,5 @@
 <template>
-  <div class="json-tree">
+  <div class="json-tree" :class="{ 'dark-mode': uiStore.darkMode }">
     <JsonNodeEdit
       v-for="node in filteredRoots"
       :key="node.path"
@@ -21,6 +21,9 @@ import { ref, watch, computed, reactive } from 'vue';
 import { get, set, unset, cloneDeep } from 'lodash';
 import { JsonNodeType } from '../../types/JsonNode';
 import JsonNodeEdit from './JsonNodeEdit.vue';
+import { useUiStore } from '@/ERA助手/stores/UIStore';
+
+const uiStore = useUiStore();
 
 /* ---------- Props / Emits ---------- */
 const props = defineProps<{
@@ -228,5 +231,15 @@ function removeNode(path: string) {
   padding: 20px;
   color: #9ca3af;
   text-align: center;
+}
+
+/* 黑夜模式 */
+.dark-mode .json-tree {
+  background-color: #1f2937;
+  color: #e2e8f0;
+}
+
+.dark-mode .empty-tree {
+  color: #6b7280;
 }
 </style>

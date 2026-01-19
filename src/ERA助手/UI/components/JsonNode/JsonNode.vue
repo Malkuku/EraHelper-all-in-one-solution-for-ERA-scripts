@@ -1,5 +1,5 @@
 <template>
-  <div class="json-node" :style="{ marginLeft: `${node.depth * 20}px` }">
+  <div class="json-node" :class="{ 'dark-mode': uiStore.darkMode }" :style="{ marginLeft: `${node.depth * 20}px` }">
     <div class="line">
       <!-- 折叠/展开箭头 -->
       <span
@@ -56,6 +56,10 @@
 
 <script setup lang="ts">
 import { JsonNodeType } from '../../types/JsonNode';
+import { useUiStore } from '@/ERA助手/stores/UIStore';
+
+
+const uiStore = useUiStore();
 
 const props = defineProps<{ node: JsonNodeType }>();
 const emit = defineEmits<{
@@ -180,10 +184,53 @@ function getValueTypeClass(value: any): string {
   }
 }
 
-.children-container {
-  /* 移除左侧边框线，保持 Edit 风格的简洁 */
-  /* 如果需要虚线指引，可以取消下面注释 */
-  /* padding-left: 10px; */
-  /* border-left: 1px dashed #e2e8f0; */
+/* 黑夜模式 */
+.dark-mode {
+  .line {
+    &:hover {
+      background-color: #374151;
+    }
+  }
+
+  .arrow {
+    color: #94a3b8;
+
+    &:hover {
+      color: #cbd5e1;
+    }
+  }
+
+  .key {
+    color: #e2e8f0;
+  }
+
+  .value {
+    &.type-string {
+      color: #34d399; /* 更亮的绿色 */
+    }
+    &.type-number {
+      color: #f87171; /* 更亮的红色 */
+    }
+    &.type-boolean {
+      color: #a78bfa; /* 更亮的紫色 */
+    }
+    &.type-null {
+      color: #9ca3af; /* 更亮的灰色 */
+    }
+  }
+
+  .preview {
+    color: #9ca3af;
+  }
+
+  .btn-action {
+    color: #9ca3af;
+
+    &:hover {
+      background-color: #4b5563;
+      color: #f8fafc;
+    }
+  }
 }
+
 </style>

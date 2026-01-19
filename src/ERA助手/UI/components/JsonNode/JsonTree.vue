@@ -1,5 +1,5 @@
 <template>
-  <div class="json-tree">
+  <div class="json-tree" :class="{ 'dark-mode': uiStore.darkMode }">
     <json-node
       v-for="(n, i) in roots"
       :key="i"
@@ -15,6 +15,9 @@
 import { watch, ref } from 'vue';
 import { JsonNodeType } from '../../types/JsonNode';
 import JsonNode from './JsonNode.vue';
+import { useUiStore } from '@/ERA助手/stores/UIStore';
+
+const uiStore = useUiStore();
 
 /* ---------- props / emit ---------- */
 const props = defineProps<{ data: any }>();
@@ -66,5 +69,15 @@ function onToggle(n: JsonNodeType) {
   color: #9ca3af;
   text-align: center;
   font-style: italic;
+}
+
+/* 黑夜模式 */
+.dark-mode .json-tree {
+  background-color: #1f2937;
+  color: #e2e8f0;
+}
+
+.dark-mode .empty-tree {
+  color: #6b7280;
 }
 </style>

@@ -1,5 +1,5 @@
 <template>
-  <div class="era-rule-panel">
+  <div class="era-rule-panel" :class="{ 'dark-mode': uiStore.darkMode }">
     <!-- 页签导航 -->
     <div class="sticky-tabs">
       <div class="tabs-container">
@@ -1593,4 +1593,269 @@ input:checked + .toggle-label:before {
     min-width: calc(50% - 4px);
   }
 }
+
+/* 黑夜模式 */
+.dark-mode {
+  .era-rule-panel {
+    background: #1f2937;
+    color: #e5e7eb;
+  }
+
+  .sticky-tabs {
+    background: #1f2937;
+    border-bottom-color: #374151;
+  }
+
+  .tabs-container {
+    background: #1f2937;
+  }
+
+  .tabs-container button {
+    color: #9ca3af;
+
+    &.active {
+      color: #818cf8;
+      border-bottom-color: #818cf8;
+    }
+
+    &:hover:not(.active) {
+      color: #e5e7eb;
+      background: rgba(255, 255, 255, 0.05);
+    }
+  }
+
+  .json-tree-box {
+    background: #111827;
+    border-color: #374151;
+  }
+
+  .empty-state {
+    color: #9ca3af;
+  }
+
+  .rule-card {
+    background: #1f2937;
+    border-color: #374151;
+
+    .rule-header {
+      background: #374151;
+      color: #e5e7eb;
+
+      &:hover {
+        background: #4b5563;
+      }
+    }
+
+    .rule-body {
+      border-top-color: #374151;
+    }
+
+    .rule-name {
+      color: #e5e7eb;
+    }
+
+    .rule-status {
+      color: #9ca3af;
+      .status-indicator {
+        &.enabled {
+          background: #10b981;
+        }
+
+        &:not(.enabled) {
+          background: #ef4444;
+        }
+      }
+    }
+
+    .rule-content {
+      .rule-details {
+        color: #cbd5e1;
+        div {
+          color: #cbd5e1;
+        }
+        strong {
+          color: #e5e7eb;
+        }
+      }
+
+      .handle-list {
+        .handle-item {
+          background: #111827;
+          border-color: #374151;
+
+          .handle-header {
+            color: #e5e7eb;
+            strong {
+              color: #fff;
+            }
+          }
+        }
+      }
+
+      .handle-expression {
+        color: #cbd5e1;
+        strong {
+          color: #e5e7eb;
+        }
+      }
+    }
+  }
+
+  .btn {
+    background: #374151;
+    color: #e5e7eb;
+    border-color: #4b5563;
+
+    &:hover {
+      background: #4b5563;
+      color: #fff;
+    }
+
+    &.primary {
+      background: #4f46e5;
+      color: #f8fafc;
+
+      &:hover {
+        background: #6366f1;
+      }
+    }
+
+    &.danger {
+      background: #991b1b;
+      color: #fecaca;
+
+      &:hover {
+        background: #dc2626;
+        color: #fff;
+      }
+    }
+  }
+
+  h2 {
+    color: #e5e7eb;
+  }
+
+  .field label {
+    color: #cbd5e1;
+  }
+
+  .input-label {
+    color: #cbd5e1;
+  }
+
+  input, select {
+    background: #111827;
+    color: #e5e7eb;
+    border-color: #374151;
+
+    &:focus {
+      border-color: #818cf8;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+    }
+
+    &::placeholder {
+      color: #6b7280;
+    }
+  }
+
+  /* Handle 编辑区域 */
+  .handle-area {
+    background: #1f2937;
+    border: 1px solid #374151;
+
+    .handle-area-header {
+      color: #e5e7eb;
+    }
+  }
+
+  .rule-if-config {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: #4b5563 !important;
+
+    .dsl-header label span {
+      color: #9ca3af !important;
+    }
+  }
+
+  .handle-editor {
+    background: #111827;
+    border-color: #374151;
+
+    .handle-header {
+      border-bottom-color: #374151;
+
+      .handle-name-input {
+        background: #1f2937;
+        color: #e5e7eb;
+        border-color: #374151;
+
+        &:focus {
+          border-color: #818cf8;
+        }
+      }
+    }
+  }
+
+  .dsl-builder {
+    .dsl-header {
+      label {
+        color: #cbd5e1;
+      }
+    }
+
+    .dsl-preview input {
+      background: #1f2937;
+      color: #e5e7eb;
+      border-color: #374151;
+
+      &:hover {
+        background: #374151;
+        border-color: #6b7280;
+      }
+    }
+  }
+
+  .toggle-switch {
+    .toggle-label {
+      background: #4b5563;
+
+      &::before {
+        background: #d1d5db;
+      }
+    }
+
+    input:checked + .toggle-label {
+      background: #4f46e5;
+
+      &::before {
+        background: #fff;
+      }
+    }
+  }
+
+  .fold-indicator {
+    color: #9ca3af;
+  }
+
+  .status-message {
+    &.success {
+      background: rgba(6, 95, 70, 0.3);
+      color: #a7f3d0;
+      border-color: #065f46;
+    }
+
+    &.error {
+      background: rgba(153, 27, 27, 0.3);
+      color: #fecaca;
+      border-color: #991b1b;
+    }
+
+    &.warning {
+      background: rgba(146, 64, 14, 0.3);
+      color: #fde68a;
+      border-color: #92400e;
+    }
+  }
+}
+
 </style>

@@ -1,5 +1,5 @@
 <template>
-  <div v-if="visible" class="dsl-tester-modal">
+  <div v-if="visible" class="dsl-tester-modal" :class="{ 'dark-mode': uiStore.darkMode }">
     <div class="dsl-tester-content">
       <!-- 1. 顶部工具栏 (Header + Actions) -->
       <div class="tester-header">
@@ -87,11 +87,14 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { EraDataHandler } from '../../../EraDataHandler/EraDataHandler';
-import { eraLogger } from '../../../utils/EraHelperLogger';
-import { EraDataRule } from '../../../EraDataHandler/types/EraDataRule';
+import { EraDataHandler } from '@/ERA助手/EraDataHandler/EraDataHandler';
+import { eraLogger } from '@/ERA助手/utils/EraHelperLogger';
+import { EraDataRule } from '@/ERA助手/EraDataHandler/types/EraDataRule';
 import FileImportExport from '../File/FileImportExport.vue';
-import { useEraEditStore } from '../../../stores/EraEditStore';
+import { useEraEditStore } from '@/ERA助手/stores/EraEditStore';
+import { useUiStore } from '@/ERA助手/stores/UIStore';
+
+const uiStore = useUiStore();
 
 interface Props {
   visible?: boolean;
@@ -579,6 +582,155 @@ $header-height: 60px;
   .btn {
     padding: 0 10px;
     font-size: 12px;
+  }
+}
+
+/* 黑夜模式 */
+.dark-mode {
+  .dsl-tester-modal {
+    background: rgba(15, 23, 42, 0.85);
+  }
+
+  .dsl-tester-content {
+    background: #1f2937;
+    color: #e2e8f0;
+  }
+
+  .tester-header {
+    background: #374151;
+    border-bottom: 1px solid #4b5563;
+
+    .header-left {
+      h3 {
+        color: #e2e8f0;
+      }
+
+      .data-badge {
+        background: #164e63;
+        color: #bae6fd;
+        border: 1px solid #0891b2;
+      }
+    }
+  }
+
+  .tester-body {
+    background: #1f2937;
+  }
+
+  .panel-left {
+    background: #374151;
+    border-right: 1px solid #4b5563;
+  }
+
+  .panel-right {
+    background: #111827;
+  }
+
+  .panel-header {
+    background: #374151;
+    border-bottom: 1px solid #4b5563;
+    color: #cbd5e1;
+
+    &.dark-mode & {
+      background: #1f2937;
+      border-bottom: 1px solid #374151;
+      color: #9ca3af;
+    }
+  }
+
+  .rule-card {
+    background: #4b5563;
+    border: 1px solid #6b7280;
+    color: #e2e8f0;
+
+    &:hover {
+      border-color: #9ca3af;
+    }
+
+    .rule-name {
+      color: #e2e8f0;
+    }
+
+    .status-dot {
+      background: #9ca3af;
+
+      &.active {
+        background: #34d399;
+        box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.15);
+      }
+    }
+
+    .path-code {
+      background: #6b7280;
+      color: #e2e8f0;
+    }
+  }
+
+  .output-container {
+    &::-webkit-scrollbar-track {
+      background: #1f2937;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: #4b5563;
+      border: 2px solid #1f2937;
+    }
+    &::-webkit-scrollbar-thumb:hover {
+      background: #6b7280;
+    }
+  }
+
+  .console-output {
+    color: #d1d5db;
+    background: #1f2937;
+  }
+
+  .empty-state,
+  .empty-result {
+    color: #9ca3af;
+  }
+
+  .btn {
+    background: #4b5563;
+    color: #e2e8f0;
+    border: 1px solid #6b7280;
+
+    &:hover:not(:disabled) {
+      background: #6b7280;
+      color: #f8fafc;
+    }
+
+    &.primary {
+      background: #4f46e5;
+      color: #f8fafc;
+
+      &:hover:not(:disabled) {
+        background: #6366f1;
+      }
+    }
+
+    &:disabled {
+      background: #4b5563;
+      color: #9ca3af;
+    }
+  }
+
+  .close-btn {
+    color: #9ca3af;
+
+    &:hover {
+      background: #4b5563;
+      color: #f8fafc;
+    }
+  }
+
+  :deep(.file-import-export button) {
+    background: #4b5563;
+    border: 1px solid #6b7280;
+    color: #e2e8f0;
+
+    &:hover {
+      background: #6b7280;
+    }
   }
 }
 </style>

@@ -1,5 +1,5 @@
 <template>
-  <div v-if="visible" class="dsl-builder-modal" @click.self="handleClose">
+  <div v-if="visible" class="dsl-builder-modal" :class="{ 'dark-mode': uiStore.darkMode }" @click.self="handleClose">
     <div class="dsl-builder-content">
       <div class="dsl-header">
         <h3>{{ title }}</h3>
@@ -717,5 +717,130 @@ watch(
   background: white !important;
   color: #111827 !important;
   -webkit-text-fill-color: #111827 !important;
+}
+
+/* 黑夜模式 */
+.dark-mode {
+  .dsl-builder-modal {
+    background: rgba(0, 0, 0, 0.75);
+  }
+
+  .dsl-builder-content {
+    background: #1f2937;
+    color: #e2e8f0;
+  }
+
+  .dsl-header {
+    background: #374151;
+    border-bottom: 1px solid #4b5563;
+    color: #e2e8f0;
+  }
+
+  .dsl-components {
+    border-right: 1px solid #4b5563;
+    background: #374151;
+  }
+
+  .component-section h4 {
+    color: #e2e8f0;
+  }
+
+  .path-dropdown {
+    background: #1f2937 !important;
+    color: #e2e8f0 !important;
+    border-color: #4b5563;
+  }
+
+  .value-input input,
+  .value-input select {
+    background: #1f2937 !important;
+    color: #e2e8f0 !important;
+    border-color: #4b5563;
+  }
+
+  .selected-path {
+    background: #1e3a8a;
+    border-color: #3b82f6;
+    color: #bfdbfe;
+  }
+
+  .dsl-preview-area {
+    color: #e2e8f0;
+  }
+
+  .expression-preview,
+  .expression-editor {
+    background: #1f2937;
+    border-color: #4b5563;
+    color: #e2e8f0;
+  }
+
+  .expression-preview.readable {
+    background: #164e63;
+    border-color: #0891b2;
+  }
+
+  .preview-header {
+    color: #cbd5e1;
+
+    .hint {
+      color: #9ca3af;
+    }
+  }
+
+  .expression-display {
+    background: #374151;
+    color: #e2e8f0;
+  }
+
+  .readable-text {
+    color: #6ee7b7;
+  }
+
+  .expression-raw {
+    color: #e2e8f0;
+  }
+
+  .expression-raw pre {
+    background: #374151;
+    color: #cbd5e1;
+  }
+
+  .expression-editor textarea {
+    background: #1f2937 !important;
+    color: #e2e8f0 !important;
+    border-color: #4b5563;
+  }
+
+  .btn {
+    background: #4b5563;
+    color: #e2e8f0;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+
+    &:hover {
+      background: #6b7280;
+      color: #f8fafc;
+    }
+
+    &.primary {
+      background: #4f46e5;
+      color: #f8fafc;
+
+      &:hover {
+        background: #6366f1;
+        color: #f8fafc;
+      }
+    }
+
+    &.danger {
+      background: #dc2626;
+      color: #f8fafc;
+
+      &:hover {
+        background: #ef4444;
+        color: #f8fafc;
+      }
+    }
+  }
 }
 </style>

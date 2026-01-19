@@ -1,5 +1,5 @@
 <template>
-  <div class="json-node" :style="{ marginLeft: `${node.depth * 20}px` }">
+  <div class="json-node" :class="{ 'dark-mode': uiStore.darkMode }" :style="{ marginLeft: `${node.depth * 20}px` }">
     <div class="line" :class="{ 'is-editing': isEditing }">
       <!-- 折叠/展开箭头 -->
       <span v-if="!node.isLeaf" class="arrow" :class="{ expanded: node.expanded }" @click="emit('toggleExpand', node)">
@@ -100,6 +100,9 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue';
 import type { JsonNodeType } from '../../types/JsonNode';
+import { useUiStore } from '@/ERA助手/stores/UIStore';
+
+const uiStore = useUiStore();
 
 const props = defineProps<{
   node: JsonNodeType;
@@ -308,5 +311,79 @@ watch(isEditing, isNowEditing => {
 .children-container {
   padding-left: 10px;
   border-left: 1px dashed #e2e8f0;
+}
+
+/* 黑夜模式 */
+.dark-mode {
+  .line {
+    &:hover {
+      background-color: #374151;
+    }
+  }
+
+  .arrow {
+    color: #94a3b8;
+
+    &.expanded {
+      color: #cbd5e1;
+    }
+  }
+
+  .key {
+    color: #e2e8f0;
+  }
+
+  .value {
+    &.type-string {
+      color: #34d399;
+    }
+    &.type-number {
+      color: #f87171;
+    }
+    &.type-boolean {
+      color: #a78bfa;
+    }
+    &.type-null {
+      color: #9ca3af;
+    }
+  }
+
+  .preview {
+    color: #9ca3af;
+  }
+
+  .edit-select,
+  .edit-input {
+    background-color: #374151 !important;
+    color: #e2e8f0 !important;
+    border-color: #4b5563;
+  }
+
+  .edit-select option {
+    background: #374151 !important;
+    color: #e2e8f0 !important;
+  }
+
+  .btn-action {
+    color: #9ca3af;
+
+    &:hover {
+      background-color: #4b5563;
+      color: #f8fafc;
+    }
+
+    &.danger:hover {
+      background-color: #450a0a;
+      color: #fecaca;
+    }
+
+    &.save {
+      color: #34d399;
+    }
+
+    &.cancel {
+      color: #f87171;
+    }
+  }
 }
 </style>

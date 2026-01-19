@@ -1,5 +1,5 @@
 <template>
-  <div class="search-box">
+  <div class="search-box" :class="{ 'dark-mode': uiStore.darkMode }">
     <svg class="search-icon" viewBox="0 0 16 16" fill="currentColor">
       <path
         d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"
@@ -17,6 +17,10 @@
 </template>
 
 <script setup lang="ts">
+import { useUiStore } from '@/ERA助手/stores/UIStore';
+
+const uiStore = useUiStore();
+
 defineProps<{
   modelValue: string;
 }>();
@@ -96,6 +100,40 @@ defineEmits<{
 
   .search-input::placeholder {
     color: #94a3b8 !important;
+  }
+}
+
+/* 黑夜模式 */
+.dark-mode {
+  .search-box {
+    border-bottom: 1px solid #4b5563;
+  }
+
+  .search-icon {
+    color: #94a3b8;
+  }
+
+  .search-input {
+    background: #374151 !important;
+    color: #e2e8f0 !important;
+    border-color: #4b5563 !important;
+
+    &:focus {
+      border-color: #818cf8;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+
+    &::placeholder {
+      color: #6b7280 !important;
+    }
+  }
+
+  .search-clear {
+    color: #94a3b8;
+
+    &:hover {
+      color: #cbd5e1;
+    }
   }
 }
 </style>

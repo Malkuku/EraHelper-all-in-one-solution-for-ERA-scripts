@@ -1,7 +1,7 @@
 <!-- components/EraConfirmModal.vue -->
 <template>
   <Transition name="modal">
-    <div v-if="visible" class="modal-overlay" @click.self="handleCancel">
+    <div v-if="visible" class="modal-overlay" :class="{ 'dark-mode': uiStore.darkMode }" @click.self="handleCancel">
       <div class="modal-content">
         <div class="modal-header">
           <h3>{{ title }}</h3>
@@ -35,7 +35,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { watch } from 'vue';
+import { useUiStore } from '@/ERA助手/stores/UIStore';
+
+const uiStore = useUiStore();
 
 interface Props {
   visible: boolean;
@@ -242,6 +245,74 @@ watch(
   .modal-footer {
     padding-left: 20px;
     padding-right: 20px;
+  }
+}
+
+/* 黑夜模式 */
+.dark-mode {
+  .modal-overlay {
+    background: rgba(0, 0, 0, 0.75);
+  }
+
+  .modal-content {
+    background: #1f2937;
+    color: #e2e8f0;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+
+  .modal-header {
+    border-bottom: 1px solid #374151;
+
+    h3 {
+      color: #e2e8f0;
+    }
+
+    .modal-close {
+      color: #9ca3af;
+
+      &:hover {
+        background: #4b5563;
+        color: #f8fafc;
+      }
+    }
+  }
+
+  .modal-body {
+    color: #cbd5e1;
+
+    p {
+      color: #cbd5e1;
+    }
+  }
+
+  .modal-footer {
+    border-top: 1px solid #374151;
+  }
+
+  .btn {
+    background: #4b5563;
+    color: #e2e8f0;
+
+    &:hover {
+      background: #6b7280;
+    }
+
+    &:active {
+      background: #4b5563;
+    }
+
+    &.primary {
+      background: #4f46e5;
+      color: #f8fafc;
+
+      &:hover {
+        background: #6366f1;
+      }
+
+      &:active {
+        background: #4f46e5;
+      }
+    }
   }
 }
 </style>

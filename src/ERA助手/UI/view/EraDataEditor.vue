@@ -1,5 +1,5 @@
 <template>
-  <div class="stat-data-editor">
+  <div class="stat-data-editor" :class="{ 'dark-mode': uiStore.darkMode }">
     <!-- 顶部工具栏 -->
     <div class="editor-toolbar">
       <div class="toolbar-left">
@@ -262,9 +262,11 @@ import FileImportExport from '../components/File/FileImportExport.vue';
 import PathSearch from '../components/Search/PathSearch.vue';
 import { eraLogger } from '../../utils/EraHelperLogger';
 import JsonTreeEdit from '../components/JsonNode/JsonTreeEdit.vue';
+import { useUiStore } from '@/ERA助手/stores/UIStore';
 
 // Store
 const eraEditStore = useEraEditStore();
+const uiStore = useUiStore();
 
 // --- 响应式数据 ---
 const loading = ref(false);
@@ -1489,6 +1491,205 @@ textarea::placeholder {
 
   .btn {
     width: 100%;
+  }
+}
+
+
+/* 黑夜模式 */
+.dark-mode {
+  .stat-data-editor {
+    background: #1f2937;
+    color: #e2e8f0;
+  }
+
+  input,
+  select,
+  textarea,
+  option {
+    background: #374151 !important;
+    color: #e2e8f0 !important;
+    border-color: #4b5563 !important;
+  }
+
+  select option {
+    background: #374151 !important;
+    color: #e2e8f0 !important;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    border-color: #818cf8 !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2) !important;
+  }
+
+  input:disabled,
+  select:disabled,
+  textarea:disabled {
+    background: #4b5563 !important;
+    color: #9ca3af !important;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #9ca3af !important;
+  }
+
+  .editor-toolbar {
+    background: linear-gradient(135deg, #1f2937 0%, #374151 100%) !important;
+    border-bottom: 1px solid #4b5563;
+  }
+
+  .toolbar-btn {
+    background: #374151;
+    color: #cbd5e1;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+
+    &:hover:not(:disabled) {
+      background: #4b5563;
+    }
+  }
+
+  .change-indicator {
+    background: #713f12;
+    border-color: #f59e0b;
+    color: #fef3c7;
+
+    .dot {
+      background: #f59e0b;
+    }
+  }
+
+  .status-text {
+    color: #9ca3af;
+
+    &.status-loading {
+      color: #818cf8;
+    }
+  }
+
+  .loading-container .spinner {
+    border: 3px solid #4b5563;
+    border-top-color: #818cf8;
+  }
+
+  .empty-container {
+    color: #9ca3af;
+  }
+
+  .empty-btn {
+    background: #4f46e5;
+    color: #f8fafc;
+
+    &:hover {
+      background: #6366f1;
+    }
+  }
+
+  .mode-btn {
+    border: 1px solid #4b5563;
+    background: #374151;
+    color: #cbd5e1;
+
+    &:hover {
+      background: #4b5563;
+      border-color: #6b7280;
+    }
+
+    &.active {
+      background: #4f46e5;
+      border-color: #4f46e5;
+      color: #f8fafc;
+    }
+  }
+
+  .tool-btn {
+    border: 1px solid #4b5563;
+    background: #374151;
+    color: #cbd5e1;
+
+    &:hover:not(:disabled) {
+      background: #4b5563;
+      border-color: #6b7280;
+    }
+
+    &.danger {
+      color: #fca5a5;
+      border-color: #7f1d1d;
+
+      &:hover {
+        background: #450a0a;
+        border-color: #991b1b;
+      }
+    }
+  }
+
+  .tree-editor {
+    &::-webkit-scrollbar-track {
+      background: #374151;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: #4b5563;
+      border-radius: 4px;
+    }
+    &::-webkit-scrollbar-thumb:hover {
+      background: #6b7280;
+    }
+  }
+
+  .raw-editor {
+    background: #1f2937 !important;
+    color: #e2e8f0 !important;
+  }
+
+  .editor-header {
+    background: #374151 !important;
+    border-bottom: 1px solid #4b5563;
+  }
+
+  .json-editor {
+    background: #1f2937;
+    color: #e2e8f0;
+    border-color: #4b5563;
+  }
+
+  .json-error {
+    color: #f87171;
+  }
+
+  .json-success {
+    color: #34d399;
+  }
+
+  .modal-overlay {
+    background: rgba(0, 0, 0, 0.75);
+  }
+
+  .modal {
+    background: #1f2937;
+    border: 1px solid #4b5563;
+  }
+
+  .modal .form-input,
+  .modal .form-select {
+    background: #374151;
+    color: #e2e8f0;
+    border-color: #4b5563;
+  }
+
+  .modal .btn {
+    background: #4b5563;
+    color: #e2e8f0;
+    border-color: #6b7280;
+
+    &.primary {
+      background: #4f46e5;
+      color: #f8fafc;
+
+      &:hover {
+        background: #6366f1;
+      }
+    }
   }
 }
 </style>

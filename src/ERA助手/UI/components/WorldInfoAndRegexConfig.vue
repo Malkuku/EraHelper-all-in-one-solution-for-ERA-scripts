@@ -1,5 +1,5 @@
 <template>
-  <div class="config-container">
+  <div class="config-container" :class="{ 'dark-mode': uiStore.darkMode }">
     <!-- 世界书配置部分 -->
     <div class="collapsible-section">
       <div class="section-header" @click="toggleWorldInfoSection">
@@ -116,6 +116,9 @@ import { useAsyncAnalyzeStore } from '../../stores/AsyncAnalyzeStore';
 import { storeToRefs } from 'pinia';
 import { WorldInfoUtil } from '../../../Utils/WorldInfoUtil';
 import FileImportExport from './File/FileImportExport.vue';
+import { useUiStore } from '@/ERA助手/stores/UIStore';
+
+const uiStore = useUiStore();
 
 const asyncAnalyzeStore = useAsyncAnalyzeStore();
 const { analyzeRores, updateRores, ignoreRores, regexList } = storeToRefs(asyncAnalyzeStore);
@@ -549,4 +552,99 @@ watch(
     }
   }
 }
+
+
+/* 黑夜模式 */
+.dark-mode {
+  .config-container {
+    background: #1f2937;
+    color: #e2e8f0;
+  }
+
+  .collapsible-section {
+    border: 1px solid #4b5563;
+  }
+
+  .section-header {
+    background: #374151;
+    color: #e2e8f0;
+    border-color: #4b5563;
+  }
+
+  .subsection-header {
+    color: #cbd5e1;
+  }
+
+  .section-content {
+    background: #374151;
+  }
+
+  .config-section {
+    h5 {
+      color: #cbd5e1;
+    }
+  }
+
+  .entry-list {
+    .entry-select,
+    .regex-input {
+      background: #1f2937;
+      color: #e2e8f0;
+      border-color: #4b5563;
+    }
+
+    .btn {
+      &.add-btn {
+        background: #4f46e5;
+        color: #f8fafc;
+
+        &:hover {
+          background: #6366f1;
+        }
+      }
+
+      &.remove-btn {
+        background: #dc2626;
+        color: #f8fafc;
+
+        &:hover {
+          background: #ef4444;
+        }
+      }
+    }
+  }
+
+  .actions {
+    .btn {
+      background: #4b5563;
+      color: #e2e8f0;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+
+      &:hover:not(.disabled) {
+        background: #6b7280;
+        color: #f8fafc;
+      }
+
+      &.primary {
+        background: #4f46e5;
+        color: #f8fafc;
+
+        &:hover:not(:disabled) {
+          background: #6366f1;
+          color: #f8fafc;
+        }
+      }
+
+      &.danger {
+        background: #dc2626;
+        color: #f8fafc;
+
+        &:hover:not(:disabled) {
+          background: #ef4444;
+        }
+      }
+    }
+  }
+}
+
 </style>

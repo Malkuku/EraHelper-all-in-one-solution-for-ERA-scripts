@@ -1,5 +1,5 @@
 <template>
-  <div v-if="visible" class="mask">
+  <div v-if="visible" class="mask" :class="{ 'dark-mode': uiStore.darkMode }">
     <div class="card">
       <!-- 顶部按钮组 -->
       <div class="top-button-group">
@@ -16,7 +16,6 @@
         <button class="btn" :class="{ active: currentRoute === '/Version' }" @click="goToRoute('/Version')">
           <span class="btn-text">🍎版本信息</span>
         </button>
-
         <!--        <button-->
         <!--          v-if="true"-->
         <!--          class="btn"-->
@@ -26,6 +25,11 @@
         <!--          <span class="btn-text">临时测试</span>-->
         <!--        </button>-->
       </div>
+
+      <!-- 黑夜模式切换按钮 (新位置：独立浮动) -->
+      <button class="mode-switch" title="切换黑夜模式" @click="toggleDarkMode">
+        {{ uiStore.darkMode ? '🌙' : '☀️' }}
+      </button>
 
       <!-- 关闭按钮 -->
       <button class="close-x" title="关闭" @click="close">&times;</button>
@@ -46,8 +50,8 @@ import { useUiStore } from '../../stores/UIStore';
 import { computed, ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 
-const UiStore = useUiStore();
-const visible = computed(() => UiStore.showUI);
+const uiStore = useUiStore();
+const visible = computed(() => uiStore.showUI);
 const router = useRouter();
 const route = useRoute();
 const currentRoute = ref(route.path);
@@ -61,11 +65,16 @@ watch(
 );
 
 const close = () => {
-  UiStore.showUI = false;
+  uiStore.showUI = false;
 };
 
 const goToRoute = (path: string) => {
   router.push(path);
+};
+
+const toggleDarkMode = () => {
+  uiStore.darkMode = !uiStore.darkMode;
+  uiStore.saveModeSetting();
 };
 </script>
 
@@ -224,6 +233,33 @@ const goToRoute = (path: string) => {
   margin-top: 2px;
 }
 
+/* 黑夜模式切换按钮样式 (新) */
+.mode-switch {
+  position: absolute;
+  top: 62px;
+  right: 54px; /* 位于关闭按钮左侧 */
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: #f8fafc;
+  border-radius: 50%;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+  z-index: 2;
+
+  &:hover {
+    background: #e2e8f0;
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+}
+
 /* 调整关闭按钮位置 */
 .close-x {
   position: absolute;
@@ -302,6 +338,14 @@ const goToRoute = (path: string) => {
     font-size: 12px;
   }
 
+  .mode-switch {
+    top: 58px;
+    right: 46px;
+    width: 26px;
+    height: 26px;
+    font-size: 14px;
+  }
+
   .close-x {
     top: 58px;
     right: 12px;
@@ -313,5 +357,72 @@ const goToRoute = (path: string) => {
   .content {
     border-radius: 10px;
   }
+}
+
+/* 黑夜模式样式 */
+.mask.dark-mode {
+  background: rgba(0, 0, 0, 0.85);
+}
+
+.dark-mode .card {
+  background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.dark-mode .top-button-group {
+  background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+  border-bottom: 1px solid rgba(100, 100, 100, 0.5);
+}
+
+.dark-mode .router-view-container {
+  background: rgba(30, 30, 30, 0.7);
+  border-top: 1px solid rgba(100, 100, 100, 0.3);
+}
+
+.dark-mode .content {
+  background: #2d3748;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(0, 0, 0, 0.2);
+}
+
+.dark-mode .btn {
+  background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+  color: #cbd5e0;
+  box-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  &:hover {
+    color: #e2e8f0;
+  }
+}
+
+.dark-mode .mode-switch {
+  background: #4a5568;
+  color: #cbd5e0;
+
+  &:hover {
+    background: #718096;
+    color: white;
+  }
+}
+
+.dark-mode .close-x {
+  background: #4a5568;
+  color: #cbd5e0;
+
+  &:hover {
+    background: #e53e3e;
+  }
+}
+
+.dark-mode .btn.active {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  box-shadow:
+    0 2px 8px rgba(79, 70, 229, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 </style>

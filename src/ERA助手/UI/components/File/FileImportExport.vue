@@ -1,5 +1,5 @@
 <template>
-  <div class="file-import-export">
+  <div class="file-import-export" :class="{ 'dark-mode': uiStore.darkMode }">
     <input ref="fileInputRef" type="file" :accept="accept" style="display: none" @change="handleFileImport" />
 
     <div v-if="showButtons" class="button-group">
@@ -38,6 +38,9 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import EraConfirmModal from '../Dialog/EraConfirmModal.vue';
+import { useUiStore } from '@/ERA助手/stores/UIStore';
+
+const uiStore = useUiStore();
 
 // Props 定义
 interface Props {
@@ -301,5 +304,59 @@ function showMessage(text: string, type: 'success' | 'error' | 'warning') {
   background: #fef3c7;
   color: #92400e;
   border: 1px solid #fde68a;
+}
+
+/* 黑夜模式 */
+.dark-mode {
+  .btn {
+    background: #4b5563;
+    color: #e2e8f0;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+
+    &:hover:not(.disabled) {
+      background: #6b7280;
+      color: #f8fafc;
+    }
+
+    &.primary {
+      background: #4f46e5;
+      color: #f8fafc;
+
+      &:hover:not(.disabled) {
+        background: #6366f1;
+        color: #f8fafc;
+      }
+    }
+
+    &.disabled {
+      opacity: 0.6;
+      color: #9ca3af;
+    }
+  }
+
+  .loading-spinner {
+    border: 2px solid #4b5563;
+    border-top: 2px solid #818cf8;
+  }
+
+  .status-message {
+    &.success {
+      background: #065f46;
+      color: #a7f3d0;
+      border: 1px solid #065f46;
+    }
+
+    &.error {
+      background: #991b1b;
+      color: #fecaca;
+      border: 1px solid #991b1b;
+    }
+
+    &.warning {
+      background: #92400e;
+      color: #fef08a;
+      border: 1px solid #92400e;
+    }
+  }
 }
 </style>
