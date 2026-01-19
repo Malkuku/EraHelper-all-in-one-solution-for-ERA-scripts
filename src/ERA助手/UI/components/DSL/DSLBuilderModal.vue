@@ -745,17 +745,26 @@ watch(
     color: #e2e8f0;
   }
 
+  /* 修复下拉框文字颜色 */
   .path-dropdown {
     background: #1f2937 !important;
     color: #e2e8f0 !important;
+    -webkit-text-fill-color: #e2e8f0 !important;
     border-color: #4b5563;
   }
 
+  /* 修复普通输入框文字颜色 */
   .value-input input,
   .value-input select {
     background: #1f2937 !important;
     color: #e2e8f0 !important;
+    -webkit-text-fill-color: #e2e8f0 !important;
     border-color: #4b5563;
+
+    &::placeholder {
+      color: #9ca3af;
+      -webkit-text-fill-color: #9ca3af !important;
+    }
   }
 
   .selected-path {
@@ -806,10 +815,18 @@ watch(
     color: #cbd5e1;
   }
 
+  /* 优化 DSL 文本编辑框：更深的背景，更亮的文字，强制覆盖填充色 */
   .expression-editor textarea {
-    background: #1f2937 !important;
-    color: #e2e8f0 !important;
+    background: #0f172a !important; /* 使用更深的背景色 (Slate-900) 突出显示 */
+    color: #f1f5f9 !important;      /* 使用亮白色文字 (Slate-100) */
+    -webkit-text-fill-color: #f1f5f9 !important; /* 关键修复：覆盖 light-theme 的填充色 */
     border-color: #4b5563;
+    font-weight: 500;               /* 稍微加粗字体增加清晰度 */
+
+    &:focus {
+      border-color: #818cf8;
+      box-shadow: 0 0 0 1px rgba(129, 140, 248, 0.3);
+    }
   }
 
   .btn {
