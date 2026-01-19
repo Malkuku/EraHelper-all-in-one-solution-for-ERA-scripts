@@ -151,7 +151,8 @@ export class DSLEvaluator {
         return Math.max(...args.map(Number));
       case 'min':
         return Math.min(...args.map(Number));
-      case 'random': { // 随机数函数：#[{random}&[{num}min]&[{num}max]] 从范围内生成一个随机数
+      case 'random': {
+        // 随机数函数：#[{random}&[{num}min]&[{num}max]] 从范围内生成一个随机数
         if (args.length !== 2) {
           throw new Error(`函数 'random' 需要恰好2个参数，但提供了 ${args.length} 个参数`);
         }

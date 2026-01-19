@@ -1,5 +1,10 @@
 <template>
-  <div v-if="visible" class="simulation-test-modal" :class="{ 'dark-mode': uiStore.darkMode }" @click.self="handleClose">
+  <div
+    v-if="visible"
+    class="simulation-test-modal"
+    :class="{ 'dark-mode': uiStore.darkMode }"
+    @click.self="handleClose"
+  >
     <div class="simulation-test-content">
       <div class="tester-header">
         <h3>模拟测试</h3>

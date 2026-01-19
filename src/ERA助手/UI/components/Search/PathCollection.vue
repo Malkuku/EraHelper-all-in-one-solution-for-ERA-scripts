@@ -1,5 +1,9 @@
 <template>
-  <div v-show="uiStore.collectedPaths.length > 0" class="path-collection-box" :class="{ 'dark-mode': uiStore.darkMode }">
+  <div
+    v-show="uiStore.collectedPaths.length > 0"
+    class="path-collection-box"
+    :class="{ 'dark-mode': uiStore.darkMode }"
+  >
     <div class="path-collection-header" @click="toggleCollection">
       <span>已收集路径 ({{ uiStore.collectedPaths.length }})</span>
       <span class="toggle-icon">{{ isExpanded ? '▲' : '▼' }}</span>
@@ -140,7 +144,7 @@ const clearAllPaths = () => {
 }
 
 /* 黑夜模式 */
-.dark-mode{
+.dark-mode {
   .path-collection-box {
     border-color: #4b5563;
     background: #1f2937;

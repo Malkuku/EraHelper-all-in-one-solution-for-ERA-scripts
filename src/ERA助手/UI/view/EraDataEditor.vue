@@ -1494,7 +1494,6 @@ textarea::placeholder {
   }
 }
 
-
 /* 黑夜模式 */
 .dark-mode {
   .stat-data-editor {

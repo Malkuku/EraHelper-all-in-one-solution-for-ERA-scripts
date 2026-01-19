@@ -73,7 +73,7 @@ export const reSendEraUpdate = async () => {
  * 处理接收到的massage_received事件
  */
 export const handleMessageReceived = async (message_id: number) => {
-  try{
+  try {
     if (getLastMessageId() == 0 || message_id == 0) {
       //不处理0层
       return;
@@ -95,7 +95,9 @@ export const handleMessageReceived = async (message_id: number) => {
     getAsyncAnalyzeStore().isUpdateEra = true;
 
     handleKatEraUpdate(); //让正文先显示出来
-  }finally { /* empty */ }
+  } finally {
+    /* empty */
+  }
 };
 
 /**
@@ -221,7 +223,11 @@ export const handleKatEraUpdate = async () => {
     ];
     eraLogger.log('模型来源: ', modelSource.value);
     //1.sample 或者 external的预设模型与in_use不一致时，先切换预设
-    if(modelSource.value == 'sample' && simplePresetName.value !== "in_use" && originalPresetName !== simplePresetName.value){
+    if (
+      modelSource.value == 'sample' &&
+      simplePresetName.value !== 'in_use' &&
+      originalPresetName !== simplePresetName.value
+    ) {
       const isLoadPresetSuccess = loadPreset(simplePresetName.value);
       if (!isLoadPresetSuccess) {
         toastr.error(`预设切换失败: ${simplePresetName.value} 请检查预设是否存在`);
@@ -229,7 +235,11 @@ export const handleKatEraUpdate = async () => {
         toastr.info(`已切换预设至: ${simplePresetName.value}`);
       }
     }
-    if(modelSource.value == 'external' && customModelSettings.value.presetName !== "in_use" && originalPresetName !== customModelSettings.value.presetName){
+    if (
+      modelSource.value == 'external' &&
+      customModelSettings.value.presetName !== 'in_use' &&
+      originalPresetName !== customModelSettings.value.presetName
+    ) {
       const isLoadPresetSuccess = loadPreset(customModelSettings.value.presetName);
       if (!isLoadPresetSuccess) {
         toastr.error(`预设切换失败: ${customModelSettings.value.presetName} 请检查预设是否存在`);
@@ -240,13 +250,7 @@ export const handleKatEraUpdate = async () => {
 
     const result =
       modelSource.value == 'sample'
-        ? await PromptUtil.sendPrompt(
-          user_input,
-          promptInjects,
-          maxMessageFloor.value,
-          is_should_stream,
-          null,
-          null)
+        ? await PromptUtil.sendPrompt(user_input, promptInjects, maxMessageFloor.value, is_should_stream, null, null)
         : modelSource.value == 'profile'
           ? await PromptUtil.sendPrompt(
               user_input,
@@ -274,16 +278,22 @@ export const handleKatEraUpdate = async () => {
     toastr.error('分步分析处理失败');
     eraLogger.error('分步分析处理失败: ', e);
   } finally {
-    if((modelSource.value == 'sample' && simplePresetName.value !== "in_use" && originalPresetName !== simplePresetName.value)
-      || (modelSource.value == 'external' && customModelSettings.value.presetName !== "in_use" && originalPresetName !== customModelSettings.value.presetName)){
+    if (
+      (modelSource.value == 'sample' &&
+        simplePresetName.value !== 'in_use' &&
+        originalPresetName !== simplePresetName.value) ||
+      (modelSource.value == 'external' &&
+        customModelSettings.value.presetName !== 'in_use' &&
+        originalPresetName !== customModelSettings.value.presetName)
+    ) {
       loadPreset(originalPresetName);
-      toastr.info(`切回预设: ${originalPresetName}`, );
+      toastr.info(`切回预设: ${originalPresetName}`);
     }
     getAsyncAnalyzeStore().isUpdateEra = false;
 
     //await eventEmit(ERAEvents.FORCE_SYNC);
 
-    await setChatMessages([{message_id: getLastMessageId()}]);
+    await setChatMessages([{ message_id: getLastMessageId() }]);
     //发送事件-声明该部分消息已处理完毕
     await eventEmit(ERAEvents.FORCE_SYNC);
     await eventEmit('kat:handle_era_finished');

@@ -818,10 +818,10 @@ watch(
   /* 优化 DSL 文本编辑框：更深的背景，更亮的文字，强制覆盖填充色 */
   .expression-editor textarea {
     background: #0f172a !important; /* 使用更深的背景色 (Slate-900) 突出显示 */
-    color: #f1f5f9 !important;      /* 使用亮白色文字 (Slate-100) */
+    color: #f1f5f9 !important; /* 使用亮白色文字 (Slate-100) */
     -webkit-text-fill-color: #f1f5f9 !important; /* 关键修复：覆盖 light-theme 的填充色 */
     border-color: #4b5563;
-    font-weight: 500;               /* 稍微加粗字体增加清晰度 */
+    font-weight: 500; /* 稍微加粗字体增加清晰度 */
 
     &:focus {
       border-color: #818cf8;

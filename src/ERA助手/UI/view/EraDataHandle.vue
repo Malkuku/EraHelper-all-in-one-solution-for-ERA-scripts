@@ -1743,7 +1743,8 @@ input:checked + .toggle-label:before {
     color: #cbd5e1;
   }
 
-  input, select {
+  input,
+  select {
     background: #111827;
     color: #e5e7eb;
     border-color: #374151;
@@ -1857,5 +1858,4 @@ input:checked + .toggle-label:before {
     }
   }
 }
-
 </style>

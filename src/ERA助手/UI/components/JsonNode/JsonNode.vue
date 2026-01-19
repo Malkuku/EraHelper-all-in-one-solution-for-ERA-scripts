@@ -46,7 +46,6 @@
 import { JsonNodeType } from '../../types/JsonNode';
 import { useUiStore } from '@/ERA助手/stores/UIStore';
 
-
 const uiStore = useUiStore();
 
 const props = defineProps<{ node: JsonNodeType }>();
@@ -220,5 +219,4 @@ function getValueTypeClass(value: any): string {
     }
   }
 }
-
 </style>

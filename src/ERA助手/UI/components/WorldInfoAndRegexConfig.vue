@@ -553,7 +553,6 @@ watch(
   }
 }
 
-
 /* 黑夜模式 */
 .dark-mode {
   .config-container {
@@ -646,5 +645,4 @@ watch(
     }
   }
 }
-
 </style>
