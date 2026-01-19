@@ -647,46 +647,47 @@ onMounted(() => {
   background: white;
   border-radius: 12px;
   overflow: hidden;
+  /* 添加过渡效果，使切换更平滑 */
+  transition: background-color 0.3s, color 0.3s;
 }
 
-// 强制所有表单元素使用浅色主题
-/* 强制浅色输入框和选择框 */
+/* 输入框和选择框 */
 input,
 select,
 textarea,
 option {
-  background: #f8fafc !important;
-  color: #1e293b !important;
-  border-color: #e2e8f0 !important;
+  background: #f8fafc;
+  color: #1e293b;
+  border-color: #e2e8f0;
 }
 
-/* 选择框选项强制浅色 */
+/* 选择框选项 */
 select option {
-  background: #f8fafc !important;
-  color: #1e293b !important;
+  background: #f8fafc;
+  color: #1e293b;
 }
 
 /* 输入框聚焦状态 */
 input:focus,
 select:focus,
 textarea:focus {
-  border-color: #6366f1 !important;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 /* 只读和禁用状态 */
 input:disabled,
 select:disabled,
 textarea:disabled {
-  background: #f1f5f9 !important;
-  color: #94a3b8 !important;
+  background: #f1f5f9;
+  color: #94a3b8;
   cursor: not-allowed;
 }
 
 /* 占位符颜色 */
 input::placeholder,
 textarea::placeholder {
-  color: #94a3b8 !important;
+  color: #94a3b8;
   opacity: 1;
 }
 
@@ -849,13 +850,11 @@ textarea::placeholder {
   height: 100%;
   display: flex;
   flex-direction: column;
-  // 添加横向滚动支持
   overflow-x: auto;
 }
 
 .json-tree {
   padding: 16px;
-  // 确保内容宽度适应其子元素
   min-width: 100%;
 }
 
@@ -958,10 +957,8 @@ textarea::placeholder {
   overflow-y: auto;
   overflow-x: auto;
   width: 100%;
-  // 确保有足够的空间显示节点上方的按钮
   padding-top: 10px;
 
-  // 添加滚动条样式
   &::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -981,7 +978,6 @@ textarea::placeholder {
 .json-tree {
   padding: 16px;
   width: 100%;
-  // 添加最小宽度以支持横向滚动
   min-width: fit-content;
 }
 
@@ -991,29 +987,29 @@ textarea::placeholder {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #f8fafc !important;
-  color: #1e293b !important;
+  background: #f8fafc;
+  color: #1e293b;
   min-height: 350px;
 }
 
 .editor-header {
   padding: 12px 16px;
-  background: #f1f5f9 !important;
+  background: #f1f5f9;
   border-bottom: 1px solid #e2e8f0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  color: #1e293b !important;
+  color: #1e293b;
 }
 
 .editor-info {
   font-size: 14px;
-  color: #64748b !important;
+  color: #64748b;
 }
 
 .editor-size {
   font-size: 13px;
-  color: #94a3b8 !important;
+  color: #94a3b8;
   font-family: monospace;
 }
 
@@ -1025,19 +1021,19 @@ textarea::placeholder {
   font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
   font-size: 14px;
   line-height: 1.5;
-  background: #ffffff !important;
-  color: #1e293b !important;
-  border: 1px solid #e2e8f0 !important;
+  background: #ffffff;
+  color: #1e293b;
+  border: 1px solid #e2e8f0;
   border-radius: 6px;
   margin: 16px;
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-  overflow: auto; // 添加滚动
-  white-space: pre; // 保持空白字符
-  min-width: min-content; // 确保内容不会被压缩
+  overflow: auto;
+  white-space: pre;
+  min-width: min-content;
 
   &:focus {
-    border-color: #6366f1 !important;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
   }
 
   &::-webkit-scrollbar {
@@ -1058,7 +1054,7 @@ textarea::placeholder {
   }
 
   &::placeholder {
-    color: #94a3b8 !important;
+    color: #94a3b8;
   }
 }
 
@@ -1145,8 +1141,8 @@ textarea::placeholder {
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   font-size: 14px;
-  color: #1e293b !important;
-  background: #f8fafc !important;
+  color: #1e293b;
+  background: #f8fafc;
   transition: all 0.2s ease;
 
   &:focus {
@@ -1156,14 +1152,13 @@ textarea::placeholder {
   }
 
   &::placeholder {
-    color: #94a3b8 !important;
+    color: #94a3b8;
   }
 }
 
-/* 强制选择框选项使用浅色 */
 .form-select option {
-  background: #f8fafc !important;
-  color: #1e293b !important;
+  background: #f8fafc;
+  color: #1e293b;
 }
 
 // 布尔值选项
@@ -1180,12 +1175,12 @@ textarea::placeholder {
   padding: 8px 12px;
   border-radius: 6px;
   border: 1px solid #e2e8f0;
-  background: #f8fafc !important;
-  color: #1e293b !important;
+  background: #f8fafc;
+  color: #1e293b;
   transition: all 0.2s ease;
 
   &:hover {
-    background: #f1f5f9 !important;
+    background: #f1f5f9;
     border-color: #cbd5e1;
   }
 
@@ -1195,7 +1190,7 @@ textarea::placeholder {
 
   span {
     font-size: 14px;
-    color: #1e293b !important;
+    color: #1e293b;
   }
 }
 
@@ -1226,7 +1221,7 @@ textarea::placeholder {
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   overflow: hidden;
-  background: #f8fafc !important;
+  background: #f8fafc;
 }
 
 .json-editor-header {
@@ -1234,13 +1229,13 @@ textarea::placeholder {
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: #f1f5f9 !important;
+  background: #f1f5f9;
   border-bottom: 1px solid #e2e8f0;
 
   span {
     font-size: 12px;
     font-weight: 500;
-    color: #1e293b !important;
+    color: #1e293b;
   }
 }
 
@@ -1273,18 +1268,16 @@ textarea::placeholder {
   font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
   font-size: 13px;
   line-height: 1.5;
-  background: white !important;
-  color: #1e293b !important;
+  background: white;
+  color: #1e293b;
   min-height: 120px;
-  background: white !important;
-  color: #1e293b !important;
 
   &:focus {
     outline: none;
   }
 
   &::placeholder {
-    color: #94a3b8 !important;
+    color: #94a3b8;
   }
 }
 
@@ -1362,93 +1355,20 @@ textarea::placeholder {
   }
 }
 
-/* 深色模式强制覆盖 */
-@media (prefers-color-scheme: dark) {
-  /* 强制整个编辑器使用浅色主题 */
-  .stat-data-editor,
-  .stat-data-editor * {
-    background: #f8fafc !important;
-    color: #1e293b !important;
-  }
+/*
+   已删除 @media (prefers-color-scheme: dark) 块
+   这个块之前强制在系统深色模式下使用浅色主题，导致 .dark-mode 类失效
+*/
 
-  /* 强制所有输入框和选择框使用浅色 */
-  input,
-  select,
-  textarea,
-  option,
-  .form-input,
-  .form-select,
-  .form-textarea,
-  .boolean-option {
-    background: #f8fafc !important;
-    color: #1e293b !important;
-    border-color: #e2e8f0 !important;
-  }
-
-  /* 强制选择框选项使用浅色 */
-  select option,
-  .form-select option {
-    background: #f8fafc !important;
-    color: #1e293b !important;
-  }
-
-  /* 强制模态框使用浅色 */
-  .modal {
-    background: white !important;
-    color: #1e293b !important;
-  }
-
-  /* 强制下拉框选项颜色 */
-  :deep(select option) {
-    background: #f8fafc !important;
-    color: #1e293b !important;
-  }
-
-  /* 强制编辑器区域使用浅色 */
-  .json-editor,
-  .json-editor-input,
-  .raw-editor,
-  .tree-editor {
-    background: #ffffff !important;
-    color: #1e293b !important;
-  }
-
-  /* 强制按钮使用浅色样式 */
-  .btn,
-  .toolbar-btn,
-  .mode-btn,
-  .tool-btn {
-    background: white !important;
-    color: #1e293b !important;
-    border-color: #e2e8f0 !important;
-  }
-
-  .btn.primary {
-    background: #6366f1 !important;
-    color: white !important;
-    border-color: #6366f1 !important;
-  }
-
-  .mode-btn.active {
-    background: #6366f1 !important;
-    color: white !important;
-  }
-}
-
-/* 使用 :deep 选择器穿透子组件样式（如果需要的话） */
+/* 使用 :deep 选择器穿透子组件样式 */
 :deep(.json-node-editor) {
   input,
   select,
   textarea,
   option {
-    background: #f8fafc !important;
-    color: #1e293b !important;
-    border-color: #e2e8f0 !important;
-  }
-
-  select option {
-    background: #f8fafc !important;
-    color: #1e293b !important;
+    background: inherit;
+    color: inherit;
+    border-color: inherit;
   }
 }
 
@@ -1494,7 +1414,6 @@ textarea::placeholder {
   }
 }
 
-
 /* 黑夜模式 */
 .dark-mode {
   .stat-data-editor {
@@ -1505,13 +1424,18 @@ textarea::placeholder {
   input,
   select,
   textarea,
-  option {
+  option,
+  .form-input,
+  .form-select,
+  .form-textarea,
+  .boolean-option {
     background: #374151 !important;
     color: #e2e8f0 !important;
     border-color: #4b5563 !important;
   }
 
-  select option {
+  select option,
+  .form-select option {
     background: #374151 !important;
     color: #e2e8f0 !important;
   }
@@ -1645,20 +1569,33 @@ textarea::placeholder {
   .editor-header {
     background: #374151 !important;
     border-bottom: 1px solid #4b5563;
+    color: #e2e8f0 !important;
+  }
+
+  .editor-info {
+    color: #9ca3af !important;
+  }
+
+  .editor-size {
+    color: #6b7280 !important;
   }
 
   .json-editor {
-    background: #1f2937;
-    color: #e2e8f0;
-    border-color: #4b5563;
+    background: #1f2937 !important;
+    color: #e2e8f0 !important;
+    border-color: #4b5563 !important;
   }
 
   .json-error {
-    color: #f87171;
+    background: rgba(153, 27, 27, 0.2);
+    color: #fca5a5;
+    border-top-color: #7f1d1d;
   }
 
   .json-success {
-    color: #34d399;
+    background: rgba(6, 95, 70, 0.2);
+    color: #6ee7b7;
+    border-top-color: #065f46;
   }
 
   .modal-overlay {
@@ -1668,6 +1605,16 @@ textarea::placeholder {
   .modal {
     background: #1f2937;
     border: 1px solid #4b5563;
+    color: #e2e8f0;
+  }
+
+  .modal h3 {
+    color: #e2e8f0;
+    border-bottom-color: #4b5563;
+  }
+
+  .form-group label {
+    color: #cbd5e1;
   }
 
   .modal .form-input,
@@ -1677,10 +1624,43 @@ textarea::placeholder {
     border-color: #4b5563;
   }
 
+  .null-info {
+    background: #374151;
+    border-color: #4b5563;
+    span { color: #9ca3af; }
+  }
+
+  .json-editor-container {
+    background: #1f2937 !important;
+    border-color: #4b5563;
+  }
+
+  .json-editor-header {
+    background: #374151 !important;
+    border-bottom-color: #4b5563;
+    span { color: #e2e8f0 !important; }
+  }
+
+  .btn-small {
+    background: #374151;
+    border-color: #4b5563;
+    &:hover { background: #4b5563; }
+    .format-icon { color: #cbd5e1; }
+  }
+
+  .json-editor-input {
+    background: #1f2937 !important;
+    color: #e2e8f0 !important;
+  }
+
   .modal .btn {
     background: #4b5563;
     color: #e2e8f0;
     border-color: #6b7280;
+
+    &:hover {
+      background: #374151;
+    }
 
     &.primary {
       background: #4f46e5;
@@ -1691,5 +1671,10 @@ textarea::placeholder {
       }
     }
   }
+
+  .modal-actions {
+    border-top-color: #4b5563;
+  }
 }
 </style>
+
