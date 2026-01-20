@@ -7,6 +7,7 @@ import { eraLogger } from '../utils/EraHelperLogger';
 import { EraDataHandler } from '../EraDataHandler/EraDataHandler';
 import { useEraDataStore } from '../stores/EraDataStore';
 import { useEraEditStore } from '../stores/EraEditStore';
+import { JsonUtil } from '@/Utils/JsonUtil';
 
 const getAsyncAnalyzeStore = () => (window as any).AsyncAnalyzeStore as ReturnType<typeof useAsyncAnalyzeStore>;
 const getEraDataStore = () => (window as any).EraDataStore as ReturnType<typeof useEraDataStore>;
@@ -114,49 +115,81 @@ export const handleEraRulesOnMessageReceived = async (message_id: number) => {
   await eventEmit('kat:handle_era_finished');
 };
 
+
 /**
  * 处理ERA变量更新
  * @param result
  */
 async function handleEraRules(result: string) {
-  // 从消息中提取出edit内容，应用EraDataRule处理数据
-  const regexEdit =
-    /<VariableEdit>((?:(?!<VariableEdit>)[\s\S])*?)<\/VariableEdit>(?![\s\S]*<VariableEdit>[\s\S]*<\/VariableEdit>)/;
-  const editMatch = result.match(regexEdit);
+  // 1. 全局匹配所有 VariableEdit 标签
+  const regexGlobal = /<VariableEdit>([\s\S]*?)<\/VariableEdit>/g;
+  const matches = Array.from(result.matchAll(regexGlobal));
 
-  if (editMatch && editMatch[1]) {
+  if (matches.length === 0) {
+    return result;
+  }
+
+  let mergedEditData: Record<string, any> = {};
+  let hasValidData = false;
+
+  // 2. 遍历并深度合并
+  for (const match of matches) {
+    const content = match[1];
+    if (!content || !content.trim()) continue;
+
     try {
-      // 解析VariableEdit中的JSON数据
-      const editData = JSON.parse(editMatch[1]);
+      // 注意：JSON格式必须标准，例如 "角色"{ 必须是 "角色":{
+      const editData = JSON.parse(content);
 
-      // 获取快照数据
-      const snapshotData = await getEraEditStore().getStatData();
-      if (snapshotData == null) {
-        toastr.error('快照数据为空,跳过处理');
-        return result;
-      }
+      // 使用深度合并替代 Object.assign
+      // 这样 {"A": {"b":1}} 和 {"A": {"c":2}} 会合并成 {"A": {"b":1, "c":2}}
+      mergedEditData = JsonUtil.mergeDeep(mergedEditData, editData);
 
-      //获取EraRules
-      const rules = getEraDataStore().eraDataRule;
-
-      // 应用规则处理数据
-      const { data: updatedData } = await EraDataHandler.applyRule(editData, snapshotData, rules);
-
-      const updatedContent = JSON.stringify(updatedData);
-      result = result.replace(
-        /<VariableEdit>[\s\S]*?<\/VariableEdit>/,
-        `<VariableEdit>\n${updatedContent}\n</VariableEdit>`,
-      );
-
-      // 记录处理日志
-      //eraLogger.log("变量更新日志：", log); //不需要特别处理因为EraDataHandler已经处理了
+      hasValidData = true;
     } catch (e) {
-      eraLogger.error('变量更新失败：', e);
-      toastr.error('变量更新失败');
+      console.warn('忽略无效的 VariableEdit 内容:', content);
     }
   }
+
+  if (!hasValidData) {
+    return result;
+  }
+
+  try {
+    const snapshotData = await getEraEditStore().getStatData();
+    if (snapshotData == null) {
+      toastr.error('快照数据为空,跳过处理');
+      return result;
+    }
+
+    const rules = getEraDataStore().eraDataRule;
+
+    // 应用规则
+    const { data: updatedData } = await EraDataHandler.applyRule(mergedEditData, snapshotData, rules);
+
+    const updatedContent = JSON.stringify(updatedData);
+    const newTag = `<VariableEdit>\n${updatedContent}\n</VariableEdit>`;
+
+    // 3. 替换逻辑：保留第一个位置，删除后续位置
+    let isFirstMatch = true;
+    result = result.replace(regexGlobal, () => {
+      if (isFirstMatch) {
+        isFirstMatch = false;
+        return newTag;
+      } else {
+        return '';
+      }
+    });
+
+  } catch (e) {
+    eraLogger.error('变量更新失败：', e);
+    toastr.error('变量更新失败');
+  }
+
   return result;
 }
+
+
 
 /**
  * 合并消息内容
