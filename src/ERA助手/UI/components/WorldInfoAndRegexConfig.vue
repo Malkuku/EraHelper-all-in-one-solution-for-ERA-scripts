@@ -14,7 +14,7 @@
             </div>
             <div v-show="isAnalyzeListOpen" class="entry-list">
               <div v-for="(entry, index) in localAnalyzeEntries" :key="index" class="entry-item">
-                <select v-model="localAnalyzeEntries[index]" class="entry-select light-theme">
+                <select v-model="localAnalyzeEntries[index]" class="entry-select">
                   <option value="">请选择世界书条目</option>
                   <option v-for="name in worldBookNames" :key="name" :value="name">{{ name }}</option>
                 </select>
@@ -31,7 +31,7 @@
             </div>
             <div v-show="isUpdateListOpen" class="entry-list">
               <div v-for="(entry, index) in localUpdateEntries" :key="index" class="entry-item">
-                <select v-model="localUpdateEntries[index]" class="entry-select light-theme">
+                <select v-model="localUpdateEntries[index]" class="entry-select">
                   <option value="">请选择世界书条目</option>
                   <option v-for="name in worldBookNames" :key="name" :value="name">{{ name }}</option>
                 </select>
@@ -48,7 +48,7 @@
             </div>
             <div v-show="isIgnoreListOpen" class="entry-list">
               <div v-for="(entry, index) in localIgnoreEntries" :key="index" class="entry-item">
-                <select v-model="localIgnoreEntries[index]" class="entry-select light-theme">
+                <select v-model="localIgnoreEntries[index]" class="entry-select">
                   <option value="">请选择世界书条目</option>
                   <option v-for="name in worldBookNames" :key="name" :value="name">{{ name }}</option>
                 </select>
@@ -79,7 +79,7 @@
                 <input
                   v-model="localRegexList[index]"
                   type="text"
-                  class="regex-input light-theme"
+                  class="regex-input"
                   placeholder="请输入正则表达式"
                 />
                 <button class="btn remove-btn" @click="removeRegex(index)">×</button>
@@ -457,13 +457,16 @@ watch(
     border: 1px solid #e5e7eb;
     border-radius: 4px;
     font-size: 12px;
-    background: white;
+
+    /* 强制浅色模式 (白天) */
+    background: #ffffff !important;
+    color: #111827 !important;
   }
 
-  .entry-select.light-theme,
-  .regex-input.light-theme {
-    background: white !important;
-    color: black !important;
+  /* 确保 option 也是浅色 */
+  .entry-select option {
+    background: #ffffff !important;
+    color: #111827 !important;
   }
 
   .regex-input {
@@ -587,9 +590,16 @@ watch(
   .entry-list {
     .entry-select,
     .regex-input {
-      background: #1f2937;
-      color: #e2e8f0;
-      border-color: #4b5563;
+      /* 强制深色模式 */
+      background: #374151 !important;
+      color: #e2e8f0 !important;
+      border-color: #4b5563 !important;
+    }
+
+    /* 确保 option 也是深色 */
+    .entry-select option {
+      background: #374151 !important;
+      color: #e2e8f0 !important;
     }
 
     .btn {
