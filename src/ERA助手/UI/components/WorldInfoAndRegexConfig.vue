@@ -76,12 +76,7 @@
             </div>
             <div v-show="isRegexListOpen" class="entry-list">
               <div v-for="(regex, index) in localRegexList" :key="index" class="entry-item">
-                <input
-                  v-model="localRegexList[index]"
-                  type="text"
-                  class="regex-input"
-                  placeholder="请输入正则表达式"
-                />
+                <input v-model="localRegexList[index]" type="text" class="regex-input" placeholder="请输入正则表达式" />
                 <button class="btn remove-btn" @click="removeRegex(index)">×</button>
               </div>
               <button class="btn add-btn" @click="addRegex">添加正则</button>

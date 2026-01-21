@@ -18,26 +18,17 @@ const versionHistory = ref([
   {
     version: 'v1.2.3',
     date: '2026-01-21',
-    changes: [
-      '现在会尝试合并所有的edit标签，再一起运用handle处理',
-      'fix:世界书和正则配置黑夜模式没有完全生效'
-    ],
+    changes: ['现在会尝试合并所有的edit标签，再一起运用handle处理', 'fix:世界书和正则配置黑夜模式没有完全生效'],
   },
   {
     version: 'v1.2.2',
     date: '2026-01-19',
-    changes: [
-      'fix：分步模式的era差异同步问题',
-      '添加黑夜模式主题'
-    ],
+    changes: ['fix：分步模式的era差异同步问题', '添加黑夜模式主题'],
   },
   {
     version: 'v1.2.1',
     date: '2026-01-18',
-    changes: [
-      '分步模式有时候会导致预设正则失效',
-      '分步模式发送【kat:handle_era_finished】事件的时机不对'
-    ],
+    changes: ['分步模式有时候会导致预设正则失效', '分步模式发送【kat:handle_era_finished】事件的时机不对'],
   },
   {
     version: 'v1.2.0',
@@ -220,7 +211,6 @@ const versionHistory = ref([
   color: #475569;
 }
 
-
 /* 黑夜模式 */
 .dark-mode {
   .version-container {
@@ -274,5 +264,4 @@ const versionHistory = ref([
     color: #cbd5e1;
   }
 }
-
 </style>

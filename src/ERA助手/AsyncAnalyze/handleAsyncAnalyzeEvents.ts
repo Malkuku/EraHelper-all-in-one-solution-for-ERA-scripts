@@ -117,7 +117,6 @@ export const handleEraRulesOnMessageReceived = async (message_id: number) => {
   await eventEmit('kat:handle_era_finished');
 };
 
-
 /**
  * 处理ERA变量更新
  * @param result
@@ -187,7 +186,6 @@ async function handleEraRules(result: string) {
     // 可选：如果你想清理掉那些因为“向回找”而被遗弃的、不成对的 <VariableEdit> 头部标签，可以再加一行：
     // result = result.replace(/<VariableEdit>/g, '');
     // 但建议谨慎使用，以免误删文本中提到的标签名。
-
   } catch (e) {
     eraLogger.error('变量更新失败：', e);
     toastr.error('变量更新失败');
@@ -195,9 +193,6 @@ async function handleEraRules(result: string) {
 
   return result;
 }
-
-
-
 
 /**
  * 合并消息内容
