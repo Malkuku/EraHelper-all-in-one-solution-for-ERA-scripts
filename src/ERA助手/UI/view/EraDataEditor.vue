@@ -648,7 +648,9 @@ onMounted(() => {
   border-radius: 12px;
   overflow: hidden;
   /* 添加过渡效果，使切换更平滑 */
-  transition: background-color 0.3s, color 0.3s;
+  transition:
+    background-color 0.3s,
+    color 0.3s;
 }
 
 /* 输入框和选择框 */
@@ -1627,7 +1629,9 @@ textarea::placeholder {
   .null-info {
     background: #374151;
     border-color: #4b5563;
-    span { color: #9ca3af; }
+    span {
+      color: #9ca3af;
+    }
   }
 
   .json-editor-container {
@@ -1638,14 +1642,20 @@ textarea::placeholder {
   .json-editor-header {
     background: #374151 !important;
     border-bottom-color: #4b5563;
-    span { color: #e2e8f0 !important; }
+    span {
+      color: #e2e8f0 !important;
+    }
   }
 
   .btn-small {
     background: #374151;
     border-color: #4b5563;
-    &:hover { background: #4b5563; }
-    .format-icon { color: #cbd5e1; }
+    &:hover {
+      background: #4b5563;
+    }
+    .format-icon {
+      color: #cbd5e1;
+    }
   }
 
   .json-editor-input {
@@ -1677,4 +1687,3 @@ textarea::placeholder {
   }
 }
 </style>
-
