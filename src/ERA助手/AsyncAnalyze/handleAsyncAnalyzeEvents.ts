@@ -121,9 +121,12 @@ export const handleEraRulesOnMessageReceived = async (message_id: number) => {
  * @param result
  */
 async function handleEraRules(result: string) {
-  // 1. 全局匹配所有 VariableEdit 标签
-  const regexGlobal = /<VariableEdit>([\s\S]*?)<\/VariableEdit>/g;
-  const matches = Array.from(result.matchAll(regexGlobal));
+  // 1. 使用“最近匹配”正则
+  // 逻辑：匹配 <VariableEdit> 开头，中间内容不允许出现 <VariableEdit>，直到 </VariableEdit> 结束
+  // 效果：如果出现 <VariableEdit> ... <VariableEdit> {json} </VariableEdit>，它只会匹配后半部分，保证 JSON 纯净
+  const regexInnermost = /<VariableEdit>((?:(?!<VariableEdit>)[\s\S])*?)<\/VariableEdit>/g;
+
+  const matches = Array.from(result.matchAll(regexInnermost));
 
   if (matches.length === 0) {
     return result;
@@ -138,19 +141,17 @@ async function handleEraRules(result: string) {
     if (!content || !content.trim()) continue;
 
     try {
-      // 注意：JSON格式必须标准，例如 "角色"{ 必须是 "角色":{
       const editData = JSON.parse(content);
-
-      // 使用深度合并替代 Object.assign
-      // 这样 {"A": {"b":1}} 和 {"A": {"c":2}} 会合并成 {"A": {"b":1, "c":2}}
+      // 深度合并数据
       mergedEditData = JsonUtil.mergeDeep(mergedEditData, editData);
-
       hasValidData = true;
     } catch (e) {
+      // 这里的警告通常是因为内容不是 JSON，或者被截断了
       console.warn('忽略无效的 VariableEdit 内容:', content);
     }
   }
 
+  // 如果没有提取到任何有效数据，直接返回原文本（或者你可以选择在这里清理掉所有标签）
   if (!hasValidData) {
     return result;
   }
@@ -172,14 +173,18 @@ async function handleEraRules(result: string) {
 
     // 3. 替换逻辑：保留第一个位置，删除后续位置
     let isFirstMatch = true;
-    result = result.replace(regexGlobal, () => {
+    result = result.replace(regexInnermost, () => {
       if (isFirstMatch) {
         isFirstMatch = false;
-        return newTag;
+        return newTag; // 第一个匹配位置放置合并后的完整数据
       } else {
-        return '';
+        return ''; // 后续匹配位置直接删除
       }
     });
+
+    // 可选：如果你想清理掉那些因为“向回找”而被遗弃的、不成对的 <VariableEdit> 头部标签，可以再加一行：
+    // result = result.replace(/<VariableEdit>/g, '');
+    // 但建议谨慎使用，以免误删文本中提到的标签名。
 
   } catch (e) {
     eraLogger.error('变量更新失败：', e);
@@ -188,6 +193,7 @@ async function handleEraRules(result: string) {
 
   return result;
 }
+
 
 
 

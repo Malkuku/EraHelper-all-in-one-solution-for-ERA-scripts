@@ -5,7 +5,7 @@ import { useUiStore } from '@/ERA助手/stores/UIStore';
 const uiStore = useUiStore();
 
 // 当前版本号
-const currentVersion = ref('v1.2.2');
+const currentVersion = ref('v1.2.3');
 
 // 作者信息
 const author = ref({
@@ -16,10 +16,18 @@ const author = ref({
 // 版本更新历史记录
 const versionHistory = ref([
   {
+    version: 'v1.2.3',
+    date: '2026-01-21',
+    changes: [
+      '现在会尝试合并所有的edit标签，再一起运用handle处理',
+      'fix:世界书和正则配置黑夜模式没有完全生效'
+    ],
+  },
+  {
     version: 'v1.2.2',
     date: '2026-01-19',
     changes: [
-      '（fix）分步模式的era差异同步问题',
+      'fix：分步模式的era差异同步问题',
       '添加黑夜模式主题'
     ],
   },
