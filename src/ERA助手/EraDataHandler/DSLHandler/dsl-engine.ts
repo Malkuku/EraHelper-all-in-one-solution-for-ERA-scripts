@@ -4,7 +4,6 @@ import { ASTNode, DSLParser } from './parser';
 import { DSLEvaluator, VariableStore } from './evaluator';
 import { RuleParser } from './ruleParser';
 import { DSLPreprocessor } from './preprocessor';
-import { eraLogger } from '../../utils/EraHelperLogger';
 
 export interface DSLResultItem {
   path?: string; // 如果是赋值操作，返回被修改的路径
@@ -22,7 +21,7 @@ export class DSLEngine {
   // --- AST 缓存 ---
   // Key: 预处理后的表达式字符串, Value: 解析后的 AST 根节点
   private static astCache = new Map<string, ASTNode>();
-  private static MAX_CACHE_SIZE = 10000;
+  private static MAX_CACHE_SIZE = 2000;
 
   static evaluate(
     expression: string,
