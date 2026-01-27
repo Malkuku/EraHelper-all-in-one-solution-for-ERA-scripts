@@ -279,7 +279,8 @@ const currentMergeKey = ref<string>('');
 // 初始化：确定当前编辑的是哪个规则组
 onMounted(() => {
   const queryRule = route.query.rule as string;
-  if (queryRule && store.asyncAnalyzeSetting[queryRule]) {
+  // 修改后：直接赋值，移除 store.asyncAnalyzeSetting[queryRule] 的即时检查
+  if (queryRule) {
     currentRuleName.value = queryRule;
   } else if (store.activeRuleName && store.asyncAnalyzeSetting[store.activeRuleName]) {
     currentRuleName.value = store.activeRuleName;
