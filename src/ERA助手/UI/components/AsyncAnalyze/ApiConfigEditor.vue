@@ -64,7 +64,7 @@
                   <option value="" disabled>请选择...</option>
                   <option v-for="p in profileList" :key="p" :value="p">{{ shortName(p) }}</option>
                 </select>
-                <button class="btn icon-btn" @click="refreshProfileList" title="刷新列表">↻</button>
+                <button class="btn icon-btn" title="刷新列表" @click="refreshProfileList">↻</button>
               </div>
             </div>
           </div>
@@ -205,7 +205,7 @@ const selectConfig = (name: string) => {
 // 动作：新建配置
 const createConfigName = ref('');
 const createNewConfig = () => {
-  const name = prompt('请输入新配置的名称 (例如: GPT-4-Turbo)');
+  const name = prompt('请输入新配置的名称');
   if (!name) return;
   if (store.apiConfigSettings[name]) {
     toastr.error('该名称已存在');
@@ -313,25 +313,27 @@ const testConnection = async () => {
   const config = currentConfig.value;
   if (!config) return;
 
-  // 1. Sample / Profile 模式
+  /* 1. 内置模型（sample / profile）*/
   if (config.model_source === 'sample' || config.model_source === 'profile') {
     try {
-      // 如果是 Profile，先尝试切换过去（注意：这会改变 ST 当前的状态，需谨慎）
-      // 原代码逻辑是切换过去测试，这里为了安全，仅测试 /model 命令
-      // 或者提示用户这会临时切换模型
-
-      if (config.model_source === 'profile' && config.profileSetting) {
+      let tempProfileSetting;
+      if (config.model_source === 'profile') {
+        tempProfileSetting = ((await (window as any).SillyTavern.executeSlashCommands('/profile')) as any).pipe;
+        eraLogger.log('当前预设名称:', tempProfileSetting);
         await (window as any).SillyTavern.executeSlashCommands(`/profile ${config.profileSetting}`);
       }
-
+      // 用 ST 自带指令检查当前模型是否在线
       const res = await (window as any).SillyTavern.executeSlashCommands('/model');
       if (!res.error) {
-        toastr.success('SillyTavern 模型连接正常');
+        toastr.success('模型连接正常 ✓');
+        if (config.model_source === 'profile') {
+          await (window as any).SillyTavern.executeSlashCommands(`/profile ${tempProfileSetting}`);
+        }
       } else {
-        toastr.error(`模型异常: ${res.error}`);
+        toastr.error(`模型异常：${res.error}`);
       }
     } catch (e: any) {
-      toastr.error(`测试失败: ${e.message}`);
+      toastr.error(`检测失败：${e.message || '未知错误'}`);
     }
     return;
   }
