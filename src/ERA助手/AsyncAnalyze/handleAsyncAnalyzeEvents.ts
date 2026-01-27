@@ -288,21 +288,21 @@ export const handleKatEraUpdate = async () => {
           null)
         : modelSource.value == 'profile'
           ? await PromptUtil.sendPrompt(
-              user_input,
-              promptInjects,
-              maxMessageFloor.value,
-              is_should_stream,
-              null,
-              profileSetting.value,
-            )
+            user_input,
+            promptInjects,
+            maxMessageFloor.value,
+            is_should_stream,
+            null,
+            profileSetting.value,
+          )
           : await PromptUtil.sendPrompt(
-              user_input,
-              promptInjects,
-              maxMessageFloor.value,
-              is_should_stream,
-              customModelSettings.value,
-              null,
-            );
+            user_input,
+            promptInjects,
+            maxMessageFloor.value,
+            is_should_stream,
+            customModelSettings.value,
+            null,
+          );
 
     eraLogger.log('接收到的分析结果原文: ', result);
 
