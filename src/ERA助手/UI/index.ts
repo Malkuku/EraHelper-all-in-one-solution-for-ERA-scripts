@@ -82,8 +82,6 @@ $(() => {
   (window as any).UiStore = useUiStore(pinia);
   (window as any).AsyncAnalyzeStore = useAsyncAnalyzeStore(pinia);
   useAsyncAnalyzeStore().getModelSettings();
-  useAsyncAnalyzeStore().getWorldInfoFilterConfig();
-  useAsyncAnalyzeStore().getRegexConfig();
   (window as any).EraDataStore = useEraDataStore(pinia);
   useEraDataStore().getEraDataRules();
   (window as any).EraEditStore = useEraEditStore(pinia);
