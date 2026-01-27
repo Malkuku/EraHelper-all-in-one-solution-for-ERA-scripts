@@ -24,7 +24,7 @@
           <button class="btn small icon-btn" @click="createTask" title="新建任务">+</button>
         </div>
 
-        <div class="task-list">
+        <div class="task-list custom-scrollbar">
           <div v-if="sortedTasks.length === 0" class="empty-tip">
             暂无任务，请新建
           </div>
@@ -49,7 +49,6 @@
 
       <!-- 右侧：任务详情编辑器 -->
       <div class="main-content">
-        <!-- 修改处：判断 currentTask 是否存在，而非 currentTaskName -->
         <div v-if="!currentTask" class="no-selection">
           请选择或新建一个任务
         </div>
@@ -67,7 +66,6 @@
             </div>
             <div class="task-actions">
               <label class="toggle-switch">
-                <!-- 修改处：v-model 不支持 ?. 写法，且外层已判断非空 -->
                 <input type="checkbox" v-model="currentTask.enable">
                 <span class="slider"></span>
                 <span class="text">{{ currentTask.enable ? '已启用' : '已禁用' }}</span>
@@ -102,7 +100,7 @@
           </div>
 
           <!-- 标签页内容 -->
-          <div class="tab-content">
+          <div class="tab-content custom-scrollbar">
 
             <!-- 1. 基础设置与提示词 -->
             <div v-show="activeTab === 'basic'" class="tab-pane">
@@ -113,7 +111,6 @@
                 </div>
                 <div class="form-group">
                   <label>API 配置</label>
-                  <!-- 修改处：移除 ?. -->
                   <select v-model="currentTask.api_config">
                     <option value="">-- 请选择 API --</option>
                     <option v-for="(cfg, name) in store.apiConfigSettings" :key="name" :value="name">
@@ -127,7 +124,6 @@
                 </div>
                 <div class="form-group">
                   <label>上下文楼层 (Chat History)</label>
-                  <!-- 这里的类型定义是 boolean 但注释是数字，这里按数字处理，如果报错请改为 checkbox -->
                   <input type="number" v-model.number="currentTask.chat_history" min="0" />
                 </div>
                 <div class="form-group">
@@ -151,7 +147,7 @@
               <div class="list-editor">
                 <div class="list-sidebar">
                   <button class="btn small primary full" @click="addWorldBookItem">+ 添加提取规则</button>
-                  <div class="scroll-list">
+                  <div class="scroll-list custom-scrollbar">
                     <div
                       v-for="(wb, key) in currentTask.world_book"
                       :key="key"
@@ -163,8 +159,7 @@
                     </div>
                   </div>
                 </div>
-                <div class="list-content">
-                  <!-- 这里使用 ?. 是安全的，因为是读取属性 -->
+                <div class="list-content custom-scrollbar">
                   <div v-if="currentWbKey && currentTask.world_book?.[currentWbKey]" class="sub-form">
                     <div class="sub-header">
                       <strong>{{ currentWbKey }}</strong>
@@ -194,7 +189,7 @@
               <div class="list-editor">
                 <div class="list-sidebar">
                   <button class="btn small primary full" @click="addMergeItem">+ 添加处理规则</button>
-                  <div class="scroll-list">
+                  <div class="scroll-list custom-scrollbar">
                     <div
                       v-for="(item, key) in currentTask.merge_setting"
                       :key="key"
@@ -206,7 +201,7 @@
                     </div>
                   </div>
                 </div>
-                <div class="list-content">
+                <div class="list-content custom-scrollbar">
                   <div v-if="currentMergeKey && currentTask.merge_setting?.[currentMergeKey]" class="sub-form">
                     <div class="sub-header">
                       <strong>{{ currentMergeKey }}</strong>
@@ -262,6 +257,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAsyncAnalyzeStore } from '@/ERA助手/stores/AsyncAnalyzeStore';
+import { Modal } from '@/ERA助手/utils/modal'; // 引入工具类
 
 const store = useAsyncAnalyzeStore();
 const route = useRoute();
@@ -276,10 +272,9 @@ const activeTab = ref<'basic' | 'worldbook' | 'merge'>('basic');
 const currentWbKey = ref<string>('');
 const currentMergeKey = ref<string>('');
 
-// 初始化：确定当前编辑的是哪个规则组
+// 初始化
 onMounted(() => {
   const queryRule = route.query.rule as string;
-  // 修改后：直接赋值，移除 store.asyncAnalyzeSetting[queryRule] 的即时检查
   if (queryRule) {
     currentRuleName.value = queryRule;
   } else if (store.activeRuleName && store.asyncAnalyzeSetting[store.activeRuleName]) {
@@ -287,13 +282,12 @@ onMounted(() => {
   }
 });
 
-// 计算属性：当前规则对象
+// 计算属性
 const currentRule = computed(() => {
   if (!currentRuleName.value) return null;
   return store.asyncAnalyzeSetting[currentRuleName.value];
 });
 
-// 计算属性：排序后的任务列表
 const sortedTasks = computed(() => {
   if (!currentRule.value) return [];
   return Object.entries(currentRule.value).map(([key, data]) => ({
@@ -302,7 +296,6 @@ const sortedTasks = computed(() => {
   })).sort((a, b) => a.data.order - b.data.order);
 });
 
-// 计算属性：当前任务对象
 const currentTask = computed(() => {
   if (!currentRule.value || !currentTaskName.value) return null;
   return currentRule.value[currentTaskName.value];
@@ -319,18 +312,19 @@ const saveAll = async () => {
   toastr.success('规则已保存');
 };
 
-// --- 任务管理 ---
+// --- 任务管理 (使用 Modal 替换 prompt/confirm) ---
 
-const createTask = () => {
+const createTask = async () => {
   if (!currentRule.value) return;
-  const name = prompt('请输入新任务名称 (例如: AnalyzePersonality)');
+  // 替换 prompt
+  const name = await Modal.prompt('新建任务', '请输入新任务名称 (例如: AnalyzePersonality)');
+
   if (!name) return;
   if (currentRule.value[name]) {
     toastr.error('任务名称已存在');
     return;
   }
 
-  // 初始化任务结构
   currentRule.value[name] = {
     enable: true,
     order: 0,
@@ -354,20 +348,21 @@ const renameTask = (event: Event) => {
 
   if (currentRule.value[newName]) {
     toastr.error('该名称已存在');
-    (event.target as HTMLInputElement).value = currentTaskName.value; // 恢复
+    (event.target as HTMLInputElement).value = currentTaskName.value;
     return;
   }
 
-  // 复制并删除旧的
   const taskData = currentRule.value[currentTaskName.value];
   currentRule.value[newName] = taskData;
   delete currentRule.value[currentTaskName.value];
   currentTaskName.value = newName;
 };
 
-const deleteTask = () => {
+const deleteTask = async () => {
   if (!currentRule.value || !currentTaskName.value) return;
-  if (!confirm(`确定要删除任务 "${currentTaskName.value}" 吗？`)) return;
+  // 替换 confirm
+  const confirmed = await Modal.confirm('删除任务', `确定要删除任务 "${currentTaskName.value}" 吗？`);
+  if (!confirmed) return;
 
   delete currentRule.value[currentTaskName.value];
   currentTaskName.value = '';
@@ -375,9 +370,9 @@ const deleteTask = () => {
 
 // --- World Book 管理 ---
 
-const addWorldBookItem = () => {
+const addWorldBookItem = async () => {
   if (!currentTask.value) return;
-  const name = prompt('请输入提取规则名称');
+  const name = await Modal.prompt('添加提取规则', '请输入提取规则名称');
   if (!name) return;
 
   if (!currentTask.value.world_book) currentTask.value.world_book = {};
@@ -404,9 +399,9 @@ const updateLores = (key: string, event: Event) => {
 
 // --- Merge Setting 管理 ---
 
-const addMergeItem = () => {
+const addMergeItem = async () => {
   if (!currentTask.value) return;
-  const name = prompt('请输入处理规则名称');
+  const name = await Modal.prompt('添加处理规则', '请输入处理规则名称');
   if (!name) return;
 
   if (!currentTask.value.merge_setting) currentTask.value.merge_setting = {};
@@ -442,6 +437,7 @@ const updateContentRegex = (key: string, event: Event) => {
   flex-direction: column;
   height: 100%;
   background: #fff;
+  color: #374151; /* 默认字体颜色加深 */
 }
 
 /* Header */
@@ -502,7 +498,7 @@ const updateContentRegex = (key: string, event: Event) => {
   align-items: center;
   margin-bottom: 10px;
   font-weight: 600;
-  color: #4b5563;
+  color: #374151; /* 加深 */
 }
 
 .task-list {
@@ -544,7 +540,7 @@ const updateContentRegex = (key: string, event: Event) => {
 .task-order {
   font-size: 11px;
   background: #d1d5db;
-  color: #4b5563;
+  color: #374151; /* 加深 */
   padding: 1px 4px;
   border-radius: 4px;
   min-width: 20px;
@@ -556,11 +552,12 @@ const updateContentRegex = (key: string, event: Event) => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: #374151; /* 加深 */
 }
 
 .task-status {
   font-size: 10px;
-  color: #9ca3af;
+  color: #6b7280; /* 加深: 原 #9ca3af */
   margin-top: 2px;
   text-align: right;
 }
@@ -578,7 +575,7 @@ const updateContentRegex = (key: string, event: Event) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #9ca3af;
+  color: #6b7280; /* 加深 */
   border: 2px dashed #e5e7eb;
   border-radius: 8px;
 }
@@ -604,13 +601,14 @@ const updateContentRegex = (key: string, event: Event) => {
   gap: 8px;
   flex: 1;
 
-  .label { font-size: 14px; color: #6b7280; }
+  .label { font-size: 14px; color: #4b5563; /* 加深 */ }
   .name-input {
     font-size: 16px;
     font-weight: 600;
     border: 1px solid transparent;
     padding: 4px 8px;
     border-radius: 4px;
+    color: #1f2937;
     &:hover, &:focus { border-color: #d1d5db; background: #fff; }
     background: transparent;
   }
@@ -655,7 +653,7 @@ const updateContentRegex = (key: string, event: Event) => {
   input:checked + .slider { background: #6366f1; }
   input:checked + .slider::after { left: 18px; }
 
-  .text { font-size: 12px; color: #4b5563; }
+  .text { font-size: 12px; color: #4b5563; /* 加深 */ }
 }
 
 /* Inner Tabs */
@@ -672,7 +670,7 @@ const updateContentRegex = (key: string, event: Event) => {
   border: none;
   border-bottom: 2px solid transparent;
   cursor: pointer;
-  color: #6b7280;
+  color: #6b7280; /* 加深 */
   font-size: 13px;
 
   &:hover { color: #1f2937; }
@@ -712,8 +710,9 @@ const updateContentRegex = (key: string, event: Event) => {
   label {
     display: block;
     font-size: 12px;
-    color: #4b5563;
+    color: #4b5563; /* 加深 */
     margin-bottom: 4px;
+    font-weight: 500;
   }
 
   input, select, textarea {
@@ -723,6 +722,7 @@ const updateContentRegex = (key: string, event: Event) => {
     border-radius: 4px;
     font-size: 13px;
     background: #fff;
+    color: #1f2937;
     &:focus { border-color: #6366f1; outline: none; }
   }
 
@@ -733,7 +733,7 @@ const updateContentRegex = (key: string, event: Event) => {
     textarea { flex: 1; resize: none; }
   }
 
-  .tip { font-size: 11px; color: #9ca3af; margin-bottom: 4px; }
+  .tip { font-size: 11px; color: #6b7280; margin-bottom: 4px; }
 }
 
 .checkbox-row {
@@ -769,6 +769,7 @@ const updateContentRegex = (key: string, event: Event) => {
     font-size: 12px;
     cursor: pointer;
     border-bottom: 1px solid #f3f4f6;
+    color: #4b5563; /* 加深 */
     &:hover { background: #e5e7eb; }
     &.active { background: #fff; color: #6366f1; font-weight: 600; border-left: 3px solid #6366f1; }
   }
@@ -788,6 +789,7 @@ const updateContentRegex = (key: string, event: Event) => {
   margin-bottom: 12px;
   padding-bottom: 8px;
   border-bottom: 1px solid #f3f4f6;
+  strong { color: #1f2937; }
 }
 
 .empty-sub {
@@ -814,6 +816,14 @@ const updateContentRegex = (key: string, event: Event) => {
   &.full { width: 100%; border-radius: 0; }
 }
 
+/* Custom Scrollbar */
+.custom-scrollbar {
+  &::-webkit-scrollbar { width: 6px; height: 6px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+  &::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+}
+
 /* Dark Mode */
 :global(.dark-mode) {
   .rule-editor-container, .editor-body, .main-content, .list-content, .tab-pane {
@@ -821,26 +831,33 @@ const updateContentRegex = (key: string, event: Event) => {
     color: #e2e8f0;
   }
 
-  .editor-header { border-bottom-color: #4b5563; }
+  .editor-header { border-bottom-color: #374151; }
   .breadcrumb .current-rule { color: #e2e8f0; }
+  .breadcrumb .separator { color: #6b7280; }
 
-  .sidebar { border-right-color: #4b5563; }
-  .sidebar-title { color: #cbd5e1; }
+  .sidebar { border-right-color: #374151; }
+  .sidebar-title { color: #e2e8f0; }
 
   .task-item {
     background: #374151;
     &:hover { background: #4b5563; }
     &.active { background: #312e81; border-color: #818cf8; .task-name { color: #e0e7ff; } }
   }
-  .task-order { background: #4b5563; color: #cbd5e1; }
+  .task-order { background: #4b5563; color: #e2e8f0; }
   .task-name { color: #e2e8f0; }
+  .task-status { color: #9ca3af; }
 
   .no-selection { border-color: #4b5563; color: #9ca3af; }
 
   .task-header { border-bottom-color: #374151; }
+  .task-title-edit .label { color: #9ca3af; }
   .task-title-edit .name-input { color: #e2e8f0; &:hover { background: #374151; } }
 
-  .inner-tabs { border-bottom-color: #4b5563; }
+  .toggle-switch .slider { background: #4b5563; }
+  .toggle-switch input:checked + .slider { background: #6366f1; }
+  .toggle-switch .text { color: #cbd5e1; }
+
+  .inner-tabs { border-bottom-color: #374151; }
   .tab-btn {
     color: #9ca3af;
     &:hover { color: #e2e8f0; }
@@ -855,12 +872,13 @@ const updateContentRegex = (key: string, event: Event) => {
       color: #e2e8f0;
       &:focus { border-color: #818cf8; }
     }
+    .tip { color: #9ca3af; }
   }
 
-  .list-editor { border-color: #4b5563; }
+  .list-editor { border-color: #374151; }
   .list-sidebar {
     background: #111827;
-    border-right-color: #4b5563;
+    border-right-color: #374151;
     .sub-item {
       border-bottom-color: #374151;
       color: #9ca3af;
@@ -868,6 +886,14 @@ const updateContentRegex = (key: string, event: Event) => {
       &.active { background: #1f2937; color: #818cf8; }
     }
   }
-  .sub-header { border-bottom-color: #374151; }
+  .sub-header { border-bottom-color: #374151; strong { color: #e2e8f0; } }
+
+  .btn.danger { background: #7f1d1d; color: #fecaca; &:hover { background: #991b1b; } }
+
+  /* Scrollbar Dark */
+  .custom-scrollbar {
+    &::-webkit-scrollbar-thumb { background: #4b5563; }
+    &::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+  }
 }
 </style>
