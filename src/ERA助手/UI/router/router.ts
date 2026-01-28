@@ -29,6 +29,11 @@ export const router = createRouter({
               path: 'Editor',
               name: 'RuleEditor',
               component: () => import('../components/AsyncAnalyze/StagedRuleEditor.vue'), // 模块3：规则编辑 (待实现)
+            },
+            {
+              path: 'RegexTester',
+              name: 'RegexTester',
+              component: () => import('../components/AsyncAnalyze/RegexTester.vue'),
             }
           ]
         },

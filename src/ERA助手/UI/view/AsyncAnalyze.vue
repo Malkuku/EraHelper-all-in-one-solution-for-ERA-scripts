@@ -27,6 +27,14 @@
       >
         规则编辑
       </router-link>
+
+      <router-link
+        to="/AsyncAnalyze/RegexTester"
+        class="tab-button"
+        active-class="active"
+      >
+        正则测试
+      </router-link>
     </div>
 
     <!-- 子路由渲染区域 -->

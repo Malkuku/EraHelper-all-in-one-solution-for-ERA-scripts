@@ -9,6 +9,16 @@
         />
         <button class="btn primary small" @click="createNewRule">新建规则组</button>
       </div>
+
+      <FileImportExport
+        accept=".json"
+        import-text="导入配置"
+        export-text="导出配置"
+        confirm-title="导入配置确认"
+        confirm-content="导入新配置将合并到当前配置中，重名规则组将被覆盖，确定要继续吗？"
+        @import-confirmed="handleImportConfirmed"
+        @export-data="handleExportData"
+      />
     </div>
 
     <div v-if="Object.keys(store.asyncAnalyzeSetting).length === 0" class="empty-state">
@@ -73,6 +83,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAsyncAnalyzeStore } from '@/ERA助手/stores/AsyncAnalyzeStore';
+import { AsyncAnalyzeSetting } from '@/ERA助手/AsyncAnalyze/types/AsyncAnalyzeSetting';
 
 const store = useAsyncAnalyzeStore();
 const router = useRouter();
@@ -132,6 +143,72 @@ const deleteRule = async (key: string) => {
 // 跳转到编辑页面
 const editRule = (key: string) => {
   router.push({ name: 'RuleEditor', query: { rule: key } });
+};
+
+// 处理导入确认
+const handleImportConfirmed = async (content: string, file: File) => {
+  try {
+    const importedData = JSON.parse(content);
+
+    // 检查导入的数据格式是否正确
+    if (typeof importedData !== 'object' || importedData === null) {
+      throw new Error('导入的文件格式不正确');
+    }
+
+    // 合并导入的数据到现有配置中，重名规则组将被覆盖
+    for (const [ruleName, ruleSetting] of Object.entries(importedData)) {
+      // 确保导入的规则符合 AsyncAnalyzeSetting 格式
+      if (isValidRuleSetting(ruleSetting)) {
+        store.asyncAnalyzeSetting[ruleName as string] = ruleSetting;
+      } else {
+        console.warn(`规则组 "${ruleName}" 格式不正确，跳过导入`);
+      }
+    }
+
+    await store.saveModelSettings();
+    toastr.success(`成功导入 ${Object.keys(importedData).length} 个规则组配置`);
+  } catch (error) {
+    console.error('导入配置失败:', error);
+    toastr.error(`导入失败: ${(error as Error).message}`);
+  }
+};
+
+// 验证规则设置格式是否正确
+function isValidRuleSetting(setting: any): setting is AsyncAnalyzeSetting[string] {
+  return (
+    typeof setting === 'object' &&
+    setting !== null &&
+    typeof setting.comment === 'string' &&
+    typeof setting.staged_setting === 'object' &&
+    typeof setting.world_book === 'object'
+  );
+}
+
+// 处理导出数据
+const handleExportData = () => {
+  try {
+    // 准备导出的数据
+    const exportData = { ...store.asyncAnalyzeSetting };
+
+    // 转换为 JSON 字符串
+    const jsonData = JSON.stringify(exportData, null, 2);
+
+    // 创建下载链接
+    const blob = new Blob([jsonData], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `async-analyze-settings-${new Date().toISOString().slice(0, 19)}.json`;
+    document.body.appendChild(a);
+    a.click();
+
+    // 清理
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('导出配置失败:', error);
+    toastr.error(`导出失败: ${(error as Error).message}`);
+  }
 };
 </script>
 

@@ -3,13 +3,25 @@ import { ref } from 'vue';
 import { eraLogger } from '../utils/EraHelperLogger';
 import { AsyncAnalyzeSetting, ApiConfigSetting } from '@/ERA助手/AsyncAnalyze/types/AsyncAnalyzeSetting';
 
+// 定义正则配置的类型接口
+export interface SavedRegexConfig {
+  id: string;      // 唯一标识
+  name: string;    // 规则名称
+  pattern: string; // 正则表达式
+  flags: string;   // 修饰符
+  note?: string;   // 备注（可选）
+}
+
 export const useAsyncAnalyzeStore = defineStore('KatAsyncAnalyze', () => {
   // 所有的规则集合
   const asyncAnalyzeSetting = ref<AsyncAnalyzeSetting>({});
   // 所有的API配置集合
   const apiConfigSettings = ref<ApiConfigSetting>({});
-  // 当前激活的规则名称（对应 asyncAnalyzeSetting 的 key）
+  // 当前激活的规则名称
   const activeRuleName = ref<string>('');
+
+  // [新增] 保存的正则配置列表
+  const savedRegexConfigs = ref<SavedRegexConfig[]>([]);
 
   /**
    * 尝试从变量中获取模型设置
@@ -17,19 +29,22 @@ export const useAsyncAnalyzeStore = defineStore('KatAsyncAnalyze', () => {
   const getModelSettings = async () => {
     const variables = getVariables({ type: 'script', script_id: getScriptId() });
 
-    // 读取规则设置
     if (variables.async_analyze_setting) {
       asyncAnalyzeSetting.value = variables.async_analyze_setting;
     }
-
-    // 读取API配置
     if (variables.api_config_settings) {
       apiConfigSettings.value = variables.api_config_settings;
     }
-
-    // 读取当前激活的规则名
     if (variables.active_rule_name) {
       activeRuleName.value = variables.active_rule_name;
+    }
+
+    // [新增] 读取正则配置
+    if (variables.saved_regex_configs) {
+      // 确保读取的是数组
+      savedRegexConfigs.value = Array.isArray(variables.saved_regex_configs)
+        ? variables.saved_regex_configs
+        : [];
     }
 
     eraLogger.log('获取分步分析设置完成');
@@ -42,16 +57,17 @@ export const useAsyncAnalyzeStore = defineStore('KatAsyncAnalyze', () => {
     const saveVariables = {
       async_analyze_setting: asyncAnalyzeSetting.value,
       api_config_settings: apiConfigSettings.value,
-      active_rule_name: activeRuleName.value
+      active_rule_name: activeRuleName.value,
+      // [新增] 保存正则配置
+      saved_regex_configs: savedRegexConfigs.value
     };
 
-    // 深拷贝去除响应式
     const cleaned = JSON.parse(JSON.stringify(saveVariables));
 
     updateVariablesWith(
       vars => ({
         ...vars,
-        ...cleaned, // 将所有字段展开写入
+        ...cleaned,
       }),
       { type: 'script', script_id: getScriptId() },
     );
@@ -64,6 +80,7 @@ export const useAsyncAnalyzeStore = defineStore('KatAsyncAnalyze', () => {
     asyncAnalyzeSetting.value = {};
     apiConfigSettings.value = {};
     activeRuleName.value = '';
+    savedRegexConfigs.value = [];
     await saveModelSettings();
   };
 
@@ -71,6 +88,7 @@ export const useAsyncAnalyzeStore = defineStore('KatAsyncAnalyze', () => {
     asyncAnalyzeSetting,
     apiConfigSettings,
     activeRuleName,
+    savedRegexConfigs,
     getModelSettings,
     saveModelSettings,
     clearModelSettings,
