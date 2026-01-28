@@ -478,7 +478,7 @@ const updateContentRegex = (key: string, event: Event) => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  color: #111827;
+  color: #000000;
 
   /* --- 深色模式覆盖 --- */
   &.dark-mode {
@@ -648,7 +648,7 @@ const updateContentRegex = (key: string, event: Event) => {
 
 .form-group {
   margin-bottom: 12px;
-  label { display: block; font-size: 12px; color: #4b5563; margin-bottom: 4px; font-weight: 600; }
+  label { display: block; font-size: 12px; color: #000000; margin-bottom: 4px; font-weight: 600; }
 
   input, textarea {
     width: 100%;
@@ -659,7 +659,7 @@ const updateContentRegex = (key: string, event: Event) => {
 
     /* 默认浅色模式：强制白色背景，深色文字 */
     background: #ffffff !important;
-    color: #111827 !important;
+    color: #000000 !important;
 
     &:focus { border-color: #4f46e5; outline: none; }
   }
@@ -671,7 +671,7 @@ const updateContentRegex = (key: string, event: Event) => {
 
 .checkbox-row {
   display: flex; align-items: center;
-  label { display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; color: #111827; }
+  label { display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; color: #000000; }
   input { width: auto; }
 }
 

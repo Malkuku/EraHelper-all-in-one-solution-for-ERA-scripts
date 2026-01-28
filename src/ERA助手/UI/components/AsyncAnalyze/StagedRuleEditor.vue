@@ -222,7 +222,7 @@ const openTaskEditor = (taskKey: string) => {
   flex-direction: column;
   height: 100%;
   background: #ffffff;
-  color: #111827;
+  color: #000000;
 }
 
 /* Header */
@@ -400,7 +400,7 @@ const openTaskEditor = (taskKey: string) => {
 
 .card-body {
   font-size: 13px;
-  color: #4b5563;
+  color: #000000;
 }
 
 .info-row {
@@ -409,7 +409,7 @@ const openTaskEditor = (taskKey: string) => {
   margin-bottom: 4px;
 
   .label {
-    color: #9ca3af;
+    color: #000000;
   }
   .value {
     font-weight: 500;

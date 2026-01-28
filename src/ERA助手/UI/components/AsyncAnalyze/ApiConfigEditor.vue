@@ -506,7 +506,7 @@ onMounted(() => {
     font-size: 14px;
     /* 强制覆盖浏览器默认背景和颜色 */
     background: #fff !important;
-    color: #111827 !important;
+    color: #000000 !important;
 
     &:focus {
       outline: none;
