@@ -495,7 +495,7 @@ onMounted(() => {
     margin-bottom: 6px;
     font-size: 13px;
     font-weight: 500;
-    color: #374151;
+    color: #000000 !important;
   }
 
   input, select {

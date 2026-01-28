@@ -489,7 +489,7 @@ const handleMessage = (msg: string, type: string) => console.log(`[${type}] ${ms
   label {
     font-size: 13px;
     font-weight: 600;
-    color: #374151; /* 1. 字体加深 */
+    color: #000000 !important; /* 使用纯黑色提高可读性 */
   }
 }
 

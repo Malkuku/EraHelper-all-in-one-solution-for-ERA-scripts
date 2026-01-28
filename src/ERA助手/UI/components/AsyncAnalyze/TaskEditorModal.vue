@@ -7,15 +7,16 @@
           <div class="task-title-edit">
             <span class="label">{{ isGlobalSettings ? '规则组名称:' : '任务名称:' }}</span>
             <span v-if="isGlobalSettings" class="name-static">{{ ruleName }}</span>
-            <input v-else :value="taskName" @change="renameTask($event)" class="name-input" />
+            <input v-else :value="taskName" class="name-input" @change="renameTask($event)" />
           </div>
           <div class="task-actions">
             <template v-if="!isGlobalSettings">
               <label class="toggle-switch">
-                <input type="checkbox" v-model="editingData.enable" />
+                <input v-model="editingData.enable" type="checkbox" />
                 <span class="slider"></span>
                 <span class="text">{{ editingData.enable ? '已启用' : '已禁用' }}</span>
               </label>
+              <button class="btn primary small" title="复制当前任务配置" @click="handleCopyTask">复制任务</button>
               <button class="btn danger small" @click="handleDeleteTask">删除任务</button>
             </template>
             <button class="btn icon-btn close-btn" @click="closeModal">×</button>
@@ -49,7 +50,7 @@
               <template v-if="!isGlobalSettings">
                 <div class="form-group">
                   <label>执行顺序</label>
-                  <input type="number" v-model.number="editingData.order" placeholder="0" />
+                  <input v-model.number="editingData.order" type="number" placeholder="0" />
                 </div>
                 <div class="form-group">
                   <label>API 配置</label>
@@ -61,15 +62,15 @@
                 </div>
                 <div class="form-group">
                   <label>触发间隔</label>
-                  <input type="number" v-model.number="editingData.trigger_index" min="1" />
+                  <input v-model.number="editingData.trigger_index" type="number" min="1" />
                 </div>
                 <div class="form-group">
                   <label>上下文楼层</label>
-                  <input type="number" v-model.number="editingData.chat_history" min="0" />
+                  <input v-model.number="editingData.chat_history" type="number" min="0" />
                 </div>
                 <div class="form-group">
                   <label>重试次数</label>
-                  <input type="number" v-model.number="editingData.reroll_count" min="0" />
+                  <input v-model.number="editingData.reroll_count" type="number" min="0" />
                 </div>
               </template>
             </div>
@@ -97,7 +98,7 @@
                     class="mb-2"
                   />
                   <div class="add-actions">
-                    <button class="btn small primary" @click="confirmAddWb" :disabled="!newWbName">确定</button>
+                    <button class="btn small primary" :disabled="!newWbName" @click="confirmAddWb">确定</button>
                     <button class="btn small" @click="cancelAddWb">取消</button>
                   </div>
                 </div>
@@ -183,6 +184,7 @@
                       <SearchableSelect
                         v-model="editingData.merge_setting[currentMergeKey].world_book"
                         :options="allWorldBooks"
+                        :disabled="editingData.merge_setting[currentMergeKey].is_inject"
                         placeholder="-- 选择世界书 --"
                         @change="onMergeWbChange(currentMergeKey)"
                       />
@@ -193,24 +195,63 @@
                       <SearchableSelect
                         v-model="editingData.merge_setting[currentMergeKey].target_lore"
                         :options="getCachedLores(editingData.merge_setting[currentMergeKey].world_book)"
+                        :disabled="editingData.merge_setting[currentMergeKey].is_inject"
                         placeholder="-- 选择条目 --"
                       />
                     </div>
                   </div>
 
+                  <!-- 替换正则 -->
                   <div class="form-group">
                     <label>替换正则 (Replace Regex)</label>
-                    <input v-model="editingData.merge_setting[currentMergeKey].replace_regex" />
+                    <div class="regex-input-group">
+                      <input
+                        v-model="editingData.merge_setting[currentMergeKey].replace_regex"
+                        placeholder="输入正则..."
+                        class="flex-grow"
+                      />
+                      <div class="preset-select-wrapper">
+                        <SearchableSelect
+                          :model-value="''"
+                          :options="regexPresetOptions"
+                          placeholder="选择预设..."
+                          @update:model-value="(name) => applyRegexPreset(currentMergeKey, 'replace', name)"
+                        />
+                      </div>
+                    </div>
                   </div>
 
+                  <!-- 内容捕获正则 -->
                   <div class="form-group">
                     <label>内容捕获正则 (Content Regex)</label>
-                    <div class="tip">每行一个正则表达式，用于从AI回复中提取内容</div>
-                    <textarea
-                      :value="editingData.merge_setting[currentMergeKey].content_regex.join('\n')"
-                      rows="5"
-                      @input="updateContentRegex(currentMergeKey, $event)"
-                    ></textarea>
+                    <div class="tip">每行一条正则，可手动输入或选择预设</div>
+
+                    <div class="regex-list-container">
+                      <div
+                        v-for="(regex, index) in (editingData.merge_setting[currentMergeKey].content_regex || [])"
+                        :key="index"
+                        class="regex-row"
+                      >
+                        <input
+                          :value="regex"
+                          placeholder="输入正则表达式..."
+                          @input="updateRegexItem(currentMergeKey, index, $event)"
+                        />
+                        <div class="preset-select-wrapper small">
+                          <SearchableSelect
+                            :model-value="''"
+                            :options="regexPresetOptions"
+                            placeholder="预设"
+                            @update:model-value="(name) => applyRegexPresetToItem(currentMergeKey, index, name)"
+                          />
+                        </div>
+                        <button class="btn danger icon-btn" @click="removeRegexItem(currentMergeKey, index)">×</button>
+                      </div>
+                    </div>
+
+                    <div class="regex-actions">
+                      <button class="btn small primary" @click="addEmptyRegex(currentMergeKey)">+ 添加一行</button>
+                    </div>
                   </div>
                 </div>
                 <div v-else class="empty-sub">请选择左侧规则或添加新规则</div>
@@ -276,6 +317,11 @@ const editingData = computed((): any => {
     return currentRule.value;
   }
   return currentRule.value.staged_setting?.[props.taskName];
+});
+
+// 获取正则预设的名称列表
+const regexPresetOptions = computed(() => {
+  return store.savedRegexConfigs.map(c => c.name);
 });
 
 // 初始化
@@ -363,6 +409,27 @@ const renameTask = (event: Event) => {
   emit('update:taskName', newName);
 };
 
+// 复制任务
+const handleCopyTask = () => {
+  if (!currentRule.value || !props.taskName || isGlobalSettings.value) return;
+
+  const tasks = currentRule.value.staged_setting;
+  const baseName = props.taskName + '_copy';
+  let newName = baseName;
+  let counter = 1;
+
+  // 确保名称唯一
+  while (tasks[newName]) {
+    newName = `${baseName}${counter}`;
+    counter++;
+  }
+
+  // 深拷贝数据
+  tasks[newName] = JSON.parse(JSON.stringify(editingData.value));
+  emit('update:taskName', newName); // 切换到新任务
+  toastr.success(`已复制为: ${newName}`);
+};
+
 const handleDeleteTask = async () => {
   if (!currentRule.value || !props.taskName || isGlobalSettings.value) return;
   const confirmed = await Modal.confirm('删除任务', `确定要删除任务 "${props.taskName}" 吗？`);
@@ -408,6 +475,7 @@ const deleteWorldBookItem = (key: string) => {
   delete editingData.value.world_book[key];
   if (currentWbKey.value === key) currentWbKey.value = '';
 };
+
 // --- Merge Setting 管理 ---
 
 const addMergeItem = async () => {
@@ -444,11 +512,55 @@ const onMergeWbChange = (key: string) => {
   }
 };
 
-const updateContentRegex = (key: string, event: Event) => {
-  const text = (event.target as HTMLTextAreaElement).value;
+// --- 正则管理 (应用预设) ---
+
+const getPatternByName = (name: string) => {
+  const config = store.savedRegexConfigs.find(c => c.name === name);
+  return config ? config.pattern : '';
+};
+
+const applyRegexPreset = (key: string, field: 'replace', presetName: string) => {
+  if (!presetName) return;
+  const pattern = getPatternByName(presetName);
+  if (pattern) {
+    const taskData = editingData.value as StagedSetting[string];
+    if (field === 'replace') {
+      taskData.merge_setting[key].replace_regex = pattern;
+    }
+  }
+};
+
+const applyRegexPresetToItem = (key: string, index: number, presetName: string) => {
+  if (!presetName) return;
+  const pattern = getPatternByName(presetName);
+  if (pattern) {
+    const taskData = editingData.value as StagedSetting[string];
+    if (taskData.merge_setting[key].content_regex) {
+      taskData.merge_setting[key].content_regex[index] = pattern;
+    }
+  }
+};
+
+const addEmptyRegex = (key: string) => {
   const taskData = editingData.value as StagedSetting[string];
-  if (taskData?.merge_setting[key]) {
-    taskData.merge_setting[key].content_regex = text.split('\n');
+  if (!taskData.merge_setting[key].content_regex) {
+    taskData.merge_setting[key].content_regex = [];
+  }
+  taskData.merge_setting[key].content_regex.push('');
+};
+
+const removeRegexItem = (key: string, index: number) => {
+  const taskData = editingData.value as StagedSetting[string];
+  if (taskData.merge_setting[key].content_regex) {
+    taskData.merge_setting[key].content_regex.splice(index, 1);
+  }
+};
+
+const updateRegexItem = (key: string, index: number, event: Event) => {
+  const val = (event.target as HTMLInputElement).value;
+  const taskData = editingData.value as StagedSetting[string];
+  if (taskData.merge_setting[key].content_regex) {
+    taskData.merge_setting[key].content_regex[index] = val;
   }
 };
 </script>
@@ -511,6 +623,10 @@ const updateContentRegex = (key: string, event: Event) => {
     .sub-item { color: #9ca3af; border-bottom-color: #4b5563; &.active { background: #1f2937; color: #818cf8; } &:hover { background: #374151; } }
     .sub-header { border-bottom-color: #4b5563; strong { color: #e2e8f0; } }
     .close-btn { color: #e2e8f0; &:hover { background: #374151; } }
+
+    .label { color: #e2e8f0; }
+    .tip { color: #9ca3af; }
+    .text { color: #e2e8f0; }
   }
 }
 
@@ -532,7 +648,7 @@ const updateContentRegex = (key: string, event: Event) => {
   background: transparent;
   border: none;
   cursor: pointer;
-  color: #4b5563;
+  color: #111827; /* 加深 */
   &:hover {
     background: #f3f4f6;
   }
@@ -545,7 +661,7 @@ const updateContentRegex = (key: string, event: Event) => {
   align-items: center;
   margin-bottom: 12px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .task-title-edit {
@@ -556,7 +672,8 @@ const updateContentRegex = (key: string, event: Event) => {
 
   .label {
     font-size: 14px;
-    color: #4b5563;
+    color: #111827; /* 加深 */
+    font-weight: 600;
   }
   .name-input {
     font-size: 16px;
@@ -565,19 +682,19 @@ const updateContentRegex = (key: string, event: Event) => {
     padding: 4px 8px;
     border-radius: 4px;
     /* 默认浅色模式强制样式 */
-    color: #111827 !important;
+    color: #000000 !important; /* 纯黑 */
     background: transparent;
 
     &:hover,
     &:focus {
-      border-color: #e5e7eb;
+      border-color: #9ca3af;
       background: #ffffff !important;
     }
   }
   .name-static {
     font-size: 16px;
     font-weight: 600;
-    color: #111827;
+    color: #000000;
   }
 }
 
@@ -596,19 +713,19 @@ const updateContentRegex = (key: string, event: Event) => {
 
   input { display: none; }
   .slider {
-    width: 36px; height: 20px; background: #d1d5db; border-radius: 10px; position: relative; transition: 0.3s;
+    width: 36px; height: 20px; background: #9ca3af; border-radius: 10px; position: relative; transition: 0.3s;
     &::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: 0.3s; }
   }
   input:checked + .slider { background: #4f46e5; }
   input:checked + .slider::after { left: 18px; }
-  .text { font-size: 12px; color: #4b5563; }
+  .text { font-size: 12px; color: #111827; font-weight: 500; }
 }
 
 /* Inner Tabs */
 .inner-tabs {
   display: flex;
   gap: 4px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #d1d5db; /* 加深边框 */
   margin-bottom: 16px;
 }
 
@@ -618,10 +735,11 @@ const updateContentRegex = (key: string, event: Event) => {
   border: none;
   border-bottom: 2px solid transparent;
   cursor: pointer;
-  color: #4b5563;
+  color: #374151; /* 加深 */
   font-size: 13px;
-  &:hover { color: #111827; }
-  &.active { color: #4f46e5; border-bottom-color: #4f46e5; font-weight: 600; }
+  font-weight: 500;
+  &:hover { color: #000000; }
+  &.active { color: #4f46e5; border-bottom-color: #4f46e5; font-weight: 700; }
 }
 
 .tab-content {
@@ -648,12 +766,12 @@ const updateContentRegex = (key: string, event: Event) => {
 
 .form-group {
   margin-bottom: 12px;
-  label { display: block; font-size: 12px; color: #000000; margin-bottom: 4px; font-weight: 600; }
+  label { display: block; font-size: 12px; color: #000000 !important; margin-bottom: 4px; font-weight: 700; /* 使用纯黑色提高可读性 */ }
 
   input, textarea {
     width: 100%;
     padding: 6px 8px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid #d1d5db; /* 加深边框 */
     border-radius: 4px;
     font-size: 13px;
 
@@ -666,28 +784,29 @@ const updateContentRegex = (key: string, event: Event) => {
 
   &.full-height { flex: 1; display: flex; flex-direction: column; textarea { flex: 1; resize: none; } }
   &.full-width { grid-column: 1 / -1; }
-  .tip { font-size: 11px; color: #4b5563; margin-bottom: 4px; }
+  .tip { font-size: 11px; color: #4b5563; margin-bottom: 4px; font-weight: 500; /* 加深 */ }
+  .inline-tip { margin-left: 8px; color: #dc2626; }
 }
 
 .checkbox-row {
   display: flex; align-items: center;
-  label { display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; color: #000000; }
+  label { display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; color: #000000; font-weight: 600; }
   input { width: auto; }
 }
 
 /* List Editor */
 .list-editor {
-  display: flex; height: 100%; border: 1px solid #e5e7eb; border-radius: 6px;
+  display: flex; height: 100%; border: 1px solid #d1d5db; border-radius: 6px;
 }
 
 .list-sidebar {
-  width: 180px; border-right: 1px solid #e5e7eb; display: flex; flex-direction: column; background: #f9fafb;
+  width: 180px; border-right: 1px solid #d1d5db; display: flex; flex-direction: column; background: #f3f4f6;
   border-top-left-radius: 6px; border-bottom-left-radius: 6px;
   .scroll-list { flex: 1; overflow-y: auto; }
   .sub-item {
-    padding: 8px; font-size: 12px; cursor: pointer; border-bottom: 1px solid #e5e7eb; color: #111827;
+    padding: 8px; font-size: 12px; cursor: pointer; border-bottom: 1px solid #e5e7eb; color: #111827; font-weight: 500;
     &:hover { background: #e5e7eb; }
-    &.active { background: #ffffff; color: #4f46e5; font-weight: 600; border-left: 3px solid #4f46e5; }
+    &.active { background: #ffffff; color: #4f46e5; font-weight: 700; border-left: 3px solid #4f46e5; }
   }
 }
 
@@ -703,23 +822,49 @@ const updateContentRegex = (key: string, event: Event) => {
 }
 
 .sub-header {
-  display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #f3f4f6;
-  strong { color: #111827; }
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;
+  strong { color: #000000; font-size: 14px; }
 }
 
-.empty-sub { display: flex; height: 100%; align-items: center; justify-content: center; color: #4b5563; font-size: 13px; }
+.empty-sub { display: flex; height: 100%; align-items: center; justify-content: center; color: #4b5563; font-size: 13px; font-weight: 500; }
 
-.manual-edit-details {
-  margin-top: 8px; font-size: 12px; color: #4b5563;
-  summary { cursor: pointer; &:hover { color: #111827; } }
-  textarea { width: 100%; margin-top: 4px; }
+/* Regex UI Styles */
+.regex-input-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  .flex-grow { flex: 1; }
+  .preset-select-wrapper {
+    width: 140px;
+    flex-shrink: 0;
+  }
 }
 
-.mt-2 { margin-top: 8px; }
+.regex-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.regex-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  input { flex: 1; }
+  .preset-select-wrapper {
+    width: 100px;
+    flex-shrink: 0;
+    &.small { width: 100px; }
+  }
+}
+.regex-actions {
+  display: flex;
+  gap: 8px;
+}
 
 /* Buttons */
 .btn {
-  padding: 6px 12px; border-radius: 4px; border: none; cursor: pointer; font-size: 13px;
+  padding: 6px 12px; border-radius: 4px; border: none; cursor: pointer; font-size: 13px; font-weight: 500;
   &.primary { background: #4f46e5; color: white; &:hover { background: #4338ca; } }
   &.danger { background: #fee2e2; color: #991b1b; &:hover { background: #fecaca; } }
   &.small { padding: 4px 8px; font-size: 12px; }
@@ -732,8 +877,7 @@ const updateContentRegex = (key: string, event: Event) => {
 .custom-scrollbar {
   &::-webkit-scrollbar { width: 6px; height: 6px; }
   &::-webkit-scrollbar-track { background: transparent; }
-  &::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 3px; }
-  &::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+  &::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+  &::-webkit-scrollbar-thumb:hover { background: #6b7280; }
 }
 </style>
-
