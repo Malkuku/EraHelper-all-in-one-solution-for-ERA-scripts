@@ -230,8 +230,7 @@ const saveCurrentConfig = async () => {
   }
 
   await asyncAnalyzeStore.saveModelSettings();
-  // 简单的反馈，实际项目中可以使用 Toast
-  // alert('保存成功');
+  toastr.success('保存成功');
 };
 
 // 删除配置

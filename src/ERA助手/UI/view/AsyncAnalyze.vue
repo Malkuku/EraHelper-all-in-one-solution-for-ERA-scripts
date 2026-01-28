@@ -28,13 +28,13 @@
         规则编辑
       </router-link>
 
-      <router-link
-        to="/AsyncAnalyze/RegexTester"
+      <a
         class="tab-button"
-        active-class="active"
+        :class="{ active: showRegexTester }"
+        @click.prevent="showRegexTester = true"
       >
         正则测试
-      </router-link>
+      </a>
     </div>
 
     <!-- 子路由渲染区域 -->
@@ -46,23 +46,32 @@
       </router-view>
     </div>
 
-    <!-- 底部通用操作栏 (可选) -->
+    <!-- 底部通用操作栏 -->
     <div class="footer">
       <button class="btn" @click="uiStore.showUI = false">关闭</button>
     </div>
+
+    <!-- 修改点 2: 引入弹窗组件，置于最外层，通过 v-if 控制 -->
+    <!-- 监听 @close 事件将变量设为 false -->
+    <RegexTester
+      v-if="showRegexTester"
+      @close="showRegexTester = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'; // 引入 ref
 import { useUiStore } from '@/ERA助手/stores/UIStore';
 import { useAsyncAnalyzeStore } from '@/ERA助手/stores/AsyncAnalyzeStore';
-import { onMounted } from 'vue';
+import RegexTester from '@/ERA助手/UI/components/AsyncAnalyze/RegexTester.vue';
 
 const uiStore = useUiStore();
 const asyncAnalyzeStore = useAsyncAnalyzeStore();
 
+const showRegexTester = ref(false);
+
 onMounted(async () => {
-  // 初始化时加载数据
   await asyncAnalyzeStore.getModelSettings();
 });
 </script>
@@ -73,6 +82,7 @@ onMounted(async () => {
   height: 100%;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .title {

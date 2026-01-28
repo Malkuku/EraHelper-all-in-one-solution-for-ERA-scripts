@@ -18,23 +18,18 @@ export const router = createRouter({
             {
               path: 'Selection',
               name: 'RuleSelection',
-              component: () => import('../components/AsyncAnalyze/Selection.vue'), // 模块1：规则选择
+              component: () => import('../components/AsyncAnalyze/Selection.vue'),
             },
             {
               path: 'ApiConfig',
               name: 'ApiConfig',
-              component: () => import('../components/AsyncAnalyze/ApiConfigEditor.vue'), // 模块2：API配置 (待实现)
+              component: () => import('../components/AsyncAnalyze/ApiConfigEditor.vue'),
             },
             {
               path: 'Editor',
               name: 'RuleEditor',
-              component: () => import('../components/AsyncAnalyze/StagedRuleEditor.vue'), // 模块3：规则编辑 (待实现)
+              component: () => import('../components/AsyncAnalyze/StagedRuleEditor.vue'),
             },
-            {
-              path: 'RegexTester',
-              name: 'RegexTester',
-              component: () => import('../components/AsyncAnalyze/RegexTester.vue'),
-            }
           ]
         },
         {
