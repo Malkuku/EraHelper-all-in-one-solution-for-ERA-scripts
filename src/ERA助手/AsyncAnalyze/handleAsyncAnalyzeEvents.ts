@@ -8,7 +8,7 @@ import { EraDataHandler } from '../EraDataHandler/EraDataHandler';
 import { useEraDataStore } from '../stores/EraDataStore';
 import { useEraEditStore } from '../stores/EraEditStore';
 import { JsonUtil } from '@/Utils/JsonUtil';
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 
 const getAsyncAnalyzeStore = () => (window as any).AsyncAnalyzeStore as ReturnType<typeof useAsyncAnalyzeStore>;
 const getEraDataStore = () => (window as any).EraDataStore as ReturnType<typeof useEraDataStore>;
@@ -20,12 +20,96 @@ const isReversed = ref(false); // Default false: remove items in loreList. Set t
 
 // Global lock for analysis
 let isAnalyzing = false;
+let watcherInitialized = false;
+
+/**
+ * 初始化监听器，确保 loreList 与 Store 中的全局配置同步
+ */
+const initWatcher = () => {
+  if (watcherInitialized) return;
+  const store = getAsyncAnalyzeStore();
+  if (!store) return;
+
+  // 监听 activeRuleName 和 asyncAnalyzeSetting 的变化
+  watch(
+    [() => store.activeRuleName, () => store.asyncAnalyzeSetting],
+    () => {
+      // 只有在非分析状态下才同步全局配置，避免分析过程中被覆盖
+      if (!isAnalyzing) {
+        updateGlobalLoreList();
+      }
+    },
+    { deep: true }
+  );
+
+  watcherInitialized = true;
+  updateGlobalLoreList(); // 初始同步
+};
+
+/**
+ * 更新全局 Lore List (基于当前激活规则的 world_book 配置)
+ */
+const updateGlobalLoreList = async () => {
+  const store = getAsyncAnalyzeStore();
+  if (!store || !store.activeRuleName) {
+    loreList.value = [];
+    return;
+  }
+
+  const rule = store.asyncAnalyzeSetting[store.activeRuleName];
+  // 检查 rule 是否存在以及是否有 world_book 配置
+  if (!rule || !rule.world_book) {
+    loreList.value = [];
+    return;
+  }
+
+  try {
+    loreList.value = await processWorldBookConfig(rule.world_book);
+    // eraLogger.log('Global Lore List Updated:', loreList.value);
+  } catch (e) {
+    eraLogger.error('Failed to update global lore list:', e);
+    loreList.value = [];
+  }
+};
+
+/**
+ * 辅助函数：处理 WorldBook 配置并返回条目列表
+ */
+const processWorldBookConfig = async (worldBookConfig: any): Promise<string[]> => {
+  const resultLores: string[] = [];
+
+  for (const [bookName, wbConfig] of Object.entries(worldBookConfig)) {
+    const config = wbConfig as any;
+    // 获取该书所有条目
+    const allEntries = await WorldInfoUtil.getWorldBookLoresByName(bookName);
+
+    if (config.lore_regex) {
+      try {
+        const regex = new RegExp(config.lore_regex);
+        const matchedEntries = allEntries.filter(name => regex.test(name));
+        // 合并到配置的 lores 中 (去重)
+        config.lores = [...new Set([...(config.lores || []), ...matchedEntries])];
+      } catch (e) {
+        eraLogger.error(`Regex error in world book config [${bookName}]:`, e);
+      }
+    }
+
+    // 收集条目
+    if (config.lores && config.lores.length > 0) {
+      resultLores.push(...config.lores);
+    }
+  }
+
+  return [...new Set(resultLores)]; // 最终去重
+};
 
 /**
  * 处理接收到的massage_received事件
  */
 export const handleMessageReceived = async (message_id: number) => {
   try {
+    initWatcher(); // 确保监听器已初始化
+
     if (getLastMessageId() == 0 || message_id == 0) {
       return;
     }
@@ -52,6 +136,9 @@ export const handleMessageReceived = async (message_id: number) => {
     toastr.error('分步分析执行出错');
   } finally {
     isAnalyzing = false;
+    // 任务完成后，恢复为全局配置
+    await updateGlobalLoreList();
+
     // 触发一次同步以确保UI更新
     await eventEmit(ERAEvents.FORCE_SYNC);
     await eventEmit('kat:handle_era_finished');
@@ -64,12 +151,12 @@ export const handleMessageReceived = async (message_id: number) => {
 export const handleAsyncAnalyzeTasks = async (message_id: number) => {
   const store = getAsyncAnalyzeStore();
   const ruleName = store.activeRuleName;
-  const currentRuleSet = store.asyncAnalyzeSetting[ruleName];
+  const currentRule = store.asyncAnalyzeSetting[ruleName];
 
-  if (!currentRuleSet) return;
+  if (!currentRule || !currentRule.staged_setting) return;
 
-  // 1. 任务分组与排序
-  const tasks = Object.entries(currentRuleSet).map(([taskName, config]) => ({
+  // 1. 任务分组与排序 (从 staged_setting 中获取)
+  const tasks = Object.entries(currentRule.staged_setting).map(([taskName, config]) => ({
     taskName,
     ...config
   }));
@@ -116,8 +203,8 @@ export const handleAsyncAnalyzeTasks = async (message_id: number) => {
         await executeSingleTask(task, message_id);
 
         // 更新触发历史
-        if (store.asyncAnalyzeSetting[ruleName][task.taskName]) {
-          store.asyncAnalyzeSetting[ruleName][task.taskName].trigger_history = currentFloor;
+        if (store.asyncAnalyzeSetting[ruleName]?.staged_setting?.[task.taskName]) {
+          store.asyncAnalyzeSetting[ruleName].staged_setting[task.taskName].trigger_history = currentFloor;
         }
       } catch (e) {
         eraLogger.error(`任务 [${task.taskName}] 执行失败:`, e);
@@ -130,8 +217,8 @@ export const handleAsyncAnalyzeTasks = async (message_id: number) => {
               eraLogger.log(`任务 [${task.taskName}] 重试第 ${i+1} 次`);
               await executeSingleTask(task, message_id);
               // 成功则退出重试循环
-              if (store.asyncAnalyzeSetting[ruleName][task.taskName]) {
-                store.asyncAnalyzeSetting[ruleName][task.taskName].trigger_history = currentFloor;
+              if (store.asyncAnalyzeSetting[ruleName]?.staged_setting?.[task.taskName]) {
+                store.asyncAnalyzeSetting[ruleName].staged_setting[task.taskName].trigger_history = currentFloor;
               }
               break;
             } catch(retryE) {
@@ -168,32 +255,13 @@ async function executeSingleTask(task: any, message_id: number) {
     throw new Error(`找不到 API 配置: ${apiConfigName}`);
   }
 
-  // 2. 处理 World Book 逻辑
+  // 2. 处理 World Book 逻辑 (任务级)
   // 获取所有绑定世界书的条目，正则匹配，合并到 lores，并更新 loreList.value
-  const currentTaskLores: string[] = [];
-
   if (task.world_book) {
-    for (const [bookName, wbConfig] of Object.entries(task.world_book)) {
-      const config = wbConfig as any;
-      // 获取该书所有条目
-      const allEntries = await WorldInfoUtil.getWorldBookLoresByName(bookName);
-
-      if (config.lore_regex) {
-        const regex = new RegExp(config.lore_regex);
-        const matchedEntries = allEntries.filter(name => regex.test(name));
-
-        // 合并到配置的 lores 中 (去重)
-        config.lores = [...new Set([...(config.lores || []), ...matchedEntries])];
-      }
-
-      // 收集当前任务需要处理的所有 lores
-      if (config.lores && config.lores.length > 0) {
-        currentTaskLores.push(...config.lores);
-      }
-    }
+    loreList.value = await processWorldBookConfig(task.world_book);
+  } else {
+    loreList.value = [];
   }
-
-  loreList.value = currentTaskLores;
 
   // 3. 构建 Prompt
   const maxHistory = task.chat_history || 2;
@@ -272,8 +340,12 @@ async function executeSingleTask(task: any, message_id: number) {
     if (tempPresetLoaded) {
       loadPreset(originalPresetName);
     }
-    // 清理 loreList，以免影响后续操作
-    loreList.value = [];
+    // 注意：loreList 在这里不重置为空，而是由外层循环或 finally 块恢复为全局配置
+    // 但为了防止并行任务干扰，这里其实应该考虑并发问题。
+    // 目前逻辑是：任务组内并行。如果多个任务同时修改 loreList，会有冲突。
+    // 但 loreList 是全局 ref。
+    // TODO: 如果需要完全隔离，PromptUtil 需要支持传入 lores 而不是依赖全局 handleLoresFilter。
+    // 鉴于目前架构，假设任务组内的 world_book 配置不冲突，或者接受最后一次写入的值。
   }
 }
 
@@ -475,6 +547,8 @@ export const reSendEraUpdate = async () => {
  * 此函数由事件系统自动调用
  */
 export const handleLoresFilter = async (lores: any) => {
+  initWatcher(); // 确保监听器已初始化
+
   if (loreList.value.length > 0) {
     eraLogger.log('Applying WorldInfo Filter:', loreList.value, 'IsReversed:', isReversed.value);
     await WorldInfoUtil.removeLoresByArray(lores, loreList.value, isReversed.value);

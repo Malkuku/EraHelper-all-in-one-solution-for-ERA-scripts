@@ -26,7 +26,8 @@
           <div class="rule-info">
             <span class="rule-name">{{ key }}</span>
             <span v-if="store.activeRuleName === key" class="tag success">当前启用</span>
-            <span class="tag info">{{ Object.keys(setting).length }} 个任务</span>
+            <!-- 兼容旧数据，使用 || {} -->
+            <span class="tag info">{{ Object.keys(setting.staged_setting || {}).length }} 个任务</span>
           </div>
           <div class="card-actions">
             <button
@@ -51,12 +52,17 @@
           </div>
         </div>
 
+        <!-- 显示规则注释 -->
+        <div v-if="setting.comment" class="rule-comment">
+          {{ setting.comment }}
+        </div>
+
         <div class="card-preview">
           <!-- 简单预览该规则组下的任务名称 -->
-          <span v-for="(task, taskName) in setting" :key="taskName" class="task-pill">
+          <span v-for="(task, taskName) in (setting.staged_setting || {})" :key="taskName" class="task-pill">
             {{ taskName }}
           </span>
-          <span v-if="Object.keys(setting).length === 0" class="no-task-tip">暂无任务</span>
+          <span v-if="Object.keys(setting.staged_setting || {}).length === 0" class="no-task-tip">暂无任务</span>
         </div>
       </div>
     </div>
@@ -84,8 +90,12 @@ const createNewRule = async () => {
     return;
   }
 
-  // 初始化为空的 StagedSetting
-  store.asyncAnalyzeSetting[name] = {};
+  // 初始化新结构：包含注释、分步设置、全局世界书配置
+  store.asyncAnalyzeSetting[name] = {
+    comment: '',
+    staged_setting: {},
+    world_book: {}
+  };
   newRuleName.value = '';
 
   // 如果是第一个，自动激活
@@ -119,7 +129,7 @@ const deleteRule = async (key: string) => {
   toastr.success('删除成功');
 };
 
-// 跳转到编辑页面（这里假设编辑页面需要知道当前编辑的是哪个规则，可以通过 query 参数传递，或者在 store 中增加 editingRuleName）
+// 跳转到编辑页面
 const editRule = (key: string) => {
   router.push({ name: 'RuleEditor', query: { rule: key } });
 };
@@ -191,7 +201,16 @@ const editRule = (key: string) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 8px;
+}
+
+.rule-comment {
+  font-size: 13px;
+  color: #6b7280;
   margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed #e5e7eb;
+  white-space: pre-wrap;
 }
 
 .rule-info {
@@ -301,6 +320,11 @@ const editRule = (key: string) => {
     }
 
     .rule-name { color: #e2e8f0; }
+  }
+
+  .rule-comment {
+    color: #9ca3af;
+    border-bottom-color: #4b5563;
   }
 
   .task-pill {

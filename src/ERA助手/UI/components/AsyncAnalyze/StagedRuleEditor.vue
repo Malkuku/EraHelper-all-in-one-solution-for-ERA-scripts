@@ -18,11 +18,25 @@
       <!-- 左侧：任务列表 -->
       <div class="sidebar">
         <div class="sidebar-title">
-          <span>任务列表</span>
+          <span>配置列表</span>
           <button class="btn small icon-btn" @click="createTask" title="新建任务">+</button>
         </div>
 
         <div class="task-list custom-scrollbar">
+          <!-- 全局配置入口 -->
+          <div
+            class="task-item global-item"
+            :class="{ active: currentTaskName === GLOBAL_ID }"
+            @click="currentTaskName = GLOBAL_ID"
+          >
+            <div class="task-row">
+              <span class="task-order">★</span>
+              <span class="task-name">全局设置 (Global)</span>
+            </div>
+          </div>
+
+          <div class="divider-line"></div>
+
           <div v-if="sortedTasks.length === 0" class="empty-tip">暂无任务，请新建</div>
 
           <div
@@ -45,20 +59,21 @@
 
       <!-- 右侧：任务详情编辑器 -->
       <div class="main-content">
-        <div v-if="!currentTask" class="no-selection">请选择或新建一个任务</div>
+        <div v-if="!editingData" class="no-selection">请选择一个项目进行编辑</div>
 
         <div v-else class="task-editor">
-          <!-- 任务标题栏 -->
+          <!-- 标题栏 -->
           <div class="task-header">
             <div class="task-title-edit">
-              <span class="label">任务名称:</span>
-              <input :value="currentTaskName" @change="renameTask($event)" class="name-input" />
+              <span class="label">{{ isGlobalSettings ? '规则组名称:' : '任务名称:' }}</span>
+              <span v-if="isGlobalSettings" class="name-static">{{ currentRuleName }}</span>
+              <input v-else :value="currentTaskName" @change="renameTask($event)" class="name-input" />
             </div>
-            <div class="task-actions">
+            <div class="task-actions" v-if="!isGlobalSettings">
               <label class="toggle-switch">
-                <input type="checkbox" v-model="currentTask.enable" />
+                <input type="checkbox" v-model="editingData.enable" />
                 <span class="slider"></span>
-                <span class="text">{{ currentTask.enable ? '已启用' : '已禁用' }}</span>
+                <span class="text">{{ editingData.enable ? '已启用' : '已禁用' }}</span>
               </label>
               <button class="btn danger small" @click="deleteTask">删除任务</button>
             </div>
@@ -67,64 +82,67 @@
           <!-- 内部标签页导航 -->
           <div class="inner-tabs">
             <button class="tab-btn" :class="{ active: activeTab === 'basic' }" @click="activeTab = 'basic'">
-              基础与提示词
+              {{ isGlobalSettings ? '规则说明' : '基础与提示词' }}
             </button>
             <button class="tab-btn" :class="{ active: activeTab === 'worldbook' }" @click="activeTab = 'worldbook'">
-              世界书提取 ({{ Object.keys(currentTask.world_book || {}).length }})
+              {{ isGlobalSettings ? '正文世界书配置' : '任务世界书提取' }} ({{ Object.keys(editingData.world_book || {}).length }})
             </button>
-            <button class="tab-btn" :class="{ active: activeTab === 'merge' }" @click="activeTab = 'merge'">
-              结果处理 ({{ Object.keys(currentTask.merge_setting || {}).length }})
+            <button v-if="!isGlobalSettings" class="tab-btn" :class="{ active: activeTab === 'merge' }" @click="activeTab = 'merge'">
+              结果处理 ({{ Object.keys(editingData.merge_setting || {}).length }})
             </button>
           </div>
 
           <!-- 标签页内容 -->
           <div class="tab-content custom-scrollbar">
-            <!-- 1. 基础设置与提示词 -->
+            <!-- 1. 基础设置 -->
             <div v-show="activeTab === 'basic'" class="tab-pane">
-              <div class="form-grid">
-                <div class="form-group">
-                  <label>任务备注</label>
-                  <input v-model="currentTask.comment" placeholder="在此输入任务用途或说明..." />
+              <div class="form-grid" :class="{ 'one-col': isGlobalSettings }">
+                <div class="form-group full-width">
+                  <label>{{ isGlobalSettings ? '规则组注释' : '任务备注' }}</label>
+                  <input v-model="editingData.comment" placeholder="在此输入用途或说明..." />
                 </div>
 
-                <div class="form-group">
-                  <label>执行顺序</label>
-                  <input type="number" v-model.number="currentTask.order" placeholder="0" />
-                </div>
-                <div class="form-group">
-                  <label>API 配置</label>
-                  <select v-model="currentTask.api_config">
-                    <option value="">-- 请选择 API --</option>
-                    <option v-for="(cfg, name) in store.apiConfigSettings" :key="name" :value="name">
-                      {{ name }}
-                    </option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label>触发间隔</label>
-                  <input type="number" v-model.number="currentTask.trigger_index" min="1" />
-                </div>
-                <div class="form-group">
-                  <label>上下文楼层</label>
-                  <input type="number" v-model.number="currentTask.chat_history" min="0" />
-                </div>
-                <div class="form-group">
-                  <label>重试次数</label>
-                  <input type="number" v-model.number="currentTask.reroll_count" min="0" />
-                </div>
+                <!-- 仅任务模式显示 -->
+                <template v-if="!isGlobalSettings">
+                  <div class="form-group">
+                    <label>执行顺序</label>
+                    <input type="number" v-model.number="editingData.order" placeholder="0" />
+                  </div>
+                  <div class="form-group">
+                    <label>API 配置</label>
+                    <select v-model="editingData.api_config">
+                      <option value="">-- 请选择 API --</option>
+                      <option v-for="(cfg, name) in store.apiConfigSettings" :key="name" :value="name">
+                        {{ name }}
+                      </option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>触发间隔</label>
+                    <input type="number" v-model.number="editingData.trigger_index" min="1" />
+                  </div>
+                  <div class="form-group">
+                    <label>上下文楼层</label>
+                    <input type="number" v-model.number="editingData.chat_history" min="0" />
+                  </div>
+                  <div class="form-group">
+                    <label>重试次数</label>
+                    <input type="number" v-model.number="editingData.reroll_count" min="0" />
+                  </div>
+                </template>
               </div>
 
-              <div class="form-group full-height">
+              <div v-if="!isGlobalSettings" class="form-group full-height">
                 <label>提示词</label>
                 <textarea
-                  v-model="currentTask.prompt"
+                  v-model="editingData.prompt"
                   class="prompt-area"
                   placeholder="请输入发送给 AI 的提示词..."
                 ></textarea>
               </div>
             </div>
 
-            <!-- 2. 世界书提取配置 (已修改：左侧列表改为下拉添加) -->
+            <!-- 2. 世界书配置 (通用) -->
             <div v-show="activeTab === 'worldbook'" class="tab-pane">
               <div class="list-editor">
                 <div class="list-sidebar">
@@ -140,11 +158,11 @@
                     </div>
                   </div>
                   <!-- 默认按钮 -->
-                  <button v-else class="btn small primary full" @click="startAddWb">+ 添加提取规则</button>
+                  <button v-else class="btn small primary full" @click="startAddWb">+ 添加配置</button>
 
                   <div class="scroll-list custom-scrollbar">
                     <div
-                      v-for="(wb, key) in currentTask.world_book"
+                      v-for="(wb, key) in editingData.world_book"
                       :key="key"
                       class="sub-item"
                       :class="{ active: currentWbKey === key }"
@@ -155,14 +173,14 @@
                   </div>
                 </div>
                 <div class="list-content custom-scrollbar">
-                  <div v-if="currentWbKey && currentTask.world_book?.[currentWbKey]" class="sub-form">
+                  <div v-if="currentWbKey && editingData.world_book?.[currentWbKey]" class="sub-form">
                     <div class="sub-header">
                       <strong>{{ currentWbKey }}</strong>
                       <button class="btn danger small" @click="deleteWorldBookItem(currentWbKey)">删除</button>
                     </div>
                     <div class="form-group">
                       <label>正则匹配 (Lore Regex)</label>
-                      <input v-model="currentTask.world_book[currentWbKey].lore_regex" placeholder="正则表达式..." />
+                      <input v-model="editingData.world_book[currentWbKey].lore_regex" placeholder="正则表达式..." />
                     </div>
 
                     <!-- 自定义多选下拉框 -->
@@ -173,11 +191,11 @@
                       <div ref="multiselectRef" class="custom-multiselect">
                         <!-- 显示区域 -->
                         <div class="selected-tags" @click="toggleDropdown('wb_lores')">
-                          <span v-if="currentTask.world_book[currentWbKey].lores.length === 0" class="placeholder">
+                          <span v-if="editingData.world_book[currentWbKey].lores.length === 0" class="placeholder">
                             点击选择条目...
                           </span>
                           <span
-                            v-for="(lore, index) in currentTask.world_book[currentWbKey].lores"
+                            v-for="(lore, index) in editingData.world_book[currentWbKey].lores"
                             :key="index"
                             class="tag"
                           >
@@ -194,7 +212,7 @@
                             <label v-for="loreName in currentBookLores" :key="loreName" class="dropdown-item">
                               <input
                                 type="checkbox"
-                                :checked="currentTask.world_book[currentWbKey].lores.includes(loreName)"
+                                :checked="editingData.world_book[currentWbKey].lores.includes(loreName)"
                                 @change="toggleLoreSelection(currentWbKey, loreName)"
                               />
                               {{ loreName }}
@@ -206,7 +224,7 @@
                       <details class="manual-edit-details">
                         <summary>手动编辑文本模式</summary>
                         <textarea
-                          :value="currentTask.world_book[currentWbKey].lores.join('\n')"
+                          :value="editingData.world_book[currentWbKey].lores.join('\n')"
                           @input="updateLores(currentWbKey, $event)"
                           rows="4"
                           class="mt-2"
@@ -219,14 +237,14 @@
               </div>
             </div>
 
-            <!-- 3. 结果处理 -->
-            <div v-show="activeTab === 'merge'" class="tab-pane">
+            <!-- 3. 结果处理 (仅任务) -->
+            <div v-if="!isGlobalSettings" v-show="activeTab === 'merge'" class="tab-pane">
               <div class="list-editor">
                 <div class="list-sidebar">
                   <button class="btn small primary full" @click="addMergeItem">+ 添加处理规则</button>
                   <div class="scroll-list custom-scrollbar">
                     <div
-                      v-for="(item, key) in currentTask.merge_setting"
+                      v-for="(item, key) in editingData.merge_setting"
                       :key="key"
                       class="sub-item"
                       :class="{ active: currentMergeKey === key }"
@@ -237,7 +255,7 @@
                   </div>
                 </div>
                 <div class="list-content custom-scrollbar">
-                  <div v-if="currentMergeKey && currentTask.merge_setting?.[currentMergeKey]" class="sub-form">
+                  <div v-if="currentMergeKey && editingData.merge_setting?.[currentMergeKey]" class="sub-form">
                     <div class="sub-header">
                       <strong>{{ currentMergeKey }}</strong>
                       <button class="btn danger small" @click="deleteMergeItem(currentMergeKey)">删除</button>
@@ -245,7 +263,7 @@
 
                     <div class="form-group checkbox-row">
                       <label>
-                        <input type="checkbox" v-model="currentTask.merge_setting[currentMergeKey].is_inject" />
+                        <input type="checkbox" v-model="editingData.merge_setting[currentMergeKey].is_inject" />
                         写入正文 (Is Inject)
                       </label>
                     </div>
@@ -254,7 +272,7 @@
                       <div class="form-group">
                         <label>目标世界书 (Target WB)</label>
                         <select
-                          v-model="currentTask.merge_setting[currentMergeKey].world_book"
+                          v-model="editingData.merge_setting[currentMergeKey].world_book"
                           @change="onMergeWbChange(currentMergeKey)"
                         >
                           <option value="">-- 选择世界书 --</option>
@@ -264,10 +282,10 @@
 
                       <div class="form-group">
                         <label>目标条目 (Target Lore)</label>
-                        <select v-model="currentTask.merge_setting[currentMergeKey].target_lore">
+                        <select v-model="editingData.merge_setting[currentMergeKey].target_lore">
                           <option value="">-- 选择条目 --</option>
                           <option
-                            v-for="lore in getCachedLores(currentTask.merge_setting[currentMergeKey].world_book)"
+                            v-for="lore in getCachedLores(editingData.merge_setting[currentMergeKey].world_book)"
                             :key="lore"
                             :value="lore"
                           >
@@ -279,14 +297,14 @@
 
                     <div class="form-group">
                       <label>替换正则 (Replace Regex)</label>
-                      <input v-model="currentTask.merge_setting[currentMergeKey].replace_regex" />
+                      <input v-model="editingData.merge_setting[currentMergeKey].replace_regex" />
                     </div>
 
                     <div class="form-group">
                       <label>内容捕获正则 (Content Regex)</label>
                       <div class="tip">每行一个正则表达式，用于从AI回复中提取内容</div>
                       <textarea
-                        :value="currentTask.merge_setting[currentMergeKey].content_regex.join('\n')"
+                        :value="editingData.merge_setting[currentMergeKey].content_regex.join('\n')"
                         rows="5"
                         @input="updateContentRegex(currentMergeKey, $event)"
                       ></textarea>
@@ -304,7 +322,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAsyncAnalyzeStore } from '@/ERA助手/stores/AsyncAnalyzeStore';
 import { Modal } from '@/ERA助手/utils/modal';
@@ -314,9 +332,11 @@ const store = useAsyncAnalyzeStore();
 const route = useRoute();
 const router = useRouter();
 
+const GLOBAL_ID = '__GLOBAL__';
+
 // 状态
 const currentRuleName = ref<string>('');
-const currentTaskName = ref<string>('');
+const currentTaskName = ref<string>(GLOBAL_ID); // 默认为全局设置
 const activeTab = ref<'basic' | 'worldbook' | 'merge'>('basic');
 
 // 子列表选中状态
@@ -357,8 +377,6 @@ const fetchWorldBooks = async () => {
       allWorldBooks.value = window.getWorldbookNames();
     } else {
       console.warn('无法找到 getWorldbookNames 全局函数');
-      // 模拟数据用于测试
-      // allWorldBooks.value = ['Global', 'Character', 'History'];
     }
   } catch (e) {
     console.error('获取世界书列表失败', e);
@@ -415,8 +433,8 @@ const closeDropdown = (e: Event) => {
 };
 
 const toggleLoreSelection = (wbKey: string, loreName: string) => {
-  if (!currentTask.value?.world_book[wbKey]) return;
-  const list = currentTask.value.world_book[wbKey].lores;
+  if (!editingData.value?.world_book[wbKey]) return;
+  const list = editingData.value.world_book[wbKey].lores;
   const idx = list.indexOf(loreName);
   if (idx > -1) {
     list.splice(idx, 1);
@@ -426,8 +444,8 @@ const toggleLoreSelection = (wbKey: string, loreName: string) => {
 };
 
 const removeLore = (wbKey: string, index: number) => {
-  if (!currentTask.value?.world_book[wbKey]) return;
-  currentTask.value.world_book[wbKey].lores.splice(index, 1);
+  if (!editingData.value?.world_book[wbKey]) return;
+  editingData.value.world_book[wbKey].lores.splice(index, 1);
 };
 
 // --- 计算属性 ---
@@ -436,9 +454,20 @@ const currentRule = computed(() => {
   return store.asyncAnalyzeSetting[currentRuleName.value];
 });
 
+const isGlobalSettings = computed(() => currentTaskName.value === GLOBAL_ID);
+
+// 动态获取当前编辑的对象（是全局规则还是具体任务）
+const editingData = computed(() => {
+  if (!currentRule.value) return null;
+  if (isGlobalSettings.value) {
+    return currentRule.value; // 返回规则对象本身 (含 comment, world_book)
+  }
+  return currentRule.value.staged_setting?.[currentTaskName.value];
+});
+
 const sortedTasks = computed(() => {
-  if (!currentRule.value) return [];
-  return Object.entries(currentRule.value)
+  if (!currentRule.value || !currentRule.value.staged_setting) return [];
+  return Object.entries(currentRule.value.staged_setting)
     .map(([key, data]) => ({
       key,
       data,
@@ -446,16 +475,18 @@ const sortedTasks = computed(() => {
     .sort((a, b) => a.data.order - b.data.order);
 });
 
-const currentTask = computed(() => {
-  if (!currentRule.value || !currentTaskName.value) return null;
-  return currentRule.value[currentTaskName.value];
-});
-
 // --- 新增：计算可添加的世界书 ---
 const availableNewBooks = computed(() => {
-  if (!currentTask.value?.world_book) return allWorldBooks.value;
-  const existingKeys = Object.keys(currentTask.value.world_book);
+  if (!editingData.value?.world_book) return allWorldBooks.value;
+  const existingKeys = Object.keys(editingData.value.world_book);
   return allWorldBooks.value.filter(wb => !existingKeys.includes(wb));
+});
+
+// 监听切换，重置子Tab
+watch(currentTaskName, () => {
+  activeTab.value = 'basic';
+  currentWbKey.value = '';
+  currentMergeKey.value = '';
 });
 
 // --- 导航与保存 ---
@@ -473,11 +504,14 @@ const createTask = async () => {
   if (!currentRule.value) return;
   const name = await Modal.prompt('新建任务', '请输入新任务名称 (例如: AnalyzePersonality)');
   if (!name) return;
-  if (currentRule.value[name]) {
+
+  if (!currentRule.value.staged_setting) currentRule.value.staged_setting = {};
+
+  if (currentRule.value.staged_setting[name]) {
     toastr.error('任务名称已存在');
     return;
   }
-  currentRule.value[name] = {
+  currentRule.value.staged_setting[name] = {
     comment: '',
     enable: true,
     order: 0,
@@ -494,28 +528,31 @@ const createTask = async () => {
 };
 
 const renameTask = (event: Event) => {
-  if (!currentRule.value || !currentTaskName.value) return;
+  if (!currentRule.value || !currentTaskName.value || isGlobalSettings.value) return;
   const newName = (event.target as HTMLInputElement).value.trim();
   if (!newName || newName === currentTaskName.value) return;
-  if (currentRule.value[newName]) {
+
+  const tasks = currentRule.value.staged_setting;
+  if (tasks[newName]) {
     toastr.error('该名称已存在');
     (event.target as HTMLInputElement).value = currentTaskName.value;
     return;
   }
-  currentRule.value[newName] = currentRule.value[currentTaskName.value];
-  delete currentRule.value[currentTaskName.value];
+  tasks[newName] = tasks[currentTaskName.value];
+  delete tasks[currentTaskName.value];
   currentTaskName.value = newName;
 };
 
 const deleteTask = async () => {
-  if (!currentRule.value || !currentTaskName.value) return;
+  if (!currentRule.value || !currentTaskName.value || isGlobalSettings.value) return;
   const confirmed = await Modal.confirm('删除任务', `确定要删除任务 "${currentTaskName.value}" 吗？`);
   if (!confirmed) return;
-  delete currentRule.value[currentTaskName.value];
-  currentTaskName.value = '';
+
+  delete currentRule.value.staged_setting[currentTaskName.value];
+  currentTaskName.value = GLOBAL_ID;
 };
 
-// --- World Book 管理 (修改：使用下拉添加) ---
+// --- World Book 管理 (通用) ---
 
 const startAddWb = () => {
   isAddingWb.value = true;
@@ -528,12 +565,12 @@ const cancelAddWb = () => {
 };
 
 const confirmAddWb = () => {
-  if (!currentTask.value || !newWbName.value) return;
+  if (!editingData.value || !newWbName.value) return;
 
-  if (!currentTask.value.world_book) currentTask.value.world_book = {};
+  if (!editingData.value.world_book) editingData.value.world_book = {};
 
   // 初始化
-  currentTask.value.world_book[newWbName.value] = {
+  editingData.value.world_book[newWbName.value] = {
     lores: [],
     lore_regex: '',
   };
@@ -549,28 +586,28 @@ const selectWbKey = (key: string) => {
 };
 
 const deleteWorldBookItem = (key: string) => {
-  if (!currentTask.value?.world_book) return;
-  delete currentTask.value.world_book[key];
+  if (!editingData.value?.world_book) return;
+  delete editingData.value.world_book[key];
   if (currentWbKey.value === key) currentWbKey.value = '';
 };
 
 const updateLores = (key: string, event: Event) => {
   const text = (event.target as HTMLTextAreaElement).value;
-  if (currentTask.value?.world_book[key]) {
-    currentTask.value.world_book[key].lores = text.split('\n');
+  if (editingData.value?.world_book[key]) {
+    editingData.value.world_book[key].lores = text.split('\n');
   }
 };
 
 // --- Merge Setting 管理 ---
 
 const addMergeItem = async () => {
-  if (!currentTask.value) return;
+  if (!editingData.value || isGlobalSettings.value) return;
   const name = await Modal.prompt('添加处理规则', '请输入处理规则名称');
   if (!name) return;
 
-  if (!currentTask.value.merge_setting) currentTask.value.merge_setting = {};
+  if (!editingData.value.merge_setting) editingData.value.merge_setting = {};
 
-  currentTask.value.merge_setting[name] = {
+  editingData.value.merge_setting[name] = {
     is_inject: false,
     world_book: '',
     target_lore: '',
@@ -581,13 +618,13 @@ const addMergeItem = async () => {
 };
 
 const deleteMergeItem = (key: string) => {
-  if (!currentTask.value?.merge_setting) return;
-  delete currentTask.value.merge_setting[key];
+  if (!editingData.value?.merge_setting) return;
+  delete editingData.value.merge_setting[key];
   if (currentMergeKey.value === key) currentMergeKey.value = '';
 };
 
 const onMergeWbChange = (key: string) => {
-  const setting = currentTask.value?.merge_setting[key];
+  const setting = editingData.value?.merge_setting[key];
   if (setting && setting.world_book) {
     setting.target_lore = '';
     fetchLoresForBook(setting.world_book);
@@ -596,8 +633,8 @@ const onMergeWbChange = (key: string) => {
 
 const updateContentRegex = (key: string, event: Event) => {
   const text = (event.target as HTMLTextAreaElement).value;
-  if (currentTask.value?.merge_setting[key]) {
-    currentTask.value.merge_setting[key].content_regex = text.split('\n');
+  if (editingData.value?.merge_setting[key]) {
+    editingData.value.merge_setting[key].content_regex = text.split('\n');
   }
 };
 </script>
@@ -709,6 +746,12 @@ $dark-primary-bg: #312e81;
   gap: 6px;
 }
 
+.divider-line {
+  height: 1px;
+  background: $light-border;
+  margin: 4px 0;
+}
+
 .task-item {
   padding: 8px 10px;
   border-radius: 6px;
@@ -735,6 +778,20 @@ $dark-primary-bg: #312e81;
     opacity: 0.6;
     .task-name {
       text-decoration: line-through;
+    }
+  }
+
+  &.global-item {
+    background: #fff7ed; /* Orange tint for global */
+    border-color: #fed7aa;
+    .task-order {
+      background: #ffedd5;
+      color: #c2410c;
+    }
+    &.active {
+      background: #ffedd5;
+      border-color: #f97316;
+      .task-name { color: #9a3412; }
     }
   }
 }
@@ -826,6 +883,11 @@ $dark-primary-bg: #312e81;
       border-color: $light-border;
       background: $light-bg;
     }
+  }
+  .name-static {
+    font-size: 16px;
+    font-weight: 600;
+    color: $light-text;
   }
 }
 
@@ -930,6 +992,9 @@ $dark-primary-bg: #312e81;
   &.two-col {
     grid-template-columns: 1fr 1fr;
   }
+  &.one-col {
+    grid-template-columns: 1fr;
+  }
 }
 
 .form-group {
@@ -967,6 +1032,10 @@ $dark-primary-bg: #312e81;
       flex: 1;
       resize: none;
     }
+  }
+
+  &.full-width {
+    grid-column: 1 / -1;
   }
 
   .tip {
@@ -1281,6 +1350,9 @@ $dark-primary-bg: #312e81;
   .sidebar-title {
     color: $dark-text;
   }
+  .divider-line {
+    background: $dark-border;
+  }
 
   .task-item {
     background: $dark-bg-sec;
@@ -1293,6 +1365,19 @@ $dark-primary-bg: #312e81;
       border-color: $dark-primary;
       .task-name {
         color: #e0e7ff;
+      }
+    }
+    &.global-item {
+      background: #431407; /* Dark orange bg */
+      border-color: #9a3412;
+      .task-order {
+        background: #7c2d12;
+        color: #ffedd5;
+      }
+      &.active {
+        background: #7c2d12;
+        border-color: #f97316;
+        .task-name { color: #ffedd5; }
       }
     }
   }
@@ -1318,13 +1403,13 @@ $dark-primary-bg: #312e81;
   .task-title-edit .label {
     color: $dark-text-sec;
   }
-  .task-title-edit .name-input {
+  .task-title-edit .name-input, .task-title-edit .name-static {
     color: $dark-text;
-    &:hover,
-    &:focus {
-      border-color: $dark-border;
-      background: $dark-bg-hover;
-    }
+  }
+  .task-title-edit .name-input:hover,
+  .task-title-edit .name-input:focus {
+    border-color: $dark-border;
+    background: $dark-bg-hover;
   }
 
   .toggle-switch .slider {
