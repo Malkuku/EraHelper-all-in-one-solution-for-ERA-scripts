@@ -16,7 +16,7 @@ const getEraEditStore = () => (window as any).EraEditStore as ReturnType<typeof 
 
 // Changed to ref to allow dynamic updates by tasks
 const loreList = ref<string[]>([]);
-const isReversed = ref(false); // Default false: remove items in loreList. Set to true if you want to KEEP only items in loreList.
+const isReversed = ref(true);//反向过滤
 
 // Global lock for analysis
 let isAnalyzing = false;

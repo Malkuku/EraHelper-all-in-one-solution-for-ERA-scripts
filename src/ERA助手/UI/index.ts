@@ -4,7 +4,7 @@ import App from './App.vue';
 import { useUiStore } from '../stores/UIStore';
 import { createMountPoint, destroyMountPoint, deteleportStyle, teleportStyle } from '../utils/dom';
 import {
-  handleEraRulesOnMessageReceived,
+  //handleEraRulesOnMessageReceived,
   handleLoresFilter,
   handleMessageReceived,
 } from '../AsyncAnalyze/handleAsyncAnalyzeEvents';
@@ -104,7 +104,7 @@ $(() => {
   // 监听事件
   eventOn(tavern_events.WORLDINFO_ENTRIES_LOADED, handleLoresFilter);
   eventOn(tavern_events.MESSAGE_RECEIVED, handleMessageReceived);
-  eventOn(tavern_events.MESSAGE_RECEIVED, handleEraRulesOnMessageReceived);
+  //eventOn(tavern_events.MESSAGE_RECEIVED, handleEraRulesOnMessageReceived);
 
   // eventOn('kat:handle_era_finished', async ()=>{
   //
