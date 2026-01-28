@@ -142,18 +142,31 @@
               </div>
             </div>
 
-            <!-- 2. 世界书提取配置 -->
+            <!-- 2. 世界书提取配置 (已修改：左侧列表改为下拉添加) -->
             <div v-show="activeTab === 'worldbook'" class="tab-pane">
               <div class="list-editor">
                 <div class="list-sidebar">
-                  <button class="btn small primary full" @click="addWorldBookItem">+ 添加提取规则</button>
+                  <!-- 添加模式 -->
+                  <div v-if="isAddingWb" class="add-panel">
+                    <select v-model="newWbName" class="mini-select">
+                      <option value="" disabled>选择世界书...</option>
+                      <option v-for="wb in availableNewBooks" :key="wb" :value="wb">{{ wb }}</option>
+                    </select>
+                    <div class="add-actions">
+                      <button class="btn small primary" @click="confirmAddWb" :disabled="!newWbName">确定</button>
+                      <button class="btn small" @click="cancelAddWb">取消</button>
+                    </div>
+                  </div>
+                  <!-- 默认按钮 -->
+                  <button v-else class="btn small primary full" @click="startAddWb">+ 添加提取规则</button>
+
                   <div class="scroll-list custom-scrollbar">
                     <div
                       v-for="(wb, key) in currentTask.world_book"
                       :key="key"
                       class="sub-item"
                       :class="{ active: currentWbKey === key }"
-                      @click="currentWbKey = key"
+                      @click="selectWbKey(key)"
                     >
                       {{ key }}
                     </div>
@@ -169,22 +182,67 @@
                       <label>正则匹配 (Lore Regex)</label>
                       <input v-model="currentTask.world_book[currentWbKey].lore_regex" placeholder="正则表达式..." />
                     </div>
+
+                    <!-- 自定义多选下拉框 -->
                     <div class="form-group">
                       <label>收集的条目 (Lores)</label>
-                      <div class="tip">每行一个条目，系统会自动匹配加入</div>
-                      <textarea
-                        :value="currentTask.world_book[currentWbKey].lores.join('\n')"
-                        @input="updateLores(currentWbKey, $event)"
-                        rows="6"
-                      ></textarea>
+                      <div class="tip">从下拉框选择条目，或手动输入</div>
+
+                      <div ref="multiselectRef" class="custom-multiselect">
+                        <!-- 显示区域 -->
+                        <div class="selected-tags" @click="toggleDropdown('wb_lores')">
+                          <span v-if="currentTask.world_book[currentWbKey].lores.length === 0" class="placeholder">
+                            点击选择条目...
+                          </span>
+                          <span
+                            v-for="(lore, index) in currentTask.world_book[currentWbKey].lores"
+                            :key="index"
+                            class="tag"
+                          >
+                            {{ lore }}
+                            <span class="remove-tag" @click.stop="removeLore(currentWbKey, index)">×</span>
+                          </span>
+                        </div>
+
+                        <!-- 下拉选项区域 -->
+                        <div v-if="activeDropdown === 'wb_lores'" class="dropdown-panel custom-scrollbar">
+                          <div v-if="loadingLores" class="dropdown-loading">加载中...</div>
+                          <div v-else-if="currentBookLores.length === 0" class="dropdown-empty">该世界书无条目</div>
+                          <template v-else>
+                            <label
+                              v-for="loreName in currentBookLores"
+                              :key="loreName"
+                              class="dropdown-item"
+                            >
+                              <input
+                                type="checkbox"
+                                :checked="currentTask.world_book[currentWbKey].lores.includes(loreName)"
+                                @change="toggleLoreSelection(currentWbKey, loreName)"
+                              >
+                              {{ loreName }}
+                            </label>
+                          </template>
+                        </div>
+                      </div>
+                      <!-- 手动编辑入口 -->
+                      <details class="manual-edit-details">
+                        <summary>手动编辑文本模式</summary>
+                        <textarea
+                          :value="currentTask.world_book[currentWbKey].lores.join('\n')"
+                          @input="updateLores(currentWbKey, $event)"
+                          rows="4"
+                          class="mt-2"
+                        ></textarea>
+                      </details>
                     </div>
+
                   </div>
                   <div v-else class="empty-sub">请选择左侧规则或添加新规则</div>
                 </div>
               </div>
             </div>
 
-            <!-- 3. 结果处理 (Merge Setting) -->
+            <!-- 3. 结果处理 -->
             <div v-show="activeTab === 'merge'" class="tab-pane">
               <div class="list-editor">
                 <div class="list-sidebar">
@@ -218,11 +276,27 @@
                     <div class="form-grid two-col">
                       <div class="form-group">
                         <label>目标世界书 (Target WB)</label>
-                        <input v-model="currentTask.merge_setting[currentMergeKey].world_book" />
+                        <select
+                          v-model="currentTask.merge_setting[currentMergeKey].world_book"
+                          @change="onMergeWbChange(currentMergeKey)"
+                        >
+                          <option value="">-- 选择世界书 --</option>
+                          <option v-for="wb in allWorldBooks" :key="wb" :value="wb">{{ wb }}</option>
+                        </select>
                       </div>
+
                       <div class="form-group">
                         <label>目标条目 (Target Lore)</label>
-                        <input v-model="currentTask.merge_setting[currentMergeKey].target_lore" />
+                        <select v-model="currentTask.merge_setting[currentMergeKey].target_lore">
+                          <option value="">-- 选择条目 --</option>
+                          <option
+                            v-for="lore in getCachedLores(currentTask.merge_setting[currentMergeKey].world_book)"
+                            :key="lore"
+                            :value="lore"
+                          >
+                            {{ lore }}
+                          </option>
+                        </select>
                       </div>
                     </div>
 
@@ -254,10 +328,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, reactive, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAsyncAnalyzeStore } from '@/ERA助手/stores/AsyncAnalyzeStore';
-import { Modal } from '@/ERA助手/utils/modal'; // 引入工具类
+import { Modal } from '@/ERA助手/utils/modal';
+import { WorldInfoUtil } from '@/ERA助手/utils/WorldInfoUtil';
 
 const store = useAsyncAnalyzeStore();
 const route = useRoute();
@@ -272,17 +347,116 @@ const activeTab = ref<'basic' | 'worldbook' | 'merge'>('basic');
 const currentWbKey = ref<string>('');
 const currentMergeKey = ref<string>('');
 
+// --- API 数据相关状态 ---
+const allWorldBooks = ref<string[]>([]);
+const loreCache = reactive<Record<string, string[]>>({});
+const loadingLores = ref(false);
+const activeDropdown = ref<string | null>(null);
+
+// --- 新增：添加世界书的状态 ---
+const isAddingWb = ref(false);
+const newWbName = ref('');
+
 // 初始化
-onMounted(() => {
+onMounted(async () => {
   const queryRule = route.query.rule as string;
   if (queryRule) {
     currentRuleName.value = queryRule;
   } else if (store.activeRuleName && store.asyncAnalyzeSetting[store.activeRuleName]) {
     currentRuleName.value = store.activeRuleName;
   }
+
+  document.addEventListener('click', closeDropdown);
+  await fetchWorldBooks();
 });
 
-// 计算属性
+onUnmounted(() => {
+  document.removeEventListener('click', closeDropdown);
+});
+
+// --- API 交互逻辑 ---
+const fetchWorldBooks = async () => {
+  try {
+    // @ts-ignore
+    if (typeof window.getWorldbookNames === 'function') {
+      // @ts-ignore
+      allWorldBooks.value = window.getWorldbookNames();
+    } else {
+      console.warn('无法找到 getWorldbookNames 全局函数');
+      // 模拟数据用于测试
+      // allWorldBooks.value = ['Global', 'Character', 'History'];
+    }
+  } catch (e) {
+    console.error('获取世界书列表失败', e);
+  }
+};
+
+const fetchLoresForBook = async (bookName: string) => {
+  if (!bookName) return;
+  if (loreCache[bookName]) return;
+
+  loadingLores.value = true;
+  try {
+    const lores = await WorldInfoUtil.getWorldBookLoresByName(bookName);
+    loreCache[bookName] = lores || [];
+  } catch (e) {
+    console.error(`获取世界书 [${bookName}] 条目失败`, e);
+    loreCache[bookName] = [];
+  } finally {
+    loadingLores.value = false;
+  }
+};
+
+const currentBookLores = computed(() => {
+  if (!currentWbKey.value) return [];
+  return loreCache[currentWbKey.value] || [];
+});
+
+const getCachedLores = (bookName: string) => {
+  if (!bookName) return [];
+  if (!loreCache[bookName]) {
+    fetchLoresForBook(bookName);
+    return [];
+  }
+  return loreCache[bookName];
+};
+
+// --- 下拉框交互逻辑 ---
+const toggleDropdown = (id: string) => {
+  if (activeDropdown.value === id) {
+    activeDropdown.value = null;
+  } else {
+    activeDropdown.value = id;
+    if (id === 'wb_lores' && currentWbKey.value) {
+      fetchLoresForBook(currentWbKey.value);
+    }
+  }
+};
+
+const closeDropdown = (e: Event) => {
+  const target = e.target as HTMLElement;
+  if (!target.closest('.custom-multiselect')) {
+    activeDropdown.value = null;
+  }
+};
+
+const toggleLoreSelection = (wbKey: string, loreName: string) => {
+  if (!currentTask.value?.world_book[wbKey]) return;
+  const list = currentTask.value.world_book[wbKey].lores;
+  const idx = list.indexOf(loreName);
+  if (idx > -1) {
+    list.splice(idx, 1);
+  } else {
+    list.push(loreName);
+  }
+};
+
+const removeLore = (wbKey: string, index: number) => {
+  if (!currentTask.value?.world_book[wbKey]) return;
+  currentTask.value.world_book[wbKey].lores.splice(index, 1);
+};
+
+// --- 计算属性 ---
 const currentRule = computed(() => {
   if (!currentRuleName.value) return null;
   return store.asyncAnalyzeSetting[currentRuleName.value];
@@ -301,30 +475,32 @@ const currentTask = computed(() => {
   return currentRule.value[currentTaskName.value];
 });
 
-// 导航
+// --- 新增：计算可添加的世界书 ---
+const availableNewBooks = computed(() => {
+  if (!currentTask.value?.world_book) return allWorldBooks.value;
+  const existingKeys = Object.keys(currentTask.value.world_book);
+  return allWorldBooks.value.filter(wb => !existingKeys.includes(wb));
+});
+
+// --- 导航与保存 ---
 const goBack = () => {
   router.push({ name: 'RuleSelection' });
 };
 
-// 保存
 const saveAll = async () => {
   await store.saveModelSettings();
   toastr.success('规则已保存');
 };
 
-// --- 任务管理 (使用 Modal 替换 prompt/confirm) ---
-
+// --- 任务管理 ---
 const createTask = async () => {
   if (!currentRule.value) return;
-  // 替换 prompt
   const name = await Modal.prompt('新建任务', '请输入新任务名称 (例如: AnalyzePersonality)');
-
   if (!name) return;
   if (currentRule.value[name]) {
     toastr.error('任务名称已存在');
     return;
   }
-
   currentRule.value[name] = {
     enable: true,
     order: 0,
@@ -337,7 +513,6 @@ const createTask = async () => {
     world_book: {},
     merge_setting: {}
   };
-
   currentTaskName.value = name;
 };
 
@@ -345,13 +520,11 @@ const renameTask = (event: Event) => {
   if (!currentRule.value || !currentTaskName.value) return;
   const newName = (event.target as HTMLInputElement).value.trim();
   if (!newName || newName === currentTaskName.value) return;
-
   if (currentRule.value[newName]) {
     toastr.error('该名称已存在');
     (event.target as HTMLInputElement).value = currentTaskName.value;
     return;
   }
-
   const taskData = currentRule.value[currentTaskName.value];
   currentRule.value[newName] = taskData;
   delete currentRule.value[currentTaskName.value];
@@ -360,28 +533,43 @@ const renameTask = (event: Event) => {
 
 const deleteTask = async () => {
   if (!currentRule.value || !currentTaskName.value) return;
-  // 替换 confirm
   const confirmed = await Modal.confirm('删除任务', `确定要删除任务 "${currentTaskName.value}" 吗？`);
   if (!confirmed) return;
-
   delete currentRule.value[currentTaskName.value];
   currentTaskName.value = '';
 };
 
-// --- World Book 管理 ---
+// --- World Book 管理 (修改：使用下拉添加) ---
 
-const addWorldBookItem = async () => {
-  if (!currentTask.value) return;
-  const name = await Modal.prompt('添加提取规则', '请输入提取规则名称');
-  if (!name) return;
+const startAddWb = () => {
+  isAddingWb.value = true;
+  newWbName.value = '';
+};
+
+const cancelAddWb = () => {
+  isAddingWb.value = false;
+  newWbName.value = '';
+};
+
+const confirmAddWb = () => {
+  if (!currentTask.value || !newWbName.value) return;
 
   if (!currentTask.value.world_book) currentTask.value.world_book = {};
 
-  currentTask.value.world_book[name] = {
+  // 初始化
+  currentTask.value.world_book[newWbName.value] = {
     lores: [],
     lore_regex: ''
   };
-  currentWbKey.value = name;
+
+  selectWbKey(newWbName.value);
+  isAddingWb.value = false;
+  newWbName.value = '';
+};
+
+const selectWbKey = (key: string) => {
+  currentWbKey.value = key;
+  fetchLoresForBook(key);
 };
 
 const deleteWorldBookItem = (key: string) => {
@@ -422,6 +610,14 @@ const deleteMergeItem = (key: string) => {
   if (currentMergeKey.value === key) currentMergeKey.value = '';
 };
 
+const onMergeWbChange = (key: string) => {
+  const setting = currentTask.value?.merge_setting[key];
+  if (setting && setting.world_book) {
+    setting.target_lore = '';
+    fetchLoresForBook(setting.world_book);
+  }
+};
+
 const updateContentRegex = (key: string, event: Event) => {
   const text = (event.target as HTMLTextAreaElement).value;
   if (currentTask.value?.merge_setting[key]) {
@@ -432,12 +628,33 @@ const updateContentRegex = (key: string, event: Event) => {
 </script>
 
 <style scoped lang="scss">
+/* --- 强制颜色定义 (Forced Colors) --- */
+/* Light Mode Defaults */
+$light-bg: #ffffff;
+$light-bg-sec: #f9fafb;
+$light-bg-hover: #f3f4f6;
+$light-text: #111827; /* Deep Black/Gray */
+$light-text-sec: #4b5563;
+$light-border: #d1d5db;
+$light-primary: #4f46e5;
+$light-primary-bg: #e0e7ff;
+
+/* Dark Mode Defaults */
+$dark-bg: #1f2937;
+$dark-bg-sec: #111827;
+$dark-bg-hover: #374151;
+$dark-text: #f3f4f6; /* Bright White/Gray */
+$dark-text-sec: #9ca3af;
+$dark-border: #4b5563;
+$dark-primary: #818cf8;
+$dark-primary-bg: #312e81;
+
 .rule-editor-container {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #fff;
-  color: #374151; /* 默认字体颜色加深 */
+  background: $light-bg;
+  color: $light-text;
 }
 
 /* Header */
@@ -446,7 +663,7 @@ const updateContentRegex = (key: string, event: Event) => {
   justify-content: space-between;
   align-items: center;
   padding: 10px 0;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid $light-border;
   margin-bottom: 10px;
 }
 
@@ -458,15 +675,15 @@ const updateContentRegex = (key: string, event: Event) => {
   .text-btn {
     background: none;
     border: none;
-    color: #6366f1;
+    color: $light-primary;
     cursor: pointer;
     padding: 0;
-    font-weight: 500;
+    font-weight: 600;
     &:hover { text-decoration: underline; }
   }
 
-  .separator { margin: 0 8px; color: #9ca3af; }
-  .current-rule { font-weight: 600; color: #1f2937; }
+  .separator { margin: 0 8px; color: $light-text-sec; }
+  .current-rule { font-weight: 600; color: $light-text; }
 }
 
 .error-state {
@@ -488,7 +705,7 @@ const updateContentRegex = (key: string, event: Event) => {
   width: 200px;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #e5e7eb;
+  border-right: 1px solid $light-border;
   padding-right: 10px;
 }
 
@@ -497,8 +714,8 @@ const updateContentRegex = (key: string, event: Event) => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
-  font-weight: 600;
-  color: #374151; /* 加深 */
+  font-weight: 700;
+  color: $light-text;
 }
 
 .task-list {
@@ -512,17 +729,18 @@ const updateContentRegex = (key: string, event: Event) => {
 .task-item {
   padding: 8px 10px;
   border-radius: 6px;
-  background: #f9fafb;
+  background: $light-bg-sec;
   cursor: pointer;
   border: 1px solid transparent;
   transition: all 0.2s;
+  color: $light-text;
 
-  &:hover { background: #f3f4f6; }
+  &:hover { background: $light-bg-hover; }
 
   &.active {
-    background: #e0e7ff;
-    border-color: #6366f1;
-    .task-name { color: #4338ca; font-weight: 600; }
+    background: $light-primary-bg;
+    border-color: $light-primary;
+    .task-name { color: #312e81; font-weight: 700; }
   }
 
   &.disabled {
@@ -539,8 +757,8 @@ const updateContentRegex = (key: string, event: Event) => {
 
 .task-order {
   font-size: 11px;
-  background: #d1d5db;
-  color: #374151; /* 加深 */
+  background: #e5e7eb;
+  color: $light-text;
   padding: 1px 4px;
   border-radius: 4px;
   min-width: 20px;
@@ -552,12 +770,12 @@ const updateContentRegex = (key: string, event: Event) => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #374151; /* 加深 */
+  color: $light-text;
 }
 
 .task-status {
   font-size: 10px;
-  color: #6b7280; /* 加深: 原 #9ca3af */
+  color: $light-text-sec;
   margin-top: 2px;
   text-align: right;
 }
@@ -575,8 +793,8 @@ const updateContentRegex = (key: string, event: Event) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6b7280; /* 加深 */
-  border: 2px dashed #e5e7eb;
+  color: $light-text-sec;
+  border: 2px dashed $light-border;
   border-radius: 8px;
 }
 
@@ -592,7 +810,7 @@ const updateContentRegex = (key: string, event: Event) => {
   align-items: center;
   margin-bottom: 12px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid $light-bg-hover;
 }
 
 .task-title-edit {
@@ -601,16 +819,16 @@ const updateContentRegex = (key: string, event: Event) => {
   gap: 8px;
   flex: 1;
 
-  .label { font-size: 14px; color: #4b5563; /* 加深 */ }
+  .label { font-size: 14px; color: $light-text-sec; }
   .name-input {
     font-size: 16px;
     font-weight: 600;
     border: 1px solid transparent;
     padding: 4px 8px;
     border-radius: 4px;
-    color: #1f2937;
-    &:hover, &:focus { border-color: #d1d5db; background: #fff; }
+    color: $light-text;
     background: transparent;
+    &:hover, &:focus { border-color: $light-border; background: $light-bg; }
   }
 }
 
@@ -650,17 +868,17 @@ const updateContentRegex = (key: string, event: Event) => {
     }
   }
 
-  input:checked + .slider { background: #6366f1; }
+  input:checked + .slider { background: $light-primary; }
   input:checked + .slider::after { left: 18px; }
 
-  .text { font-size: 12px; color: #4b5563; /* 加深 */ }
+  .text { font-size: 12px; color: $light-text-sec; }
 }
 
 /* Inner Tabs */
 .inner-tabs {
   display: flex;
   gap: 4px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid $light-border;
   margin-bottom: 16px;
 }
 
@@ -670,15 +888,15 @@ const updateContentRegex = (key: string, event: Event) => {
   border: none;
   border-bottom: 2px solid transparent;
   cursor: pointer;
-  color: #6b7280; /* 加深 */
+  color: $light-text-sec;
   font-size: 13px;
 
-  &:hover { color: #1f2937; }
+  &:hover { color: $light-text; }
 
   &.active {
-    color: #6366f1;
-    border-bottom-color: #6366f1;
-    font-weight: 500;
+    color: $light-primary;
+    border-bottom-color: $light-primary;
+    font-weight: 600;
   }
 }
 
@@ -710,20 +928,20 @@ const updateContentRegex = (key: string, event: Event) => {
   label {
     display: block;
     font-size: 12px;
-    color: #4b5563; /* 加深 */
+    color: $light-text-sec;
     margin-bottom: 4px;
-    font-weight: 500;
+    font-weight: 600;
   }
 
   input, select, textarea {
     width: 100%;
     padding: 6px 8px;
-    border: 1px solid #d1d5db;
+    border: 1px solid $light-border;
     border-radius: 4px;
     font-size: 13px;
-    background: #fff;
-    color: #1f2937;
-    &:focus { border-color: #6366f1; outline: none; }
+    background: $light-bg;
+    color: $light-text;
+    &:focus { border-color: $light-primary; outline: none; }
   }
 
   &.full-height {
@@ -733,13 +951,13 @@ const updateContentRegex = (key: string, event: Event) => {
     textarea { flex: 1; resize: none; }
   }
 
-  .tip { font-size: 11px; color: #6b7280; margin-bottom: 4px; }
+  .tip { font-size: 11px; color: $light-text-sec; margin-bottom: 4px; }
 }
 
 .checkbox-row {
   display: flex;
   align-items: center;
-  label { display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; }
+  label { display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; color: $light-text; }
   input { width: auto; }
 }
 
@@ -747,17 +965,17 @@ const updateContentRegex = (key: string, event: Event) => {
 .list-editor {
   display: flex;
   height: 100%;
-  border: 1px solid #e5e7eb;
+  border: 1px solid $light-border;
   border-radius: 6px;
   overflow: hidden;
 }
 
 .list-sidebar {
-  width: 160px;
-  border-right: 1px solid #e5e7eb;
+  width: 180px;
+  border-right: 1px solid $light-border;
   display: flex;
   flex-direction: column;
-  background: #f9fafb;
+  background: $light-bg-sec;
 
   .scroll-list {
     flex: 1;
@@ -768,10 +986,30 @@ const updateContentRegex = (key: string, event: Event) => {
     padding: 8px;
     font-size: 12px;
     cursor: pointer;
-    border-bottom: 1px solid #f3f4f6;
-    color: #4b5563; /* 加深 */
-    &:hover { background: #e5e7eb; }
-    &.active { background: #fff; color: #6366f1; font-weight: 600; border-left: 3px solid #6366f1; }
+    border-bottom: 1px solid $light-border;
+    color: $light-text;
+    &:hover { background: $light-border; }
+    &.active { background: $light-bg; color: $light-primary; font-weight: 600; border-left: 3px solid $light-primary; }
+  }
+}
+
+/* Add Panel in Sidebar */
+.add-panel {
+  padding: 8px;
+  border-bottom: 1px solid $light-border;
+  background: $light-bg;
+
+  .mini-select {
+    width: 100%;
+    margin-bottom: 6px;
+    font-size: 12px;
+    padding: 4px;
+  }
+
+  .add-actions {
+    display: flex;
+    gap: 4px;
+    .btn { flex: 1; }
   }
 }
 
@@ -779,7 +1017,7 @@ const updateContentRegex = (key: string, event: Event) => {
   flex: 1;
   padding: 12px;
   overflow-y: auto;
-  background: #fff;
+  background: $light-bg;
 }
 
 .sub-header {
@@ -788,8 +1026,8 @@ const updateContentRegex = (key: string, event: Event) => {
   align-items: center;
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #f3f4f6;
-  strong { color: #1f2937; }
+  border-bottom: 1px solid $light-bg-hover;
+  strong { color: $light-text; }
 }
 
 .empty-sub {
@@ -797,9 +1035,111 @@ const updateContentRegex = (key: string, event: Event) => {
   height: 100%;
   align-items: center;
   justify-content: center;
-  color: #9ca3af;
+  color: $light-text-sec;
   font-size: 13px;
 }
+
+/* Custom Multi-Select */
+.custom-multiselect {
+  position: relative;
+  border: 1px solid $light-border;
+  border-radius: 4px;
+  background: $light-bg;
+  min-height: 36px;
+}
+
+.selected-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  cursor: pointer;
+  min-height: 36px;
+  align-items: center;
+
+  .placeholder {
+    color: $light-text-sec;
+    font-size: 13px;
+    padding-left: 4px;
+  }
+}
+
+.tag {
+  background: $light-primary-bg;
+  color: #312e81;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid #c7d2fe;
+
+  .remove-tag {
+    cursor: pointer;
+    font-weight: bold;
+    &:hover { color: #1e1b4b; }
+  }
+}
+
+.dropdown-panel {
+  position: absolute;
+  top: 100%;
+  left: -1px;
+  right: -1px;
+  background: $light-bg;
+  border: 1px solid $light-border;
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 10;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  font-size: 13px;
+  cursor: pointer;
+  color: $light-text;
+  gap: 8px;
+
+  &:hover {
+    background: $light-bg-hover;
+  }
+
+  input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+  }
+}
+
+.dropdown-loading, .dropdown-empty {
+  padding: 8px;
+  text-align: center;
+  color: $light-text-sec;
+  font-size: 12px;
+}
+
+.manual-edit-details {
+  margin-top: 8px;
+  font-size: 12px;
+  color: $light-text-sec;
+
+  summary {
+    cursor: pointer;
+    &:hover { color: $light-text; }
+  }
+
+  textarea {
+    width: 100%;
+    margin-top: 4px;
+  }
+}
+
+.mt-2 { margin-top: 8px; }
 
 /* Buttons */
 .btn {
@@ -809,91 +1149,129 @@ const updateContentRegex = (key: string, event: Event) => {
   cursor: pointer;
   font-size: 13px;
 
-  &.primary { background: #6366f1; color: white; &:hover { background: #4f46e5; } }
+  &.primary { background: $light-primary; color: white; &:hover { background: #4338ca; } }
   &.danger { background: #fee2e2; color: #991b1b; &:hover { background: #fecaca; } }
   &.small { padding: 4px 8px; font-size: 12px; }
   &.icon-btn { font-size: 16px; line-height: 1; padding: 0 8px; }
   &.full { width: 100%; border-radius: 0; }
+
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 
 /* Custom Scrollbar */
 .custom-scrollbar {
   &::-webkit-scrollbar { width: 6px; height: 6px; }
   &::-webkit-scrollbar-track { background: transparent; }
-  &::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
-  &::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+  &::-webkit-scrollbar-thumb { background: $light-border; border-radius: 3px; }
+  &::-webkit-scrollbar-thumb:hover { background: $light-text-sec; }
 }
 
-/* Dark Mode */
+/* --- Dark Mode Overrides (Forced Colors) --- */
 :global(.dark-mode) {
-  .rule-editor-container, .editor-body, .main-content, .list-content, .tab-pane {
-    background: #1f2937;
-    color: #e2e8f0;
+  .rule-editor-container, .editor-body, .main-content, .list-content, .tab-pane, .add-panel {
+    background: $dark-bg;
+    color: $dark-text;
   }
 
-  .editor-header { border-bottom-color: #374151; }
-  .breadcrumb .current-rule { color: #e2e8f0; }
-  .breadcrumb .separator { color: #6b7280; }
+  .editor-header { border-bottom-color: $dark-border; }
+  .breadcrumb .text-btn { color: $dark-primary; }
+  .breadcrumb .current-rule { color: $dark-text; }
+  .breadcrumb .separator { color: $dark-text-sec; }
 
-  .sidebar { border-right-color: #374151; }
-  .sidebar-title { color: #e2e8f0; }
+  .sidebar { border-right-color: $dark-border; }
+  .sidebar-title { color: $dark-text; }
 
   .task-item {
-    background: #374151;
-    &:hover { background: #4b5563; }
-    &.active { background: #312e81; border-color: #818cf8; .task-name { color: #e0e7ff; } }
+    background: $dark-bg-sec;
+    color: $dark-text;
+    &:hover { background: $dark-bg-hover; }
+    &.active { background: $dark-primary-bg; border-color: $dark-primary; .task-name { color: #e0e7ff; } }
   }
-  .task-order { background: #4b5563; color: #e2e8f0; }
-  .task-name { color: #e2e8f0; }
-  .task-status { color: #9ca3af; }
+  .task-order { background: $dark-border; color: $dark-text; }
+  .task-name { color: $dark-text; }
+  .task-status { color: $dark-text-sec; }
 
-  .no-selection { border-color: #4b5563; color: #9ca3af; }
+  .no-selection { border-color: $dark-border; color: $dark-text-sec; }
 
-  .task-header { border-bottom-color: #374151; }
-  .task-title-edit .label { color: #9ca3af; }
-  .task-title-edit .name-input { color: #e2e8f0; &:hover { background: #374151; } }
+  .task-header { border-bottom-color: $dark-bg-hover; }
+  .task-title-edit .label { color: $dark-text-sec; }
+  .task-title-edit .name-input {
+    color: $dark-text;
+    &:hover, &:focus { border-color: $dark-border; background: $dark-bg-hover; }
+  }
 
-  .toggle-switch .slider { background: #4b5563; }
-  .toggle-switch input:checked + .slider { background: #6366f1; }
-  .toggle-switch .text { color: #cbd5e1; }
+  .toggle-switch .slider { background: $dark-border; }
+  .toggle-switch input:checked + .slider { background: $dark-primary; }
+  .toggle-switch .text { color: $dark-text-sec; }
 
-  .inner-tabs { border-bottom-color: #374151; }
+  .inner-tabs { border-bottom-color: $dark-border; }
   .tab-btn {
-    color: #9ca3af;
-    &:hover { color: #e2e8f0; }
-    &.active { color: #818cf8; border-bottom-color: #818cf8; }
+    color: $dark-text-sec;
+    &:hover { color: $dark-text; }
+    &.active { color: $dark-primary; border-bottom-color: $dark-primary; }
   }
 
   .form-group {
-    label { color: #cbd5e1; }
+    label { color: $dark-text-sec; }
     input, select, textarea {
-      background: #374151;
-      border-color: #4b5563;
-      color: #e2e8f0;
-      &:focus { border-color: #818cf8; }
+      background: $dark-bg-sec;
+      border-color: $dark-border;
+      color: $dark-text;
+      &:focus { border-color: $dark-primary; }
     }
-    .tip { color: #9ca3af; }
+    .tip { color: $dark-text-sec; }
   }
 
-  .list-editor { border-color: #374151; }
+  .checkbox-row label { color: $dark-text; }
+
+  .list-editor { border-color: $dark-border; }
   .list-sidebar {
-    background: #111827;
-    border-right-color: #374151;
+    background: $dark-bg-sec;
+    border-right-color: $dark-border;
     .sub-item {
-      border-bottom-color: #374151;
-      color: #9ca3af;
-      &:hover { background: #374151; }
-      &.active { background: #1f2937; color: #818cf8; }
+      border-bottom-color: $dark-border;
+      color: $dark-text-sec;
+      &:hover { background: $dark-bg-hover; }
+      &.active { background: $dark-bg; color: $dark-primary; }
     }
   }
-  .sub-header { border-bottom-color: #374151; strong { color: #e2e8f0; } }
+  .sub-header { border-bottom-color: $dark-border; strong { color: $dark-text; } }
 
   .btn.danger { background: #7f1d1d; color: #fecaca; &:hover { background: #991b1b; } }
 
+  /* Custom Select Dark */
+  .custom-multiselect {
+    background: $dark-bg-sec;
+    border-color: $dark-border;
+  }
+  .selected-tags .placeholder { color: $dark-text-sec; }
+
+  .tag {
+    background: $dark-primary-bg;
+    color: #e0e7ff;
+    border-color: $dark-primary;
+    .remove-tag:hover { color: #fff; }
+  }
+
+  .dropdown-panel {
+    background: $dark-bg-sec;
+    border-color: $dark-border;
+  }
+
+  .dropdown-item {
+    color: $dark-text;
+    &:hover { background: $dark-bg-hover; }
+  }
+
+  .manual-edit-details {
+    color: $dark-text-sec;
+    summary:hover { color: $dark-text; }
+  }
+
   /* Scrollbar Dark */
   .custom-scrollbar {
-    &::-webkit-scrollbar-thumb { background: #4b5563; }
-    &::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+    &::-webkit-scrollbar-thumb { background: $dark-border; }
+    &::-webkit-scrollbar-thumb:hover { background: $dark-text-sec; }
   }
 }
 </style>
