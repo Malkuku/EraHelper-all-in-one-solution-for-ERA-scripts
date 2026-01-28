@@ -47,6 +47,7 @@
 
         <!-- 显示规则注释 -->
         <div v-if="setting.comment" class="rule-comment">
+          <Tooltip content="备注信息，建议写清楚是做什么的，比如正文api" placement="top" />
           {{ setting.comment }}
         </div>
 
@@ -70,6 +71,7 @@ import { AsyncAnalyzeSetting } from '@/ERA助手/AsyncAnalyze/types/AsyncAnalyze
 import FileImportExport from '@/ERA助手/UI/components/File/FileImportExport.vue';
 import { Modal } from '@/ERA助手/utils/modal';
 import { useUiStore } from '@/ERA助手/stores/UIStore';
+import Tooltip from '../Common/Tooltip.vue';
 
 const store = useAsyncAnalyzeStore();
 const router = useRouter();
@@ -318,6 +320,9 @@ const handleExportData = () => {
   padding-bottom: 8px;
   border-bottom: 1px dashed #e5e7eb;
   white-space: pre-wrap;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
 }
 
 .rule-info {

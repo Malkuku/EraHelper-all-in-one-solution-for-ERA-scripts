@@ -25,9 +25,12 @@
         >
           <div class="card-header">
             <span class="task-order">★</span>
-            <span class="task-name">全局设置 (Global)</span>
+            <span class="task-name">正文世界书配置</span>
           </div>
-          <div class="card-desc">配置全局通用的 Prompt 和世界书</div>
+          <div class="card-desc">
+            配置发送给正文的世界书
+            <Tooltip content="这里配置的世界书条目就是正文AI能看到的所有条目，兼容酒馆设置（关闭的条目AI同样看不到，同理，绿灯条目会按照关键词触发）" placement="top" />
+          </div>
         </div>
 
         <!-- 普通任务卡片 -->
@@ -48,11 +51,13 @@
           <div class="card-body">
             <div class="info-row">
               <span class="label">触发:</span>
-              <span class="value">Index {{ task.data.trigger_index }} / Hist {{ task.data.trigger_history }}</span>
+              <span class="value">触发间隔：{{ task.data.trigger_index }} | 上下文长度：{{ task.data.trigger_history }}</span>
             </div>
             <div class="info-row">
               <span class="label">备注:</span>
-              <span class="value comment">{{ task.data.comment || '-' }}</span>
+              <span class="value comment">
+                {{ task.data.comment || '-' }}
+              </span>
             </div>
           </div>
         </div>
@@ -88,6 +93,7 @@ import { useAsyncAnalyzeStore } from '@/ERA助手/stores/AsyncAnalyzeStore';
 import { useUiStore } from '@/ERA助手/stores/UIStore';
 import { Modal } from '@/ERA助手/utils/modal';
 import TaskEditorModal from './TaskEditorModal.vue';
+import Tooltip from '../Common/Tooltip.vue';
 
 // --- 类型定义 (保持不变) ---
 export interface AsyncAnalyzeSetting {
@@ -544,4 +550,3 @@ const openTaskEditor = (taskKey: string) => {
   }
 }
 </style>
-

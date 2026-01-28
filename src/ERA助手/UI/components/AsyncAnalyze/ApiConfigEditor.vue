@@ -45,16 +45,16 @@
         <div class="form-scroll-area">
           <!-- 新增：备注字段 -->
           <div class="form-group">
-            <label>备注 (Comment)</label>
+            <label>备注</label>
             <input v-model="currentConfig.comment" placeholder="在此输入配置说明..." />
           </div>
           <!-- 1. 模型来源选择 -->
           <div class="form-group">
-            <label>模型来源</label>
+            <label>模型来源<Tooltip content="模型来源：当前模型将使用与正文相同的api;预设模型使用酒馆插头预设的api;额外模型使用自定义api" placement="top" /></label>
             <SearchableSelect
               v-model="currentConfig.model_source"
               :options="['sample', 'profile', 'external']"
-              :option-labels="{ sample: '当前模型 (Sample)', profile: '预设模型 (Profile)', external: '额外模型 (External)' }"
+              :option-labels="{ sample: '当前模型', profile: '预设模型', external: '额外模型' }"
             />
           </div>
 
@@ -63,7 +63,10 @@
           <!-- 2. 来源：Profile (预设模型) -->
           <div v-if="currentConfig?.model_source === 'profile'" class="source-settings">
             <div class="form-group">
-              <label>选择预设 (Profile)</label>
+              <label>
+                选择预设 (Profile)
+                <Tooltip content="选择预设模型配置" placement="top" />
+              </label>
               <div class="input-with-btn">
                 <SearchableSelect
                   v-model="currentConfig.profileSetting"
@@ -79,7 +82,7 @@
           <!-- 3. 来源：Sample (当前模型) -->
           <div v-if="currentConfig?.model_source === 'sample'" class="source-settings">
             <div class="form-group">
-              <label>使用的预设 (Preset)</label>
+              <label>使用的预设</label>
               <div class="input-with-btn">
                 <SearchableSelect
                   v-model="currentConfig.simple_preset_name"
@@ -87,7 +90,7 @@
                   :placeholder="'请选择...'"
                   style="flex: 1;"
                 />
-                <button class="btn icon-btn" @click="refreshPresetList" title="刷新列表">↻</button>
+                <button class="btn icon-btn" title="刷新列表" @click="refreshPresetList">↻</button>
               </div>
             </div>
           </div>
@@ -99,12 +102,12 @@
             </div>
 
             <div class="form-group">
-              <label>接口地址 (Base URL)</label>
+              <label>接口地址</label>
               <input v-model="currentConfig.custom_model_settings.baseURL" placeholder="https://api.openai.com/v1" />
             </div>
 
             <div class="form-group">
-              <label>API 密钥</label>
+              <label>API密钥</label>
               <input
                 v-model="currentConfig.custom_model_settings.apiKey"
                 type="password"
@@ -126,27 +129,30 @@
             </div>
 
             <div class="form-group">
-              <label>使用的预设 (Preset)</label>
+              <label>使用的预设</label>
               <div class="input-with-btn">
                 <SearchableSelect
                   v-model="currentConfig.custom_model_settings.presetName"
                   :options="presetList"
                   style="flex: 1;"
                 />
-                <button class="btn icon-btn" @click="refreshPresetList" title="刷新列表">↻</button>
+                <button class="btn icon-btn" title="刷新列表" @click="refreshPresetList">↻</button>
               </div>
             </div>
 
             <div class="row-group">
               <div class="form-group half">
-                <label>温度 (Temperature)</label>
+                <label>
+                  温度
+                  <Tooltip content="控制生成文本的随机性，值越高越随机" placement="top" />
+                </label>
                 <input
                   v-model.number="currentConfig.custom_model_settings.temperature"
                   type="number" step="0.1" min="0" max="2"
                 />
               </div>
               <div class="form-group half">
-                <label>最大 Token (Max Tokens)</label>
+                <label>最大Token数</label>
                 <input
                   v-model.number="currentConfig.custom_model_settings.maxTokens"
                   type="number" min="1"
@@ -174,6 +180,8 @@ import { eraLogger } from '@/ERA助手/utils/EraHelperLogger';
 // [新增] 引入组件
 import SearchableSelect from '../Dialog/SearchableSelect.vue';
 import { useUiStore } from '@/ERA助手/stores/UIStore';
+// [新增] 引入Tooltip组件
+import Tooltip from '../Common/Tooltip.vue';
 
 const uiStore = useUiStore();
 
@@ -494,7 +502,9 @@ onMounted(() => {
   margin-bottom: 16px;
 
   label {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 6px;
     margin-bottom: 6px;
     font-size: 13px;
     font-weight: 500;
@@ -653,4 +663,3 @@ onMounted(() => {
   }
 }
 </style>
-

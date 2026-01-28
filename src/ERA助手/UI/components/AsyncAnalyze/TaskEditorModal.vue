@@ -42,18 +42,27 @@
           <div v-show="activeTab === 'basic'" class="tab-pane">
             <div class="form-grid" :class="{ 'one-col': isGlobalSettings }">
               <div class="form-group full-width">
-                <label>{{ isGlobalSettings ? '规则组注释' : '任务备注' }}</label>
+                <label>
+                  {{ isGlobalSettings ? '规则组注释' : '任务备注' }}
+                  <Tooltip content="注释文本内容" placement="top" />
+                </label>
                 <input v-model="editingData.comment" placeholder="在此输入用途或说明..." />
               </div>
 
               <!-- 仅任务模式显示 -->
               <template v-if="!isGlobalSettings">
                 <div class="form-group">
-                  <label>执行顺序</label>
+                  <label>
+                    执行顺序
+                    <Tooltip content="任务的处理顺序，按照从小到大的顺序处理，如果相同则会并行处理。" placement="top" />
+                  </label>
                   <input v-model.number="editingData.order" type="number" placeholder="0" />
                 </div>
                 <div class="form-group">
-                  <label>API 配置</label>
+                  <label>
+                    API 配置
+                    <Tooltip content="使用的api配置名称，此处关联“API配置”部分" placement="top" />
+                  </label>
                   <SearchableSelect
                     v-model="editingData.api_config"
                     :options="Object.keys(store.apiConfigSettings)"
@@ -61,22 +70,34 @@
                   />
                 </div>
                 <div class="form-group">
-                  <label>触发间隔</label>
+                  <label>
+                    触发间隔
+                    <Tooltip content="触发的间隔楼层数，当前楼层与上次触发楼层的差值>=触发间隔时，该任务才会被触发" placement="top" />
+                  </label>
                   <input v-model.number="editingData.trigger_index" type="number" min="1" />
                 </div>
                 <div class="form-group">
-                  <label>上下文楼层</label>
+                  <label>
+                    上下文楼层
+                    <Tooltip content="AI读取的最大上下文楼层数" placement="top" />
+                  </label>
                   <input v-model.number="editingData.chat_history" type="number" min="0" />
                 </div>
                 <div class="form-group">
-                  <label>重试次数</label>
+                  <label>
+                    重试次数
+                    <Tooltip content="AI回复失败时的重试次数" placement="top" />
+                  </label>
                   <input v-model.number="editingData.reroll_count" type="number" min="0" />
                 </div>
               </template>
             </div>
 
             <div v-if="!isGlobalSettings" class="form-group full-height">
-              <label>提示词</label>
+              <label>
+                提示词
+                <Tooltip content="发送给AI的提示词" placement="top" />
+              </label>
               <textarea
                 v-model="editingData.prompt"
                 class="prompt-area"
@@ -117,6 +138,7 @@
                   </div>
                 </div>
               </div>
+
               <div class="list-content custom-scrollbar">
                 <div v-if="currentWbKey && editingData.world_book?.[currentWbKey]" class="sub-form">
                   <div class="sub-header">
@@ -124,13 +146,19 @@
                     <button class="btn danger small" @click="deleteWorldBookItem(currentWbKey)">删除</button>
                   </div>
                   <div class="form-group">
-                    <label>正则匹配 (Lore Regex)</label>
+                    <label>
+                      正则匹配条目
+                      <Tooltip content="通过正则匹配条目,它会将匹配到的条目发送给AI" placement="top" />
+                    </label>
                     <input v-model="editingData.world_book[currentWbKey].lore_regex" placeholder="正则表达式..." />
                   </div>
 
                   <!-- 自定义多选下拉框 -->
                   <div class="form-group">
-                    <label>收集的条目 (Lores)</label>
+                    <label>
+                      名称匹配条目
+                      <Tooltip content="根据名称来匹配条目，匹配的条目将发送给AI" placement="top" />
+                    </label>
                     <div class="tip">从下拉框选择条目，或手动输入</div>
 
                     <SearchableSelect
@@ -174,13 +202,17 @@
                   <div class="form-group checkbox-row">
                     <label>
                       <input v-model="editingData.merge_setting[currentMergeKey].is_inject" type="checkbox" />
-                      写入正文 (Is Inject)
+                      写入正文
+                      <Tooltip content="是否写入正文中，如果为否，则需要配置写入的世界书条目位置" placement="top" />
                     </label>
                   </div>
 
                   <div class="form-grid two-col">
                     <div class="form-group">
-                      <label>目标世界书 (Target WB)</label>
+                      <label>
+                        目标世界书
+                        <Tooltip content="AI写入的目标世界书名称" placement="top" />
+                      </label>
                       <SearchableSelect
                         v-model="editingData.merge_setting[currentMergeKey].world_book"
                         :options="allWorldBooks"
@@ -191,7 +223,10 @@
                     </div>
 
                     <div class="form-group">
-                      <label>目标条目 (Target Lore)</label>
+                      <label>
+                        目标条目
+                        <Tooltip content="AI写入的目标条目名称" placement="top" />
+                      </label>
                       <SearchableSelect
                         v-model="editingData.merge_setting[currentMergeKey].target_lore"
                         :options="getCachedLores(editingData.merge_setting[currentMergeKey].world_book)"
@@ -201,29 +236,12 @@
                     </div>
                   </div>
 
-                  <!-- 替换正则 -->
-                  <div class="form-group">
-                    <label>替换正则 (Replace Regex)</label>
-                    <div class="regex-input-group">
-                      <input
-                        v-model="editingData.merge_setting[currentMergeKey].replace_regex"
-                        placeholder="输入正则..."
-                        class="flex-grow"
-                      />
-                      <div class="preset-select-wrapper">
-                        <SearchableSelect
-                          :model-value="''"
-                          :options="regexPresetOptions"
-                          placeholder="选择预设..."
-                          @update:model-value="(name) => applyRegexPreset(currentMergeKey, 'replace', name)"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
                   <!-- 内容捕获正则 -->
                   <div class="form-group">
-                    <label>内容捕获正则 (Content Regex)</label>
+                    <label>
+                      内容捕获正则
+                      <Tooltip content="内容正则匹配,将从AI输出中文本中捕获相应的内容" placement="top" />
+                    </label>
                     <div class="tip">每行一条正则，可手动输入或选择预设</div>
 
                     <div class="regex-list-container">
@@ -249,6 +267,31 @@
                       </div>
                     </div>
 
+                  <!-- 替换正则 -->
+                  <div class="form-group">
+                    <label>
+                      替换正则
+                      <Tooltip content="替换正则匹配,会将匹配到的内容替换为“内容捕获正则”的匹配内容，为空则默认在尾部添加内容" placement="top" />
+                    </label>
+                    <div class="regex-input-group">
+                      <input
+                        v-model="editingData.merge_setting[currentMergeKey].replace_regex"
+                        placeholder="输入正则..."
+                        class="flex-grow"
+                      />
+                      <div class="preset-select-wrapper">
+                        <SearchableSelect
+                          :model-value="''"
+                          :options="regexPresetOptions"
+                          placeholder="选择预设..."
+                          @update:model-value="(name) => applyRegexPreset(currentMergeKey, 'replace', name)"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+
+
                     <div class="regex-actions">
                       <button class="btn small primary" @click="addEmptyRegex(currentMergeKey)">+ 添加一行</button>
                     </div>
@@ -272,6 +315,7 @@ import { Modal } from '@/ERA助手/utils/modal';
 import { WorldInfoUtil } from '@/Utils/WorldInfoUtil';
 import SearchableSelect from '@/ERA助手/UI/components/Dialog/SearchableSelect.vue';
 import type { StagedSetting } from '@/ERA助手/AsyncAnalyze/types/AsyncAnalyzeSetting';
+import Tooltip from '../Common/Tooltip.vue';
 
 const props = defineProps<{
   ruleName: string;
@@ -766,7 +810,15 @@ const updateRegexItem = (key: string, index: number, event: Event) => {
 
 .form-group {
   margin-bottom: 12px;
-  label { display: block; font-size: 12px; color: #000000 !important; margin-bottom: 4px; font-weight: 700; /* 使用纯黑色提高可读性 */ }
+  label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #000000 !important;
+    margin-bottom: 4px;
+    font-weight: 700; /* 使用纯黑色提高可读性 */
+  }
 
   input, textarea {
     width: 100%;
