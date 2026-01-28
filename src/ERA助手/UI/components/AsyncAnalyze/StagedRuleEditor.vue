@@ -165,8 +165,8 @@
                       v-for="(wb, key) in editingData.world_book"
                       :key="key"
                       class="sub-item"
-                      :class="{ active: currentWbKey === key }"
-                      @click="selectWbKey(key)"
+                      :class="{ active: currentWbKey === String(key) }"
+                      @click="selectWbKey(String(key))"
                     >
                       {{ key }}
                     </div>
@@ -243,12 +243,13 @@
                 <div class="list-sidebar">
                   <button class="btn small primary full" @click="addMergeItem">+ 添加处理规则</button>
                   <div class="scroll-list custom-scrollbar">
+                    <!-- 修复：这里使用 String(key) 来避免 TS 认为 key 是 number 导致的类型不匹配 -->
                     <div
                       v-for="(item, key) in editingData.merge_setting"
                       :key="key"
                       class="sub-item"
-                      :class="{ active: currentMergeKey === key }"
-                      @click="currentMergeKey = key"
+                      :class="{ active: currentMergeKey === String(key) }"
+                      @click="currentMergeKey = String(key)"
                     >
                       {{ key }}
                     </div>
@@ -263,7 +264,7 @@
 
                     <div class="form-group checkbox-row">
                       <label>
-                        <input type="checkbox" v-model="editingData.merge_setting[currentMergeKey].is_inject" />
+                        <input v-model="editingData.merge_setting[currentMergeKey].is_inject" type="checkbox" />
                         写入正文 (Is Inject)
                       </label>
                     </div>
@@ -327,6 +328,49 @@ import { useRoute, useRouter } from 'vue-router';
 import { useAsyncAnalyzeStore } from '@/ERA助手/stores/AsyncAnalyzeStore';
 import { Modal } from '@/ERA助手/utils/modal';
 import { WorldInfoUtil } from '@/Utils/WorldInfoUtil';
+
+// --- 类型定义 (修复类型错误) ---
+export interface AsyncAnalyzeSetting {
+  [key: string]: {
+    comment: string;
+    staged_setting: StagedSetting;
+    world_book: {
+      [key: string]: {
+        lores: string[];
+        lore_regex: string;
+      }
+    }
+  }
+}
+
+export interface StagedSetting {
+  [key: string]: {
+    comment: string;
+    enable: boolean;
+    order: number;
+    chat_history: number;
+    trigger_index: number;
+    trigger_history: number;
+    reroll_count: number;
+    prompt: string;
+    world_book: {
+      [key: string]: {
+        lores: string[];
+        lore_regex: string;
+      }
+    }
+    merge_setting: {
+      [key: string]: {
+        is_inject: boolean;
+        world_book: string;
+        target_lore: string;
+        content_regex: string[];
+        replace_regex: string;
+      }
+    };
+    api_config: string;
+  }
+}
 
 const store = useAsyncAnalyzeStore();
 const route = useRoute();
@@ -457,7 +501,8 @@ const currentRule = computed(() => {
 const isGlobalSettings = computed(() => currentTaskName.value === GLOBAL_ID);
 
 // 动态获取当前编辑的对象（是全局规则还是具体任务）
-const editingData = computed(() => {
+// 修复：使用 any 或联合类型来避免模板中访问 merge_setting 报错
+const editingData = computed((): any => {
   if (!currentRule.value) return null;
   if (isGlobalSettings.value) {
     return currentRule.value; // 返回规则对象本身 (含 comment, world_book)
@@ -605,9 +650,12 @@ const addMergeItem = async () => {
   const name = await Modal.prompt('添加处理规则', '请输入处理规则名称');
   if (!name) return;
 
-  if (!editingData.value.merge_setting) editingData.value.merge_setting = {};
+  // 类型断言，确保TS知道这是 Task 设置
+  const taskData = editingData.value as StagedSetting[string];
 
-  editingData.value.merge_setting[name] = {
+  if (!taskData.merge_setting) taskData.merge_setting = {};
+
+  taskData.merge_setting[name] = {
     is_inject: false,
     world_book: '',
     target_lore: '',
@@ -619,12 +667,15 @@ const addMergeItem = async () => {
 
 const deleteMergeItem = (key: string) => {
   if (!editingData.value?.merge_setting) return;
-  delete editingData.value.merge_setting[key];
+  // 类型断言
+  const taskData = editingData.value as StagedSetting[string];
+  delete taskData.merge_setting[key];
   if (currentMergeKey.value === key) currentMergeKey.value = '';
 };
 
 const onMergeWbChange = (key: string) => {
-  const setting = editingData.value?.merge_setting[key];
+  const taskData = editingData.value as StagedSetting[string];
+  const setting = taskData?.merge_setting[key];
   if (setting && setting.world_book) {
     setting.target_lore = '';
     fetchLoresForBook(setting.world_book);
@@ -633,40 +684,19 @@ const onMergeWbChange = (key: string) => {
 
 const updateContentRegex = (key: string, event: Event) => {
   const text = (event.target as HTMLTextAreaElement).value;
-  if (editingData.value?.merge_setting[key]) {
-    editingData.value.merge_setting[key].content_regex = text.split('\n');
+  const taskData = editingData.value as StagedSetting[string];
+  if (taskData?.merge_setting[key]) {
+    taskData.merge_setting[key].content_regex = text.split('\n');
   }
 };
 </script>
-
 <style scoped lang="scss">
-/* --- 强制颜色定义 (Forced Colors) --- */
-/* Light Mode Defaults */
-$light-bg: #ffffff;
-$light-bg-sec: #f9fafb;
-$light-bg-hover: #f3f4f6;
-$light-text: #111827; /* Deep Black/Gray */
-$light-text-sec: #4b5563;
-$light-border: #d1d5db;
-$light-primary: #4f46e5;
-$light-primary-bg: #e0e7ff;
-
-/* Dark Mode Defaults */
-$dark-bg: #1f2937;
-$dark-bg-sec: #111827;
-$dark-bg-hover: #374151;
-$dark-text: #f3f4f6; /* Bright White/Gray */
-$dark-text-sec: #9ca3af;
-$dark-border: #4b5563;
-$dark-primary: #818cf8;
-$dark-primary-bg: #312e81;
-
 .rule-editor-container {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: $light-bg;
-  color: $light-text;
+  background: #ffffff;
+  color: #000000;
 }
 
 /* Header */
@@ -675,7 +705,7 @@ $dark-primary-bg: #312e81;
   justify-content: space-between;
   align-items: center;
   padding: 10px 0;
-  border-bottom: 1px solid $light-border;
+  border-bottom: 1px solid #9ca3af;
   margin-bottom: 10px;
 }
 
@@ -687,7 +717,7 @@ $dark-primary-bg: #312e81;
   .text-btn {
     background: none;
     border: none;
-    color: $light-primary;
+    color: #4f46e5;
     cursor: pointer;
     padding: 0;
     font-weight: 600;
@@ -698,11 +728,11 @@ $dark-primary-bg: #312e81;
 
   .separator {
     margin: 0 8px;
-    color: $light-text-sec;
+    color: #333333;
   }
   .current-rule {
     font-weight: 600;
-    color: $light-text;
+    color: #000000;
   }
 }
 
@@ -725,7 +755,7 @@ $dark-primary-bg: #312e81;
   width: 200px;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid $light-border;
+  border-right: 1px solid #9ca3af;
   padding-right: 10px;
 }
 
@@ -735,7 +765,7 @@ $dark-primary-bg: #312e81;
   align-items: center;
   margin-bottom: 10px;
   font-weight: 700;
-  color: $light-text;
+  color: #000000;
 }
 
 .task-list {
@@ -748,26 +778,26 @@ $dark-primary-bg: #312e81;
 
 .divider-line {
   height: 1px;
-  background: $light-border;
+  background: #9ca3af;
   margin: 4px 0;
 }
 
 .task-item {
   padding: 8px 10px;
   border-radius: 6px;
-  background: $light-bg-sec;
+  background: #f9fafb;
   cursor: pointer;
   border: 1px solid transparent;
   transition: all 0.2s;
-  color: $light-text;
+  color: #000000;
 
   &:hover {
-    background: $light-bg-hover;
+    background: #f3f4f6;
   }
 
   &.active {
-    background: $light-primary-bg;
-    border-color: $light-primary;
+    background: #e0e7ff;
+    border-color: #4f46e5;
     .task-name {
       color: #312e81;
       font-weight: 700;
@@ -805,7 +835,7 @@ $dark-primary-bg: #312e81;
 .task-order {
   font-size: 11px;
   background: #e5e7eb;
-  color: $light-text;
+  color: #000000;
   padding: 1px 4px;
   border-radius: 4px;
   min-width: 20px;
@@ -817,12 +847,12 @@ $dark-primary-bg: #312e81;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: $light-text;
+  color: #000000;
 }
 
 .task-status {
   font-size: 10px;
-  color: $light-text-sec;
+  color: #333333;
   margin-top: 2px;
   text-align: right;
 }
@@ -840,8 +870,8 @@ $dark-primary-bg: #312e81;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: $light-text-sec;
-  border: 2px dashed $light-border;
+  color: #333333;
+  border: 2px dashed #9ca3af;
   border-radius: 8px;
 }
 
@@ -857,7 +887,7 @@ $dark-primary-bg: #312e81;
   align-items: center;
   margin-bottom: 12px;
   padding-bottom: 10px;
-  border-bottom: 1px solid $light-bg-hover;
+  border-bottom: 1px solid #f3f4f6;
 }
 
 .task-title-edit {
@@ -868,7 +898,7 @@ $dark-primary-bg: #312e81;
 
   .label {
     font-size: 14px;
-    color: $light-text-sec;
+    color: #333333;
   }
   .name-input {
     font-size: 16px;
@@ -876,18 +906,18 @@ $dark-primary-bg: #312e81;
     border: 1px solid transparent;
     padding: 4px 8px;
     border-radius: 4px;
-    color: $light-text;
+    color: #000000;
     background: transparent;
     &:hover,
     &:focus {
-      border-color: $light-border;
-      background: $light-bg;
+      border-color: #9ca3af;
+      background: #ffffff;
     }
   }
   .name-static {
     font-size: 16px;
     font-weight: 600;
-    color: $light-text;
+    color: #000000;
   }
 }
 
@@ -930,7 +960,7 @@ $dark-primary-bg: #312e81;
   }
 
   input:checked + .slider {
-    background: $light-primary;
+    background: #4f46e5;
   }
   input:checked + .slider::after {
     left: 18px;
@@ -938,7 +968,7 @@ $dark-primary-bg: #312e81;
 
   .text {
     font-size: 12px;
-    color: $light-text-sec;
+    color: #333333;
   }
 }
 
@@ -946,7 +976,7 @@ $dark-primary-bg: #312e81;
 .inner-tabs {
   display: flex;
   gap: 4px;
-  border-bottom: 1px solid $light-border;
+  border-bottom: 1px solid #9ca3af;
   margin-bottom: 16px;
 }
 
@@ -956,16 +986,16 @@ $dark-primary-bg: #312e81;
   border: none;
   border-bottom: 2px solid transparent;
   cursor: pointer;
-  color: $light-text-sec;
+  color: #333333;
   font-size: 13px;
 
   &:hover {
-    color: $light-text;
+    color: #000000;
   }
 
   &.active {
-    color: $light-primary;
-    border-bottom-color: $light-primary;
+    color: #4f46e5;
+    border-bottom-color: #4f46e5;
     font-weight: 600;
   }
 }
@@ -1003,7 +1033,7 @@ $dark-primary-bg: #312e81;
   label {
     display: block;
     font-size: 12px;
-    color: $light-text-sec;
+    color: #333333;
     margin-bottom: 4px;
     font-weight: 600;
   }
@@ -1013,14 +1043,24 @@ $dark-primary-bg: #312e81;
   textarea {
     width: 100%;
     padding: 6px 8px;
-    border: 1px solid $light-border;
+    border: 1px solid #9ca3af;
     border-radius: 4px;
     font-size: 13px;
-    background: $light-bg;
-    color: $light-text;
+    background: #ffffff;
+    color: #000000;
     &:focus {
-      border-color: $light-primary;
+      border-color: #4f46e5;
       outline: none;
+    }
+  }
+
+  /* 修复：强制下拉框颜色 */
+  select {
+    color: #000000 !important;
+    background-color: #ffffff !important;
+    option {
+      color: #000000 !important;
+      background-color: #ffffff !important;
     }
   }
 
@@ -1040,7 +1080,7 @@ $dark-primary-bg: #312e81;
 
   .tip {
     font-size: 11px;
-    color: $light-text-sec;
+    color: #333333;
     margin-bottom: 4px;
   }
 }
@@ -1054,7 +1094,7 @@ $dark-primary-bg: #312e81;
     gap: 6px;
     cursor: pointer;
     margin: 0;
-    color: $light-text;
+    color: #000000;
   }
   input {
     width: auto;
@@ -1065,17 +1105,17 @@ $dark-primary-bg: #312e81;
 .list-editor {
   display: flex;
   height: 100%;
-  border: 1px solid $light-border;
+  border: 1px solid #9ca3af;
   border-radius: 6px;
   overflow: hidden;
 }
 
 .list-sidebar {
   width: 180px;
-  border-right: 1px solid $light-border;
+  border-right: 1px solid #9ca3af;
   display: flex;
   flex-direction: column;
-  background: $light-bg-sec;
+  background: #f9fafb;
 
   .scroll-list {
     flex: 1;
@@ -1086,16 +1126,16 @@ $dark-primary-bg: #312e81;
     padding: 8px;
     font-size: 12px;
     cursor: pointer;
-    border-bottom: 1px solid $light-border;
-    color: $light-text;
+    border-bottom: 1px solid #9ca3af;
+    color: #000000;
     &:hover {
-      background: $light-border;
+      background: #9ca3af;
     }
     &.active {
-      background: $light-bg;
-      color: $light-primary;
+      background: #ffffff;
+      color: #4f46e5;
       font-weight: 600;
-      border-left: 3px solid $light-primary;
+      border-left: 3px solid #4f46e5;
     }
   }
 }
@@ -1103,8 +1143,8 @@ $dark-primary-bg: #312e81;
 /* Add Panel in Sidebar */
 .add-panel {
   padding: 8px;
-  border-bottom: 1px solid $light-border;
-  background: $light-bg;
+  border-bottom: 1px solid #9ca3af;
+  background: #ffffff;
 
   .mini-select {
     width: 100%;
@@ -1126,7 +1166,7 @@ $dark-primary-bg: #312e81;
   flex: 1;
   padding: 12px;
   overflow-y: auto;
-  background: $light-bg;
+  background: #ffffff;
 }
 
 .sub-header {
@@ -1135,9 +1175,9 @@ $dark-primary-bg: #312e81;
   align-items: center;
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid $light-bg-hover;
+  border-bottom: 1px solid #f3f4f6;
   strong {
-    color: $light-text;
+    color: #000000;
   }
 }
 
@@ -1146,16 +1186,16 @@ $dark-primary-bg: #312e81;
   height: 100%;
   align-items: center;
   justify-content: center;
-  color: $light-text-sec;
+  color: #333333;
   font-size: 13px;
 }
 
 /* Custom Multi-Select */
 .custom-multiselect {
   position: relative;
-  border: 1px solid $light-border;
+  border: 1px solid #9ca3af;
   border-radius: 4px;
-  background: $light-bg;
+  background: #ffffff;
   min-height: 36px;
 }
 
@@ -1169,14 +1209,14 @@ $dark-primary-bg: #312e81;
   align-items: center;
 
   .placeholder {
-    color: $light-text-sec;
+    color: #333333;
     font-size: 13px;
     padding-left: 4px;
   }
 }
 
 .tag {
-  background: $light-primary-bg;
+  background: #e0e7ff;
   color: #312e81;
   font-size: 12px;
   padding: 2px 6px;
@@ -1200,8 +1240,8 @@ $dark-primary-bg: #312e81;
   top: 100%;
   left: -1px;
   right: -1px;
-  background: $light-bg;
-  border: 1px solid $light-border;
+  background: #ffffff;
+  border: 1px solid #9ca3af;
   border-top: none;
   border-radius: 0 0 4px 4px;
   max-height: 200px;
@@ -1216,11 +1256,11 @@ $dark-primary-bg: #312e81;
   padding: 6px 8px;
   font-size: 13px;
   cursor: pointer;
-  color: $light-text;
+  color: #000000;
   gap: 8px;
 
   &:hover {
-    background: $light-bg-hover;
+    background: #f3f4f6;
   }
 
   input[type='checkbox'] {
@@ -1233,19 +1273,19 @@ $dark-primary-bg: #312e81;
 .dropdown-empty {
   padding: 8px;
   text-align: center;
-  color: $light-text-sec;
+  color: #333333;
   font-size: 12px;
 }
 
 .manual-edit-details {
   margin-top: 8px;
   font-size: 12px;
-  color: $light-text-sec;
+  color: #333333;
 
   summary {
     cursor: pointer;
     &:hover {
-      color: $light-text;
+      color: #000000;
     }
   }
 
@@ -1268,7 +1308,7 @@ $dark-primary-bg: #312e81;
   font-size: 13px;
 
   &.primary {
-    background: $light-primary;
+    background: #4f46e5;
     color: white;
     &:hover {
       background: #4338ca;
@@ -1311,11 +1351,11 @@ $dark-primary-bg: #312e81;
     background: transparent;
   }
   &::-webkit-scrollbar-thumb {
-    background: $light-border;
+    background: #9ca3af;
     border-radius: 3px;
   }
   &::-webkit-scrollbar-thumb:hover {
-    background: $light-text-sec;
+    background: #333333;
   }
 }
 
@@ -1327,42 +1367,42 @@ $dark-primary-bg: #312e81;
   .list-content,
   .tab-pane,
   .add-panel {
-    background: $dark-bg;
-    color: $dark-text;
+    background: #1f2937;
+    color: #f3f4f6;
   }
 
   .editor-header {
-    border-bottom-color: $dark-border;
+    border-bottom-color: #4b5563;
   }
   .breadcrumb .text-btn {
-    color: $dark-primary;
+    color: #818cf8;
   }
   .breadcrumb .current-rule {
-    color: $dark-text;
+    color: #f3f4f6;
   }
   .breadcrumb .separator {
-    color: $dark-text-sec;
+    color: #9ca3af;
   }
 
   .sidebar {
-    border-right-color: $dark-border;
+    border-right-color: #4b5563;
   }
   .sidebar-title {
-    color: $dark-text;
+    color: #f3f4f6;
   }
   .divider-line {
-    background: $dark-border;
+    background: #4b5563;
   }
 
   .task-item {
-    background: $dark-bg-sec;
-    color: $dark-text;
+    background: #111827;
+    color: #f3f4f6;
     &:hover {
-      background: $dark-bg-hover;
+      background: #374151;
     }
     &.active {
-      background: $dark-primary-bg;
-      border-color: $dark-primary;
+      background: #312e81;
+      border-color: #818cf8;
       .task-name {
         color: #e0e7ff;
       }
@@ -1382,105 +1422,114 @@ $dark-primary-bg: #312e81;
     }
   }
   .task-order {
-    background: $dark-border;
-    color: $dark-text;
+    background: #4b5563;
+    color: #f3f4f6;
   }
   .task-name {
-    color: $dark-text;
+    color: #f3f4f6;
   }
   .task-status {
-    color: $dark-text-sec;
+    color: #9ca3af;
   }
 
   .no-selection {
-    border-color: $dark-border;
-    color: $dark-text-sec;
+    border-color: #4b5563;
+    color: #9ca3af;
   }
 
   .task-header {
-    border-bottom-color: $dark-bg-hover;
+    border-bottom-color: #374151;
   }
   .task-title-edit .label {
-    color: $dark-text-sec;
+    color: #9ca3af;
   }
   .task-title-edit .name-input, .task-title-edit .name-static {
-    color: $dark-text;
+    color: #f3f4f6;
   }
   .task-title-edit .name-input:hover,
   .task-title-edit .name-input:focus {
-    border-color: $dark-border;
-    background: $dark-bg-hover;
+    border-color: #4b5563;
+    background: #374151;
   }
 
   .toggle-switch .slider {
-    background: $dark-border;
+    background: #4b5563;
   }
   .toggle-switch input:checked + .slider {
-    background: $dark-primary;
+    background: #818cf8;
   }
   .toggle-switch .text {
-    color: $dark-text-sec;
+    color: #9ca3af;
   }
 
   .inner-tabs {
-    border-bottom-color: $dark-border;
+    border-bottom-color: #4b5563;
   }
   .tab-btn {
-    color: $dark-text-sec;
+    color: #9ca3af;
     &:hover {
-      color: $dark-text;
+      color: #f3f4f6;
     }
     &.active {
-      color: $dark-primary;
-      border-bottom-color: $dark-primary;
+      color: #818cf8;
+      border-bottom-color: #818cf8;
     }
   }
 
   .form-group {
     label {
-      color: $dark-text-sec;
+      color: #9ca3af;
     }
     input,
     select,
     textarea {
-      background: $dark-bg-sec;
-      border-color: $dark-border;
-      color: $dark-text;
+      background: #111827;
+      border-color: #4b5563;
+      color: #f3f4f6;
       &:focus {
-        border-color: $dark-primary;
+        border-color: #818cf8;
+      }
+    }
+    /* 修复：强制暗色模式下拉框颜色 */
+    select {
+      color: #f3f4f6 !important;
+      background-color: #111827 !important;
+      option {
+        color: #f3f4f6 !important;
+        background-color: #111827 !important;
       }
     }
     .tip {
-      color: $dark-text-sec;
+      color: #9ca3af;
     }
   }
 
   .checkbox-row label {
-    color: $dark-text;
+    color: #f3f4f6;
   }
 
   .list-editor {
-    border-color: $dark-border;
+    border-color: #4b5563;
   }
   .list-sidebar {
-    background: $dark-bg-sec;
-    border-right-color: $dark-border;
+    background: #111827;
+    border-right-color: #4b5563;
     .sub-item {
-      border-bottom-color: $dark-border;
-      color: $dark-text-sec;
+      border-bottom-color: #4b5563;
+      color: #9ca3af;
       &:hover {
-        background: $dark-bg-hover;
+        background: #374151;
       }
       &.active {
-        background: $dark-bg;
-        color: $dark-primary;
+        background: #1f2937;
+        color: #818cf8;
       }
     }
   }
   .sub-header {
-    border-bottom-color: $dark-border;
+    border-bottom-color: #4b5563;
     strong {
-      color: $dark-text;
+      color: #f3f4f6;
     }
   }
 
@@ -1494,48 +1543,48 @@ $dark-primary-bg: #312e81;
 
   /* Custom Select Dark */
   .custom-multiselect {
-    background: $dark-bg-sec;
-    border-color: $dark-border;
+    background: #111827;
+    border-color: #4b5563;
   }
   .selected-tags .placeholder {
-    color: $dark-text-sec;
+    color: #9ca3af;
   }
 
   .tag {
-    background: $dark-primary-bg;
+    background: #312e81;
     color: #e0e7ff;
-    border-color: $dark-primary;
+    border-color: #818cf8;
     .remove-tag:hover {
       color: #fff;
     }
   }
 
   .dropdown-panel {
-    background: $dark-bg-sec;
-    border-color: $dark-border;
+    background: #111827;
+    border-color: #4b5563;
   }
 
   .dropdown-item {
-    color: $dark-text;
+    color: #f3f4f6;
     &:hover {
-      background: $dark-bg-hover;
+      background: #374151;
     }
   }
 
   .manual-edit-details {
-    color: $dark-text-sec;
+    color: #9ca3af;
     summary:hover {
-      color: $dark-text;
+      color: #f3f4f6;
     }
   }
 
   /* Scrollbar Dark */
   .custom-scrollbar {
     &::-webkit-scrollbar-thumb {
-      background: $dark-border;
+      background: #4b5563;
     }
     &::-webkit-scrollbar-thumb:hover {
-      background: $dark-text-sec;
+      background: #9ca3af;
     }
   }
 }
