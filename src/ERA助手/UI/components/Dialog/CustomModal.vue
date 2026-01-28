@@ -33,7 +33,7 @@
 <script setup lang="ts">
 import { nextTick, watch, ref } from 'vue';
 import { modalState as state, closeModal } from '@/ERA助手/utils/modal';
-import { useUiStore } from '@/ERA助手/stores/UIStore'; // 请根据实际路径调整
+import { useUiStore } from '@/ERA助手/stores/UIStore';
 
 const inputRef = ref<HTMLInputElement | null>(null);
 const uiStore = useUiStore();
@@ -113,6 +113,7 @@ const handleCancel = () => {
     border-radius: 6px;
     font-size: 14px;
     outline: none;
+    color: #000000;
     &:focus { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2); }
   }
 }

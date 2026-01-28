@@ -1,4 +1,3 @@
-<!-- components/EraConfirmModal.vue -->
 <template>
   <Transition name="modal">
     <div v-if="visible" class="modal-overlay" :class="{ 'dark-mode': uiStore.darkMode }" @click.self="handleCancel">
