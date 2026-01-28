@@ -89,7 +89,6 @@ const hide = () => {
     color: #4b5563; /* 悬停变深 (Tailwind gray-600) */
   }
 }
-
 .tooltip-content {
   position: absolute;
   background-color: #333;
@@ -99,11 +98,11 @@ const hide = () => {
   font-size: 12px;
   white-space: nowrap;
   z-index: 20000;
-  pointer-events: none; /* 防止鼠标移动到提示框上导致闪烁 */
+  pointer-events: none;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   line-height: 1.4;
+  text-align: left;
 
-  /* 位置样式 */
   &.top {
     bottom: 100%;
     left: 50%;

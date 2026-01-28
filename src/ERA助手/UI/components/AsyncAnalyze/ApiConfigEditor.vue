@@ -177,14 +177,13 @@
 import { ref, computed, onMounted } from 'vue';
 import { useAsyncAnalyzeStore } from '@/ERA助手/stores/AsyncAnalyzeStore';
 import { eraLogger } from '@/ERA助手/utils/EraHelperLogger';
-// [新增] 引入组件
 import SearchableSelect from '../Dialog/SearchableSelect.vue';
 import { useUiStore } from '@/ERA助手/stores/UIStore';
-// [新增] 引入Tooltip组件
 import Tooltip from '../Common/Tooltip.vue';
 
-const uiStore = useUiStore();
+import { Modal } from '@/ERA助手/utils/modal';
 
+const uiStore = useUiStore();
 const store = useAsyncAnalyzeStore();
 const currentConfigName = ref<string>('');
 
@@ -212,14 +211,17 @@ const getSourceLabel = (source: string) => {
 // 动作：选择配置
 const selectConfig = (name: string) => {
   currentConfigName.value = name;
-  // 切换时尝试加载一次列表，避免下拉框为空
   if (presetList.value.length === 0) refreshPresetList();
   if (profileList.value.length === 0) refreshProfileList();
 };
 
 // 动作：新建配置
-const createNewConfig = () => {
-  const name = prompt('请输入新配置的名称');
+// [修改] 改为 async 函数以支持 await Modal.prompt
+const createNewConfig = async () => {
+  // [修改] 替换原生 prompt
+  // const name = prompt('请输入新配置的名称');
+  const name = await Modal.prompt('新建配置', '请输入新配置的名称');
+
   if (!name) return;
   if (store.apiConfigSettings[name]) {
     toastr.error('该名称已存在');
@@ -247,9 +249,15 @@ const createNewConfig = () => {
 };
 
 // 动作：删除配置
-const deleteConfig = () => {
+// [修改] 改为 async 函数以支持 await Modal.confirm
+const deleteConfig = async () => {
   if (!currentConfigName.value) return;
-  if (!confirm(`确定要删除配置 "${currentConfigName.value}" 吗？`)) return;
+
+  // [修改] 替换原生 confirm
+  // if (!confirm(`确定要删除配置 "${currentConfigName.value}" 吗？`)) return;
+  const isConfirmed = await Modal.confirm('删除确认', `确定要删除配置 "${currentConfigName.value}" 吗？`);
+
+  if (!isConfirmed) return;
 
   delete store.apiConfigSettings[currentConfigName.value];
   currentConfigName.value = '';
@@ -307,7 +315,6 @@ const getRemoteModels = async () => {
     if (!res.ok) throw new Error(res.statusText);
 
     const body = await res.json();
-    // 兼容 OpenAI 格式 { data: [{id: ...}] }
     remoteModelList.value = (body.data || []).map((m: any) => m.id).sort();
     toastr.success(`获取到 ${remoteModelList.value.length} 个模型`);
   } catch (e: any) {
@@ -330,7 +337,6 @@ const testConnection = async () => {
         eraLogger.log('当前预设名称:', tempProfileSetting);
         await (window as any).SillyTavern.executeSlashCommands(`/profile ${config.profileSetting}`);
       }
-      // 用 ST 自带指令检查当前模型是否在线
       const res = await (window as any).SillyTavern.executeSlashCommands('/model');
       if (!res.error) {
         toastr.success('模型连接正常 ✓');
@@ -354,7 +360,6 @@ const testConnection = async () => {
       return;
     }
 
-    // 简单的连通性测试
     try {
       const res = await fetch(`${cfg.baseURL.replace(/\/$/, '')}/models`, {
         method: 'GET',
@@ -375,6 +380,7 @@ onMounted(() => {
   refreshPresetList();
 });
 </script>
+
 
 <style scoped lang="scss">
 .api-config-container {

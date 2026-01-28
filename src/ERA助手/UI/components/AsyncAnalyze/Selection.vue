@@ -47,7 +47,6 @@
 
         <!-- 显示规则注释 -->
         <div v-if="setting.comment" class="rule-comment">
-          <Tooltip content="备注信息，建议写清楚是做什么的，比如正文api" placement="top" />
           {{ setting.comment }}
         </div>
 
@@ -64,14 +63,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { createApp, h, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAsyncAnalyzeStore } from '@/ERA助手/stores/AsyncAnalyzeStore';
 import { AsyncAnalyzeSetting } from '@/ERA助手/AsyncAnalyze/types/AsyncAnalyzeSetting';
 import FileImportExport from '@/ERA助手/UI/components/File/FileImportExport.vue';
 import { Modal } from '@/ERA助手/utils/modal';
 import { useUiStore } from '@/ERA助手/stores/UIStore';
-import Tooltip from '../Common/Tooltip.vue';
+import EraConfirmModal from '../Dialog/EraConfirmModal.vue';
 
 const store = useAsyncAnalyzeStore();
 const router = useRouter();
@@ -156,8 +155,9 @@ const activateRule = async (key: string) => {
 
 // 删除规则
 const deleteRule = async (key: string) => {
-  // 使用原生 confirm 或者也可以改为 Modal.confirm
-  if (!confirm(`确定要删除规则组 "${key}" 吗？此操作不可恢复。`)) return;
+  // 使用自定义确认弹窗
+  const confirmed = await showDeleteConfirm(key);
+  if (!confirmed) return;
 
   delete store.asyncAnalyzeSetting[key];
 
@@ -168,6 +168,45 @@ const deleteRule = async (key: string) => {
 
   await store.saveModelSettings();
   toastr.success('删除成功');
+};
+
+// 显示删除确认弹窗
+const showDeleteConfirm = (ruleName: string): Promise<boolean> => {
+  return new Promise((resolve) => {
+    // 创建确认弹窗实例
+    const confirmDiv = document.createElement('div');
+    document.body.appendChild(confirmDiv);
+
+    const ConfirmComponent = {
+      name: 'ConfirmComponent',
+      render() {
+        return h(EraConfirmModal, {
+          visible: true,
+          title: '删除确认',
+          content: `确定要删除规则组 "${ruleName}" 吗？此操作不可恢复。`,
+          type: 'confirm',
+          'onUpdate:visible': (val: boolean) => {
+            if (!val) {
+              resolve(false);
+              document.body.removeChild(confirmDiv);
+            }
+          },
+          onConfirm: () => {
+            resolve(true);
+            document.body.removeChild(confirmDiv);
+          },
+          onCancel: () => {
+            resolve(false);
+            document.body.removeChild(confirmDiv);
+          }
+        });
+      }
+    };
+
+    const app = createApp(ConfirmComponent);
+    app.component('EraConfirmModal', EraConfirmModal);
+    app.mount(confirmDiv);
+  });
 };
 
 // 跳转到编辑页面
