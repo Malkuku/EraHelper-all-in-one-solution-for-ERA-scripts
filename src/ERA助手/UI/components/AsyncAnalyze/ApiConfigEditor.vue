@@ -51,11 +51,11 @@
           <!-- 1. 模型来源选择 -->
           <div class="form-group">
             <label>模型来源</label>
-            <select v-model="currentConfig.model_source" @change="handleSourceChange">
-              <option value="sample">当前模型 (Sample)</option>
-              <option value="profile">预设模型 (Profile)</option>
-              <option value="external">额外模型 (External)</option>
-            </select>
+            <SearchableSelect
+              v-model="currentConfig.model_source"
+              :options="['sample', 'profile', 'external']"
+              :option-labels="{ sample: '当前模型 (Sample)', profile: '预设模型 (Profile)', external: '额外模型 (External)' }"
+            />
           </div>
 
           <hr class="divider" />
@@ -65,10 +65,12 @@
             <div class="form-group">
               <label>选择预设 (Profile)</label>
               <div class="input-with-btn">
-                <select v-model="currentConfig.profileSetting">
-                  <option value="" disabled>请选择...</option>
-                  <option v-for="p in profileList" :key="p" :value="p">{{ shortName(p) }}</option>
-                </select>
+                <SearchableSelect
+                  v-model="currentConfig.profileSetting"
+                  :options="profileList"
+                  :placeholder="'请选择...'"
+                  style="flex: 1;"
+                />
                 <button class="btn icon-btn" title="刷新列表" @click="refreshProfileList">↻</button>
               </div>
             </div>
@@ -79,10 +81,12 @@
             <div class="form-group">
               <label>使用的预设 (Preset)</label>
               <div class="input-with-btn">
-                <select v-model="currentConfig.simple_preset_name">
-                  <option value="" disabled>请选择...</option>
-                  <option v-for="p in presetList" :key="p" :value="p">{{ shortName(p) }}</option>
-                </select>
+                <SearchableSelect
+                  v-model="currentConfig.simple_preset_name"
+                  :options="presetList"
+                  :placeholder="'请选择...'"
+                  style="flex: 1;"
+                />
                 <button class="btn icon-btn" @click="refreshPresetList" title="刷新列表">↻</button>
               </div>
             </div>
@@ -111,17 +115,12 @@
             <div class="form-group">
               <label>模型名称</label>
               <div class="input-with-btn">
-                <select v-model="currentConfig.custom_model_settings.modelName" style="flex:1">
-                  <option value="" disabled>选择或输入...</option>
-                  <option v-for="m in remoteModelList" :key="m" :value="m">{{ m }}</option>
-                  <!-- 兜底显示当前值，修改处：增加可选链 ?. 防止 custom_model_settings 为空时报错 -->
-                  <option
-                    v-if="currentConfig.custom_model_settings?.modelName && !remoteModelList.includes(currentConfig.custom_model_settings.modelName)"
-                    :value="currentConfig.custom_model_settings.modelName"
-                  >
-                    {{ currentConfig.custom_model_settings.modelName }}
-                  </option>
-                </select>
+                <SearchableSelect
+                  v-model="currentConfig.custom_model_settings.modelName"
+                  :options="remoteModelList.concat(currentConfig.custom_model_settings?.modelName && !remoteModelList.includes(currentConfig.custom_model_settings.modelName) ? [currentConfig.custom_model_settings.modelName] : [])"
+                  :placeholder="'选择或输入...'"
+                  style="flex:1"
+                />
                 <button class="btn small" @click="getRemoteModels">获取列表</button>
               </div>
             </div>
@@ -129,9 +128,11 @@
             <div class="form-group">
               <label>使用的预设 (Preset)</label>
               <div class="input-with-btn">
-                <select v-model="currentConfig.custom_model_settings.presetName">
-                  <option v-for="p in presetList" :key="p" :value="p">{{ shortName(p) }}</option>
-                </select>
+                <SearchableSelect
+                  v-model="currentConfig.custom_model_settings.presetName"
+                  :options="presetList"
+                  style="flex: 1;"
+                />
                 <button class="btn icon-btn" @click="refreshPresetList" title="刷新列表">↻</button>
               </div>
             </div>
@@ -170,7 +171,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { useAsyncAnalyzeStore } from '@/ERA助手/stores/AsyncAnalyzeStore';
 import { eraLogger } from '@/ERA助手/utils/EraHelperLogger';
-
+// [新增] 引入组件
+import SearchableSelect from '../Dialog/SearchableSelect.vue';
 
 const store = useAsyncAnalyzeStore();
 const currentConfigName = ref<string>('');
@@ -196,9 +198,6 @@ const getSourceLabel = (source: string) => {
   return map[source] || source;
 };
 
-// 辅助：缩短名称
-const shortName = (full: string, max = 30) => (full.length > max ? full.slice(0, max - 1) + '…' : full);
-
 // 动作：选择配置
 const selectConfig = (name: string) => {
   currentConfigName.value = name;
@@ -208,7 +207,6 @@ const selectConfig = (name: string) => {
 };
 
 // 动作：新建配置
-const createConfigName = ref('');
 const createNewConfig = () => {
   const name = prompt('请输入新配置的名称');
   if (!name) return;
@@ -251,13 +249,6 @@ const deleteConfig = () => {
 const saveChanges = async () => {
   await store.saveModelSettings();
   toastr.success('所有配置已保存到变量');
-};
-
-// 动作：切换来源时的处理
-const handleSourceChange = () => {
-  if (!currentConfig.value) return;
-  // 可以在这里做一些清理或初始化工作
-  if (currentConfig.value.model_source === 'profile') refreshProfileList();
 };
 
 // 获取预设列表
@@ -513,8 +504,9 @@ onMounted(() => {
     border: 1px solid #d1d5db;
     border-radius: 6px;
     font-size: 14px;
-    background: #fff;
-    color: #111827;
+    /* 强制覆盖浏览器默认背景和颜色 */
+    background: #fff !important;
+    color: #111827 !important;
 
     &:focus {
       outline: none;
@@ -622,9 +614,10 @@ onMounted(() => {
   .form-group {
     label { color: #cbd5e1; }
     input, select {
-      background: #374151;
+      /* 强制覆盖深色模式下的背景和颜色 */
+      background: #374151 !important;
       border-color: #4b5563;
-      color: #e2e8f0;
+      color: #e2e8f0 !important;
       &:focus { border-color: #818cf8; }
     }
   }
@@ -657,3 +650,4 @@ onMounted(() => {
   }
 }
 </style>
+

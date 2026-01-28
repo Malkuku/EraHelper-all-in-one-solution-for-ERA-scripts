@@ -105,7 +105,7 @@ const toggleDarkMode = () => {
     0 20px 60px rgba(0, 0, 0, 0.15),
     0 0 0 1px rgba(255, 255, 255, 0.1);
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  z-index: 10000;
+  z-index: 9998;
   min-height: 750px;
   display: flex;
   flex-direction: column;
