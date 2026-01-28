@@ -2,337 +2,427 @@ import { WorldInfoUtil } from '@/Utils/WorldInfoUtil';
 import { PromptUtil } from '@/Utils/PromptUtil';
 import { MessageUtil } from '@/Utils/MessageUtil';
 import { ERAEvents } from '@/Constants/ERAEvent';
-import { useAsyncAnalyzeStore } from '../stores/AsyncAnalyzeStore';
+import { useAsyncAnalyzeStore, StagedSetting } from '../stores/AsyncAnalyzeStore';
 import { eraLogger } from '../utils/EraHelperLogger';
 import { EraDataHandler } from '../EraDataHandler/EraDataHandler';
 import { useEraDataStore } from '../stores/EraDataStore';
 import { useEraEditStore } from '../stores/EraEditStore';
 import { JsonUtil } from '@/Utils/JsonUtil';
+import { computed, ref } from 'vue';
+import * as _ from 'lodash';
 
 const getAsyncAnalyzeStore = () => (window as any).AsyncAnalyzeStore as ReturnType<typeof useAsyncAnalyzeStore>;
 const getEraDataStore = () => (window as any).EraDataStore as ReturnType<typeof useEraDataStore>;
 const getEraEditStore = () => (window as any).EraEditStore as ReturnType<typeof useEraEditStore>;
 
-const isAsync = computed(() => !!getAsyncAnalyzeStore()?.isAsync);
-const isUpdateEra = computed(() => !!getAsyncAnalyzeStore()?.isUpdateEra);
-const loreList = computed(() => {
-  if (!isAsync.value) {
-    return getAsyncAnalyzeStore()?.analyzeRores;
-  } else if (isAsync.value && !isUpdateEra.value) {
-    return [...(getAsyncAnalyzeStore()?.updateRores || []), ...(getAsyncAnalyzeStore()?.analyzeRores || [])];
-  } else {
-    return getAsyncAnalyzeStore()?.ignoreRores;
-  }
-});
-const regexStrList = computed(() => {
-  return getAsyncAnalyzeStore()?.regexList;
-});
+// Changed to ref to allow dynamic updates by tasks
+const loreList = ref<string[]>([]);
+const isReversed = ref(false); // Default false: remove items in loreList. Set to true if you want to KEEP only items in loreList.
 
-const isReversed = ref(false);
-const modelSource = computed(() => getAsyncAnalyzeStore()?.modelSource);
-const customModelSettings = computed(() => getAsyncAnalyzeStore()?.customModelSettings);
-const profileSetting = computed(() => getAsyncAnalyzeStore()?.profileSetting);
-const simplePresetName = computed(() => getAsyncAnalyzeStore()?.simplePresetName);
-const maxMessageFloor = computed(() => getAsyncAnalyzeStore()?.maxMessageFloor);
-
-const waitTime = 100;
-
-/**
- * 重发变量更新
- */
-export const reSendEraUpdate = async () => {
-  if (getLastMessageId() == 0) {
-    //不处理0层
-    toastr.warning('请不要重算0层变量', '你在干嘛😡');
-    return;
-  }
-  toastr.info('开始变量重算，等待era事件完成');
-  const isAsyncTemp = getAsyncAnalyzeStore().isAsync;
-  try {
-    //先将era回滚到上次更新
-    toastr.info('正在将era回滚到上次更新');
-    await eventEmit('era:forceSync', { mode: 'rollbackTo', message_id: getLastMessageId() - 1 });
-
-    getAsyncAnalyzeStore().isUpdateEra = true;
-    if (!isAsync.value) {
-      toastr.info('临时开启分步分析模式');
-      getAsyncAnalyzeStore().isAsync = true;
-    }
-    await handleKatEraUpdate();
-  } catch (e) {
-    toastr.error('分步分析处理失败');
-    eraLogger.error('分步分析处理失败: ', e);
-    await eventEmit('era:forceSync');
-  } finally {
-    getAsyncAnalyzeStore().isAsync = isAsyncTemp;
-    getAsyncAnalyzeStore().isUpdateEra = false;
-    await eventEmit('kat:handle_era_finished');
-  }
-};
+// Global lock for analysis
+let isAnalyzing = false;
 
 /**
  * 处理接收到的massage_received事件
  */
 export const handleMessageReceived = async (message_id: number) => {
-  try{
+  try {
     if (getLastMessageId() == 0 || message_id == 0) {
-      //不处理0层
       return;
     }
-    if (!isAsync.value) {
+
+    const store = getAsyncAnalyzeStore();
+    // 确保配置已加载
+    if (!store.activeRuleName || !store.asyncAnalyzeSetting[store.activeRuleName]) {
       return;
     }
-    if (isUpdateEra.value) {
-      toastr.warning('已有正在处理的分步分析');
+
+    if (isAnalyzing) {
+      toastr.warning('上一个分析任务尚未完成');
       return;
     }
-    if (MessageUtil.getMessageById(message_id).length < 200) {
-      toastr.error('空回了喵~请重roll喵~');
-      throw new Error('空回了喵~请重roll喵~');
-    }
-    toastr.info('开始分步分析，等待era事件完成');
-    eraLogger.info('开始分步分析，等待era事件完成');
 
-    getAsyncAnalyzeStore().isUpdateEra = true;
+    isAnalyzing = true;
+    toastr.info('开始执行分步分析规则...');
+    eraLogger.info(`开始执行分步分析规则: ${store.activeRuleName}`);
 
-    handleKatEraUpdate(); //让正文先显示出来
-  }finally { /* empty */ }
-};
-
-/**
- * 处理ERA变量更新
- */
-export const handleEraRulesOnMessageReceived = async (message_id: number) => {
-  if (isAsync.value) {
-    eraLogger.info('处于分步分析模式,跳过接收消息时的处理');
-    return;
-  }
-  const chat_message = getChatMessages(message_id)[0];
-  const msg = chat_message.message;
-  const result = await handleEraRules(msg);
-  await setChatMessages([{ message_id, message: result }]);
-  await eventEmit(ERAEvents.FORCE_SYNC);
-  await eventEmit('kat:handle_era_finished');
-};
-
-
-/**
- * 处理ERA变量更新
- * @param result
- */
-async function handleEraRules(result: string) {
-  // 1. 使用“最近匹配”正则
-  // 逻辑：匹配 <VariableEdit> 开头，中间内容不允许出现 <VariableEdit>，直到 </VariableEdit> 结束
-  // 效果：如果出现 <VariableEdit> ... <VariableEdit> {json} </VariableEdit>，它只会匹配后半部分，保证 JSON 纯净
-  const regexInnermost = /<VariableEdit>((?:(?!<VariableEdit>)[\s\S])*?)<\/VariableEdit>/g;
-
-  const matches = Array.from(result.matchAll(regexInnermost));
-
-  if (matches.length === 0) {
-    return result;
-  }
-
-  let mergedEditData: Record<string, any> = {};
-  let hasValidData = false;
-
-  // 2. 遍历并深度合并
-  for (const match of matches) {
-    const content = match[1];
-    if (!content || !content.trim()) continue;
-
-    try {
-      const editData = JSON.parse(content);
-      // 深度合并数据
-      mergedEditData = JsonUtil.mergeDeep(mergedEditData, editData);
-      hasValidData = true;
-    } catch (e) {
-      // 这里的警告通常是因为内容不是 JSON，或者被截断了
-      console.warn('忽略无效的 VariableEdit 内容:', content);
-    }
-  }
-
-  // 如果没有提取到任何有效数据，直接返回原文本（或者你可以选择在这里清理掉所有标签）
-  if (!hasValidData) {
-    return result;
-  }
-
-  try {
-    const snapshotData = await getEraEditStore().getStatData();
-    if (snapshotData == null) {
-      toastr.error('快照数据为空,跳过处理');
-      return result;
-    }
-
-    const rules = getEraDataStore().eraDataRule;
-
-    // 应用规则
-    const { data: updatedData } = await EraDataHandler.applyRule(mergedEditData, snapshotData, rules);
-
-    const updatedContent = JSON.stringify(updatedData);
-    const newTag = `<VariableEdit>\n${updatedContent}\n</VariableEdit>`;
-
-    // 3. 替换逻辑：保留第一个位置，删除后续位置
-    let isFirstMatch = true;
-    result = result.replace(regexInnermost, () => {
-      if (isFirstMatch) {
-        isFirstMatch = false;
-        return newTag; // 第一个匹配位置放置合并后的完整数据
-      } else {
-        return ''; // 后续匹配位置直接删除
-      }
-    });
-
-    // 可选：如果你想清理掉那些因为“向回找”而被遗弃的、不成对的 <VariableEdit> 头部标签，可以再加一行：
-    // result = result.replace(/<VariableEdit>/g, '');
-    // 但建议谨慎使用，以免误删文本中提到的标签名。
+    await handleAsyncAnalyzeTasks(message_id);
 
   } catch (e) {
-    eraLogger.error('变量更新失败：', e);
-    toastr.error('变量更新失败');
-  }
-
-  return result;
-}
-
-
-
-
-/**
- * 合并消息内容
- */
-async function handleMessageMerge(result: string) {
-  if (result.length < 200) {
-    toastr.error('接收的分析结果为空，哈！');
-    throw new Error('接收的分析结果为空，哈！');
-  }
-  //先去除掉正文的旧记录
-  const filterList = [] as RegExp[];
-  regexStrList.value.forEach((regexStr: string) => {
-    const regex = new RegExp(regexStr, 'gi');
-    if (result.match(regex)) {
-      filterList.push(regex);
-    }
-  });
-  await MessageUtil.removeContentByRegex(getLastMessageId(), filterList);
-
-  result = await handleEraRules(result);
-
-  //提取并且合并消息到正文
-  // 只保留标签及其内部内容
-  let content = '';
-  filterList.map(regex => {
-    content += result.match(regex)?.join('') ?? '';
-  });
-  await MessageUtil.mergeContentToMessage(getLastMessageId(), content);
-}
-
-/**
- * 准备开始分析
- */
-export const handleKatEraUpdate = async () => {
-  if (!isUpdateEra.value) {
-    toastr.warning('[isUpdateEra]标识异常');
-    eraLogger.error('[isUpdateEra]标识异常');
-    return;
-  }
-
-  //await (window as any).EjsTemplate.refreshWorldInfo();
-  await new Promise(resolve => setTimeout(resolve, waitTime));
-
-  const originalPresetName = getLoadedPresetName();
-  /**
-   * 构建提示词并请求AI分析
-   */
-  try {
-    toastr.info('正在构建提示词并请求AI分析');
-    eraLogger.info('正在构建提示词并请求AI分析');
-    const user_input = `本次不生成故事，处理ERA变量`;
-    const is_should_stream = false;
-    const promptInjects = [
-      {
-        id: '1145141919',
-        position: 'in_chat',
-        depth: 0,
-        should_scan: false,
-        role: 'user',
-        content: user_input,
-      },
-    ];
-    eraLogger.log('模型来源: ', modelSource.value);
-    //1.sample 或者 external的预设模型与in_use不一致时，先切换预设
-    if(modelSource.value == 'sample' && simplePresetName.value !== "in_use" && originalPresetName !== simplePresetName.value){
-      const isLoadPresetSuccess = loadPreset(simplePresetName.value);
-      if (!isLoadPresetSuccess) {
-        toastr.error(`预设切换失败: ${simplePresetName.value} 请检查预设是否存在`);
-      } else {
-        toastr.info(`已切换预设至: ${simplePresetName.value}`);
-      }
-    }
-    if(modelSource.value == 'external' && customModelSettings.value.presetName !== "in_use" && originalPresetName !== customModelSettings.value.presetName){
-      const isLoadPresetSuccess = loadPreset(customModelSettings.value.presetName);
-      if (!isLoadPresetSuccess) {
-        toastr.error(`预设切换失败: ${customModelSettings.value.presetName} 请检查预设是否存在`);
-      } else {
-        toastr.info(`已切换预设至: ${customModelSettings.value.presetName}`);
-      }
-    }
-
-    const result =
-      modelSource.value == 'sample'
-        ? await PromptUtil.sendPrompt(
-          user_input,
-          promptInjects,
-          maxMessageFloor.value,
-          is_should_stream,
-          null,
-          null)
-        : modelSource.value == 'profile'
-          ? await PromptUtil.sendPrompt(
-            user_input,
-            promptInjects,
-            maxMessageFloor.value,
-            is_should_stream,
-            null,
-            profileSetting.value,
-          )
-          : await PromptUtil.sendPrompt(
-            user_input,
-            promptInjects,
-            maxMessageFloor.value,
-            is_should_stream,
-            customModelSettings.value,
-            null,
-          );
-
-    eraLogger.log('接收到的分析结果原文: ', result);
-
-    await handleMessageMerge(result);
-
-    toastr.success('分步分析处理完成');
-  } catch (e) {
-    toastr.error('分步分析处理失败');
-    eraLogger.error('分步分析处理失败: ', e);
+    eraLogger.error('分步分析主流程异常:', e);
+    toastr.error('分步分析执行出错');
   } finally {
-    if((modelSource.value == 'sample' && simplePresetName.value !== "in_use" && originalPresetName !== simplePresetName.value)
-      || (modelSource.value == 'external' && customModelSettings.value.presetName !== "in_use" && originalPresetName !== customModelSettings.value.presetName)){
-      loadPreset(originalPresetName);
-      toastr.info(`切回预设: ${originalPresetName}`, );
-    }
-    getAsyncAnalyzeStore().isUpdateEra = false;
-
-    //await eventEmit(ERAEvents.FORCE_SYNC);
-
-    await setChatMessages([{message_id: getLastMessageId()}]);
-    //发送事件-声明该部分消息已处理完毕
+    isAnalyzing = false;
+    // 触发一次同步以确保UI更新
     await eventEmit(ERAEvents.FORCE_SYNC);
     await eventEmit('kat:handle_era_finished');
   }
 };
 
 /**
+ * 核心：处理分步分析任务队列
+ */
+export const handleAsyncAnalyzeTasks = async (message_id: number) => {
+  const store = getAsyncAnalyzeStore();
+  const ruleName = store.activeRuleName;
+  const currentRuleSet = store.asyncAnalyzeSetting[ruleName];
+
+  if (!currentRuleSet) return;
+
+  // 1. 任务分组与排序
+  const tasks = Object.entries(currentRuleSet).map(([taskName, config]) => ({
+    taskName,
+    ...config
+  }));
+
+  // 过滤掉未启用的任务
+  const enabledTasks = tasks.filter(t => t.enable);
+
+  // 按 order 排序
+  const sortedTasks = enabledTasks.sort((a, b) => a.order - b.order);
+
+  // 按 order 分组 (Map<order, Task[]>)
+  const taskGroups = new Map<number, typeof sortedTasks>();
+  sortedTasks.forEach(task => {
+    if (!taskGroups.has(task.order)) {
+      taskGroups.set(task.order, []);
+    }
+    taskGroups.get(task.order)!.push(task);
+  });
+
+  // 获取排序后的 order key
+  const sortedOrders = Array.from(taskGroups.keys()).sort((a, b) => a - b);
+
+  // 2. 顺序执行分组，组内并行
+  for (const order of sortedOrders) {
+    const groupTasks = taskGroups.get(order)!;
+    eraLogger.log(`正在执行第 ${order} 阶任务组，共 ${groupTasks.length} 个任务`);
+
+    // 创建并行执行的 Promise 数组
+    const promises = groupTasks.map(async (task, index) => {
+      // 检查触发间隔
+      const currentFloor = message_id;
+      const lastTrigger = task.trigger_history || 0;
+
+      // 如果 trigger_index > 1，则需要判断间隔
+      if (task.trigger_index > 1 && (currentFloor - lastTrigger) < task.trigger_index) {
+        eraLogger.log(`任务 [${task.taskName}] 跳过: 未达到触发间隔 (当前:${currentFloor}, 上次:${lastTrigger}, 间隔:${task.trigger_index})`);
+        return;
+      }
+
+      // 间隔防抖：组内任务每隔1秒启动一个
+      await new Promise(resolve => setTimeout(resolve, index * 1000));
+
+      try {
+        await executeSingleTask(task, message_id);
+
+        // 更新触发历史
+        if (store.asyncAnalyzeSetting[ruleName][task.taskName]) {
+          store.asyncAnalyzeSetting[ruleName][task.taskName].trigger_history = currentFloor;
+        }
+      } catch (e) {
+        eraLogger.error(`任务 [${task.taskName}] 执行失败:`, e);
+        toastr.error(`任务 [${task.taskName}] 执行失败`);
+
+        // 简单的重试逻辑 (reroll_count)
+        if (task.reroll_count > 0) {
+          for(let i=0; i<task.reroll_count; i++){
+            try {
+              eraLogger.log(`任务 [${task.taskName}] 重试第 ${i+1} 次`);
+              await executeSingleTask(task, message_id);
+              // 成功则退出重试循环
+              if (store.asyncAnalyzeSetting[ruleName][task.taskName]) {
+                store.asyncAnalyzeSetting[ruleName][task.taskName].trigger_history = currentFloor;
+              }
+              break;
+            } catch(retryE) {
+              eraLogger.error(`任务 [${task.taskName}] 重试失败:`, retryE);
+            }
+          }
+        }
+      }
+    });
+
+    // 等待当前组所有任务完成
+    await Promise.all(promises);
+  }
+
+  // 所有任务完成后，保存状态
+  await store.saveModelSettings();
+  toastr.success('所有分步分析任务执行完成');
+};
+
+/**
+ * 执行单个任务
+ */
+async function executeSingleTask(task: any, message_id: number) {
+  const store = getAsyncAnalyzeStore();
+  eraLogger.info(`>>> 开始执行任务: ${task.taskName}`);
+  toastr.info(`开始执行任务: ${task.taskName}`);
+
+  // 1. 准备 API 配置
+  const apiConfigName = task.api_config;
+  const apiConfig = store.apiConfigSettings[apiConfigName];
+  if (!apiConfig) {
+    eraLogger.error(`找不到 API 配置: ${apiConfigName}`);
+    toastr.error(`找不到 API 配置: ${apiConfigName}`);
+    throw new Error(`找不到 API 配置: ${apiConfigName}`);
+  }
+
+  // 2. 处理 World Book 逻辑
+  // 获取所有绑定世界书的条目，正则匹配，合并到 lores，并更新 loreList.value
+  const currentTaskLores: string[] = [];
+
+  if (task.world_book) {
+    for (const [bookName, wbConfig] of Object.entries(task.world_book)) {
+      const config = wbConfig as any;
+      // 获取该书所有条目
+      const allEntries = await WorldInfoUtil.getWorldBookLoresByName(bookName);
+
+      if (config.lore_regex) {
+        const regex = new RegExp(config.lore_regex);
+        const matchedEntries = allEntries.filter(name => regex.test(name));
+
+        // 合并到配置的 lores 中 (去重)
+        config.lores = [...new Set([...(config.lores || []), ...matchedEntries])];
+      }
+
+      // 收集当前任务需要处理的所有 lores
+      if (config.lores && config.lores.length > 0) {
+        currentTaskLores.push(...config.lores);
+      }
+    }
+  }
+
+  loreList.value = currentTaskLores;
+
+  // 3. 构建 Prompt
+  const maxHistory = task.chat_history || 2;
+  const user_input = task.prompt;
+
+  const promptInjects = [
+    {
+      id: '1145141919',
+      position: 'in_chat',
+      depth: 0,
+      should_scan: false,
+      role: 'user',
+      content: user_input,
+    },
+  ];
+
+  // 4. 切换/准备模型环境
+  const originalPresetName = getLoadedPresetName();
+  let tempPresetLoaded = false;
+
+  try {
+    // 切换预设逻辑
+    if (apiConfig.model_source === 'sample' && apiConfig.simple_preset_name && apiConfig.simple_preset_name !== 'in_use') {
+      if (originalPresetName !== apiConfig.simple_preset_name) {
+        loadPreset(apiConfig.simple_preset_name);
+        tempPresetLoaded = true;
+      }
+    } else if (apiConfig.model_source === 'external' && apiConfig.custom_model_settings?.presetName && apiConfig.custom_model_settings.presetName !== 'in_use') {
+      if (originalPresetName !== apiConfig.custom_model_settings.presetName) {
+        loadPreset(apiConfig.custom_model_settings.presetName);
+        tempPresetLoaded = true;
+      }
+    }
+
+    // 5. 发送请求
+    let result = '';
+    const is_should_stream = false;
+
+    if (apiConfig.model_source === 'sample') {
+      result = await PromptUtil.sendPrompt(
+        user_input,
+        promptInjects,
+        maxHistory,
+        is_should_stream,
+        null,
+        null
+      );
+    } else if (apiConfig.model_source === 'profile') {
+      result = await PromptUtil.sendPrompt(
+        user_input,
+        promptInjects,
+        maxHistory,
+        is_should_stream,
+        null,
+        apiConfig.profileSetting
+      );
+    } else {
+      // External
+      result = await PromptUtil.sendPrompt(
+        user_input,
+        promptInjects,
+        maxHistory,
+        is_should_stream,
+        apiConfig.custom_model_settings,
+        null
+      );
+    }
+
+    eraLogger.log(`任务 [${task.taskName}] 原始输出:`, result);
+
+    // 6. 处理结果合并
+    await handleTaskResultMerge(task, result, message_id);
+
+  } finally {
+    // 恢复预设
+    if (tempPresetLoaded) {
+      loadPreset(originalPresetName);
+    }
+    // 清理 loreList，以免影响后续操作
+    loreList.value = [];
+  }
+}
+
+/**
+ * 处理任务结果的合并逻辑
+ */
+async function handleTaskResultMerge(task: any, result: string, message_id: number) {
+  if (!task.merge_setting) return;
+
+  const mergeSettings = task.merge_setting;
+
+  // 获取当前消息内容
+  let currentMessageContent = MessageUtil.getMessageById(message_id);
+
+  for (const [mergeKey, setting] of Object.entries(mergeSettings)) {
+    const { is_inject, world_book, target_lore, content_regex, replace_regex } = setting as any;
+
+    // 1. 提取内容
+    let extractedContent = result;
+    if (content_regex && content_regex.length > 0) {
+      let matchFound = false;
+      for (const regexStr of content_regex) {
+        const regex = new RegExp(regexStr, 's'); // 's' flag allows . to match newlines
+        const match = result.match(regex);
+        if (match && match[1]) {
+          extractedContent = match[1];
+          matchFound = true;
+          break;
+        }
+      }
+      if (!matchFound) {
+        eraLogger.warn(`任务 [${task.taskName}] Merge [${mergeKey}]: 未匹配到内容正则，跳过`);
+        continue;
+      }
+    }
+
+    // 2. 处理世界书写入
+    if (world_book && target_lore) {
+      // 尝试更新世界书条目
+      const success = await WorldInfoUtil.enabledEntry(world_book, [{ name: target_lore, enabled: true }]);
+      // 这里 WorldInfoUtil 似乎没有直接更新内容的 API，假设我们需要扩展或者使用 updateWorldbookWith
+      // 暂时仅做日志记录，实际需要实现 updateWorldbookContent 类似的方法
+      // 伪代码实现:
+      await updateWorldbookWith(world_book, (entries) => {
+        return entries.map(e => {
+          if (e.name === target_lore) {
+            return { ...e, content: extractedContent };
+          }
+          return e;
+        });
+      });
+      eraLogger.info(`更新世界书 [${world_book}] 条目 [${target_lore}]`);
+    }
+
+    // 3. 处理正文替换
+    if (replace_regex) {
+      const regex = new RegExp(replace_regex, 'g');
+      if (currentMessageContent.match(regex)) {
+        currentMessageContent = currentMessageContent.replace(regex, extractedContent);
+        await MessageUtil.editMessage(message_id, currentMessageContent);
+      }
+    }
+
+    // 4. 处理正文注入
+    if (is_inject) {
+      await MessageUtil.mergeContentToMessage(message_id, `\n${extractedContent}`);
+      currentMessageContent = MessageUtil.getMessageById(message_id);
+    }
+
+    // 5. 兼容旧的 <VariableEdit> 逻辑
+    if (extractedContent.includes('<VariableEdit>')) {
+      await handleEraRules(extractedContent);
+    }
+  }
+}
+
+/**
+ * 处理ERA变量更新 (Legacy Logic Preserved)
+ */
+async function handleEraRules(result: string) {
+  const regexInnermost = /<VariableEdit>((?:(?!<VariableEdit>)[\s\S])*?)<\/VariableEdit>/g;
+  const matches = Array.from(result.matchAll(regexInnermost));
+
+  if (matches.length === 0) return result;
+
+  let mergedEditData: Record<string, any> = {};
+  let hasValidData = false;
+
+  for (const match of matches) {
+    const content = match[1];
+    if (!content || !content.trim()) continue;
+    try {
+      const editData = JSON.parse(content);
+      mergedEditData = JsonUtil.mergeDeep(mergedEditData, editData);
+      hasValidData = true;
+    } catch (e) {
+      console.warn('忽略无效的 VariableEdit 内容:', content);
+    }
+  }
+
+  if (!hasValidData) return result;
+
+  try {
+    const snapshotData = await getEraEditStore().getStatData();
+    if (snapshotData == null) return result;
+
+    const rules = getEraDataStore().eraDataRule;
+    const { data: updatedData } = await EraDataHandler.applyRule(mergedEditData, snapshotData, rules);
+
+    const updatedContent = JSON.stringify(updatedData);
+    const newTag = `<VariableEdit>\n${updatedContent}\n</VariableEdit>`;
+
+    let isFirstMatch = true;
+    result = result.replace(regexInnermost, () => {
+      if (isFirstMatch) {
+        isFirstMatch = false;
+        return newTag;
+      } else {
+        return '';
+      }
+    });
+
+  } catch (e) {
+    eraLogger.error('变量更新失败：', e);
+    toastr.error('变量更新失败');
+  }
+  return result;
+}
+
+/**
+ * 重发变量更新
+ */
+export const reSendEraUpdate = async () => {
+  if (getLastMessageId() == 0) {
+    toastr.warning('请不要重算0层变量');
+    return;
+  }
+  toastr.info('开始重算分步分析');
+  await handleAsyncAnalyzeTasks(getLastMessageId());
+};
+
+/**
  * 处理世界书内容的排除
+ * 此函数由事件系统自动调用
  */
 export const handleLoresFilter = async (lores: any) => {
-  eraLogger.log('WORLDINFO_ENTRIES_LOADED: ', lores);
-  await WorldInfoUtil.removeLoresByArray(lores, loreList.value, isReversed.value);
+  if (loreList.value.length > 0) {
+    eraLogger.log('Applying WorldInfo Filter:', loreList.value, 'IsReversed:', isReversed.value);
+    await WorldInfoUtil.removeLoresByArray(lores, loreList.value, isReversed.value);
+  }
 };

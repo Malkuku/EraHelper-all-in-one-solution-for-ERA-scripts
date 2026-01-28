@@ -1,13 +1,34 @@
+
 /**
- * 获取当前角色的世界书的标注信息
+ * 根据世界书名称获取世界书的条目列表
  */
-const getCurrentCharWorldBookPrimary = async () => {
-  const { primary } = getCharWorldbookNames('current');
-  if (!primary) {
-    throw new Error('未能找到当前角色的世界书。');
-  }
-  return primary;
+const getWorldBookLoresByName = async (primary: string) => {
+  const bookInfo = await getWorldbook(primary);
+  return bookInfo.map(t => t.name);
 };
+
+/**
+ * 获取当前角色的世界书的条目列表
+ */
+const getCurrentCharWorldBookLores =  async () => {
+  const { primary } = getCharWorldbookNames('current');
+  if(!primary) return [];
+  const bookInfo = await getWorldbook(primary);
+  return bookInfo.map(t => t.name);
+};
+
+/**
+ * 获取所有的世界书的标注信息
+ */
+const getAllWorldBookLores = async () => {
+  const names =  getWorldbookNames();
+  const list = [];
+  for (const t of names) {
+    const bookInfo = await getWorldbook(t);
+    list.push(bookInfo.map(t => t.name));
+  }
+  return list;
+}
 
 /**
  * 基于正则过滤世界书名称条目
@@ -17,35 +38,19 @@ const filterWorldBookNamesRegex = (regex: RegExp, names: string[]) => {
 };
 
 /**
- * 获取所有的世界书名称列表
+ * 获取世界书条目的文本内容
  */
-const getAllWorldBookNames = async () => {
-  const primary = await getCurrentCharWorldBookPrimary();
-  const bookInfo = await getWorldbook(primary);
-  return bookInfo.map(t => t.name);
-};
-
-/**
- * 获取世界书信息
- */
-const getWorldBookContent = async (bookNames: string[]) => {
-  const primary = await getCurrentCharWorldBookPrimary();
-  const bookInfo = await getWorldbook(primary);
-  let info = '';
-  const neededBookInfo = bookInfo
-    .filter(t => bookNames.includes(t.name))
-    .sort((a, b) => a.position.order - b.position.order);
-  neededBookInfo.forEach(bookInfo => {
-    info += bookInfo.content;
-  });
-  return info;
+const getWorldBookLoreContent = async (bookName: string,loreName: string) => {
+  const bookInfo = await getWorldbook(bookName);
+  const lore = bookInfo.find(t => t.name === loreName);
+  if (!lore) return '';
+  return lore.content;
 };
 
 /**
  * 批量设置世界书条目
  */
-const enabledEntry = async (targets: Array<{ name: string; enabled: boolean }>) => {
-  const primary = await getCurrentCharWorldBookPrimary();
+const enabledEntry = async (primary: string,targets: Array<{ name: string; enabled: boolean }>) => {
   const bookInfo = await getWorldbook(primary);
   // 有任何一条缺失，立即失败
   const miss = targets.find(t => !bookInfo.some(e => e.name === t.name));
@@ -80,11 +85,11 @@ const removeLoresByRegex = async (lores: any, regex: RegExp, isReversed: boolean
 /**
  * 通过数组批量排除世界书条目
  */
-const removeLoresByArray = async (lores: any, array: string[], isReversed: boolean) => {
-  console.info('removeLoresByArray: ', '开始过滤', array, isReversed);
+const removeLoresByArray = async (lores: any, names: string[], isReversed: boolean) => {
+  console.info('removeLoresByArray: ', '开始过滤', names, isReversed);
   const remove = (lore: any) =>
     _.remove(lore, entry => {
-      return isReversed ? !array.includes(entry.comment) : array.includes(entry.comment);
+      return isReversed ? !names.includes(entry.comment) : names.includes(entry.comment);
     });
   remove(lores.globalLore);
   remove(lores.characterLore);
@@ -94,10 +99,11 @@ const removeLoresByArray = async (lores: any, array: string[], isReversed: boole
 };
 
 export const WorldInfoUtil = {
-  getCurrentCharWorldBookPrimary,
-  getWorldBookContent,
-  getAllWorldBookNames,
+  getWorldBookLoresByName,
+  getCurrentCharWorldBookLores,
+  getAllWorldBookLores,
   filterWorldBookNamesRegex,
+  getWorldBookLoreContent,
   enabledEntry,
   removeLoresByRegex,
   removeLoresByArray,
