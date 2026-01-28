@@ -1,3 +1,4 @@
+import { eraLogger } from '@/ERA助手/utils/EraHelperLogger';
 
 /**
  * 根据世界书名称获取世界书的条目列表
@@ -98,6 +99,65 @@ const removeLoresByArray = async (lores: any, names: string[], isReversed: boole
   console.log('removeLoresByArray过滤完成: ', lores);
 };
 
+
+/**
+ * 更新或创建世界书条目
+ * @param bookName 世界书名称
+ * @param loreName 条目名称
+ * @param content 条目内容
+ */
+const updateOrCreateEntry = async (bookName: string, loreName: string, content: string) => {
+  try {
+    // 1. 检查世界书是否存在以及条目是否存在
+    let entries: any[] = [];
+    try {
+      entries = await getWorldbook(bookName);
+    } catch (e) {
+      eraLogger.error(`[WorldInfoUtil] Worldbook not found: ${bookName}`);
+      return false;
+    }
+
+    const existingEntry = entries.find((e: any) => e.name === loreName);
+
+    if (existingEntry) {
+      // 2. 更新现有条目
+      await updateWorldbookWith(bookName, (currentEntries) => {
+        return currentEntries.map((entry) => {
+          if (entry.name === loreName) {
+            return {
+              ...entry,
+              content: content,
+              enabled: true, // 更新时自动启用
+            };
+          }
+          return entry;
+        });
+      });
+      eraLogger.info(`[WorldInfoUtil] Updated entry: [${loreName}] in book [${bookName}]`);
+    } else {
+      // 3. 创建新条目
+      // 使用 API 创建，只提供必要字段，其他字段由系统填充默认值
+      await createWorldbookEntries(bookName, [{
+        name: loreName,
+        content: content,
+        enabled: true,
+        // 设置默认策略：关键字触发，关键字为条目名称
+        strategy: {
+          type: 'selective',
+          keys: [loreName],
+          keys_secondary: { logic: 'not_any', keys: [] },
+          scan_depth: 'same_as_global'
+        } as any // Cast to any to avoid strict type issues if PartialDeep is tricky
+      }]);
+      eraLogger.info(`[WorldInfoUtil] Created new entry: [${loreName}] in book [${bookName}]`);
+    }
+    return true;
+  } catch (e) {
+    eraLogger.error(`[WorldInfoUtil] Failed to update/create entry in ${bookName}:`, e);
+    return false;
+  }
+};
+
 export const WorldInfoUtil = {
   getWorldBookLoresByName,
   getCurrentCharWorldBookLores,
@@ -107,4 +167,5 @@ export const WorldInfoUtil = {
   enabledEntry,
   removeLoresByRegex,
   removeLoresByArray,
+  updateOrCreateEntry,
 };

@@ -2,14 +2,13 @@ import { WorldInfoUtil } from '@/Utils/WorldInfoUtil';
 import { PromptUtil } from '@/Utils/PromptUtil';
 import { MessageUtil } from '@/Utils/MessageUtil';
 import { ERAEvents } from '@/Constants/ERAEvent';
-import { useAsyncAnalyzeStore, StagedSetting } from '../stores/AsyncAnalyzeStore';
+import { useAsyncAnalyzeStore } from '../stores/AsyncAnalyzeStore';
 import { eraLogger } from '../utils/EraHelperLogger';
 import { EraDataHandler } from '../EraDataHandler/EraDataHandler';
 import { useEraDataStore } from '../stores/EraDataStore';
 import { useEraEditStore } from '../stores/EraEditStore';
 import { JsonUtil } from '@/Utils/JsonUtil';
-import { computed, ref } from 'vue';
-import * as _ from 'lodash';
+import { ref } from 'vue';
 
 const getAsyncAnalyzeStore = () => (window as any).AsyncAnalyzeStore as ReturnType<typeof useAsyncAnalyzeStore>;
 const getEraDataStore = () => (window as any).EraDataStore as ReturnType<typeof useEraDataStore>;
@@ -286,67 +285,122 @@ async function handleTaskResultMerge(task: any, result: string, message_id: numb
 
   const mergeSettings = task.merge_setting;
 
-  // 获取当前消息内容
-  let currentMessageContent = MessageUtil.getMessageById(message_id);
-
   for (const [mergeKey, setting] of Object.entries(mergeSettings)) {
     const { is_inject, world_book, target_lore, content_regex, replace_regex } = setting as any;
 
-    // 1. 提取内容
-    let extractedContent = result;
-    if (content_regex && content_regex.length > 0) {
-      let matchFound = false;
+    // ---------------------------------------------------------
+    // 1. 提取内容 (Parallel Extraction)
+    // ---------------------------------------------------------
+    let finalExtractedContent = '';
+
+    // 如果定义了提取正则，则从 result 中提取
+    if (content_regex && Array.isArray(content_regex) && content_regex.length > 0) {
+      const extractedParts: string[] = [];
+      let allMatched = true;
+
       for (const regexStr of content_regex) {
-        const regex = new RegExp(regexStr, 's'); // 's' flag allows . to match newlines
-        const match = result.match(regex);
-        if (match && match[1]) {
-          extractedContent = match[1];
-          matchFound = true;
-          break;
+        try {
+          // 使用 's' 标志允许 . 匹配换行符
+          const regex = new RegExp(regexStr, 's');
+          // 注意：这里每次都匹配原始的 result
+          const match = result.match(regex);
+
+          if (match && match[1]) {
+            extractedParts.push(match[1]);
+          } else {
+            // 如果要求必须匹配但没匹配到，记录警告
+            eraLogger.warn(`任务 [${task.taskName}] 合并 [${mergeKey}]: 正则未匹配到内容 "${regexStr}"`);
+            // 根据需求，这里可以选择是否中断。
+            // 如果 "必须逐个匹配" 意味着缺一不可，则标记失败
+            // allMatched = false;
+          }
+        } catch (e) {
+          eraLogger.error(`任务 [${task.taskName}] 提取正则错误: ${regexStr}`, e);
+          allMatched = false;
         }
       }
-      if (!matchFound) {
-        eraLogger.warn(`任务 [${task.taskName}] Merge [${mergeKey}]: 未匹配到内容正则，跳过`);
+
+      // 将所有提取到的部分拼接（这里默认用换行符拼接，可根据需求调整）
+      if (extractedParts.length > 0) {
+        finalExtractedContent = extractedParts.join('\n');
+      } else {
+        // 如果所有正则都没匹配到东西，跳过此合并项
         continue;
       }
+    } else {
+      // 如果没定义 content_regex，则默认使用全部输出
+      finalExtractedContent = result;
     }
 
-    // 2. 处理世界书写入
-    if (world_book && target_lore) {
-      // 尝试更新世界书条目
-      const success = await WorldInfoUtil.enabledEntry(world_book, [{ name: target_lore, enabled: true }]);
-      // 这里 WorldInfoUtil 似乎没有直接更新内容的 API，假设我们需要扩展或者使用 updateWorldbookWith
-      // 暂时仅做日志记录，实际需要实现 updateWorldbookContent 类似的方法
-      // 伪代码实现:
-      await updateWorldbookWith(world_book, (entries) => {
-        return entries.map(e => {
-          if (e.name === target_lore) {
-            return { ...e, content: extractedContent };
+    // ---------------------------------------------------------
+    // 2. 处理注入/替换逻辑
+    // ---------------------------------------------------------
+
+    if (is_inject) {
+      // === 场景 A: 注入到聊天正文 ===
+      // 忽略 world_book 设置
+
+      if (replace_regex) {
+        // 策略：获取当前正文 -> 查找 replace_regex -> 替换为 finalExtractedContent -> 保存
+        try {
+          const currentMessageContent = MessageUtil.getMessageById(message_id);
+          const regex = new RegExp(replace_regex, 'g'); // 全局替换
+
+          if (regex.test(currentMessageContent)) {
+            const newMessageContent = currentMessageContent.replace(regex, finalExtractedContent);
+            await setChatMessages([{ message_id, message: newMessageContent }]);
+            eraLogger.info(`任务 [${task.taskName}] 合并 [${mergeKey}]: 正文内容已根据正则替换`);
+          } else {
+            eraLogger.warn(`任务 [${task.taskName}] 合并 [${mergeKey}]: 正文中未找到可替换的内容 (正则: ${replace_regex})`);
           }
-          return e;
-        });
-      });
-      eraLogger.info(`更新世界书 [${world_book}] 条目 [${target_lore}]`);
-    }
+        } catch (e) {
+          eraLogger.error(`任务 [${task.taskName}] 正文替换执行出错:`, e);
+        }
+      } else {
+        // 策略：直接追加到正文末尾
+        await MessageUtil.mergeContentToMessage(message_id, `\n${finalExtractedContent}`);
+        eraLogger.info(`任务 [${task.taskName}] 合并 [${mergeKey}]: 内容已追加到正文`);
+      }
 
-    // 3. 处理正文替换
-    if (replace_regex) {
-      const regex = new RegExp(replace_regex, 'g');
-      if (currentMessageContent.match(regex)) {
-        currentMessageContent = currentMessageContent.replace(regex, extractedContent);
-        await MessageUtil.editMessage(message_id, currentMessageContent);
+    } else if (world_book && target_lore) {
+      // === 场景 B: 写入世界书 ===
+      // 仅当 is_inject 为 false 时执行
+
+      if (replace_regex) {
+        // 策略：获取条目内容 -> 查找 replace_regex -> 替换为 finalExtractedContent -> 保存
+        const oldContent = await WorldInfoUtil.getWorldBookLoreContent(world_book, target_lore);
+
+        if (oldContent) {
+          try {
+            const regex = new RegExp(replace_regex, 'g');
+            if (regex.test(oldContent)) {
+              const newContent = oldContent.replace(regex, finalExtractedContent);
+              await WorldInfoUtil.updateOrCreateEntry(world_book, target_lore, newContent);
+              eraLogger.info(`任务 [${task.taskName}] 合并 [${mergeKey}]: 世界书条目 [${target_lore}] 内容已替换更新`);
+            } else {
+              eraLogger.warn(`任务 [${task.taskName}] 合并 [${mergeKey}]: 世界书条目中未找到可替换的内容`);
+            }
+          } catch (e) {
+            eraLogger.error(`任务 [${task.taskName}] 世界书替换执行出错:`, e);
+          }
+        } else {
+          // 条目不存在，跳过
+          eraLogger.info(`任务 [${task.taskName}] 合并 [${mergeKey}]: 世界书条目不存在，跳过任务`);
+        }
+      } else {
+        // 策略：覆盖/创建条目
+        // eslint-disable-next-line no-lonely-if
+        if (finalExtractedContent && finalExtractedContent.trim().length > 0) {
+          await WorldInfoUtil.updateOrCreateEntry(world_book, target_lore, finalExtractedContent);
+          eraLogger.info(`任务 [${task.taskName}] 合并 [${mergeKey}]: 世界书条目 [${target_lore}] 已覆盖更新`);
+        } else {
+          eraLogger.warn(`任务 [${task.taskName}] 合并 [${mergeKey}]: 提取内容为空，跳过写入世界书`);
+        }
       }
     }
 
-    // 4. 处理正文注入
-    if (is_inject) {
-      await MessageUtil.mergeContentToMessage(message_id, `\n${extractedContent}`);
-      currentMessageContent = MessageUtil.getMessageById(message_id);
-    }
-
-    // 5. 兼容旧的 <VariableEdit> 逻辑
-    if (extractedContent.includes('<VariableEdit>')) {
-      await handleEraRules(extractedContent);
+    if (finalExtractedContent.includes('<VariableEdit>')) {
+      await handleEraRules(finalExtractedContent);
     }
   }
 }
