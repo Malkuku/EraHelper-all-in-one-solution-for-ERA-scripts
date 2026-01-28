@@ -43,6 +43,11 @@
         </div>
 
         <div class="form-scroll-area">
+          <!-- 新增：备注字段 -->
+          <div class="form-group">
+            <label>备注 (Comment)</label>
+            <input v-model="currentConfig.comment" placeholder="在此输入配置说明..." />
+          </div>
           <!-- 1. 模型来源选择 -->
           <div class="form-group">
             <label>模型来源</label>
@@ -214,6 +219,7 @@ const createNewConfig = () => {
 
   // 初始化默认结构
   store.apiConfigSettings[name] = {
+    comment: '',
     model_source: 'sample',
     simple_preset_name: '',
     profileSetting: '',

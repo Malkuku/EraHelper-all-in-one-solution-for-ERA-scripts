@@ -4,6 +4,7 @@ export interface AsyncAnalyzeSetting{ //允许规则处理
 
 export interface StagedSetting{
   [key: string]:{ //任务配置的名称
+    comment: string; //注释文本内容
     enable: boolean; //是否启用
     order: number; //处理顺序,按照从小到大的顺序处理,如果相同则并行。默认为0
     chat_history: number; //读取的最大上下文楼层数，默认为2
@@ -32,6 +33,7 @@ export interface StagedSetting{
 
 export interface ApiConfigSetting{
   [key: string]:{ //配置名称
+    comment: string; //注释文本内容
     model_source: 'sample' | 'external' | 'profile'; //模型来源
     simple_preset_name: string; //simple模式下选择的预设设置
     custom_model_settings: {

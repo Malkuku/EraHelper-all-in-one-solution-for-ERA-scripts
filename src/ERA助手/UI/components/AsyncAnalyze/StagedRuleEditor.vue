@@ -12,9 +12,7 @@
       </div>
     </div>
 
-    <div v-if="!currentRuleName" class="error-state">
-      请先在“规则选择”页面选择一个规则组进行编辑。
-    </div>
+    <div v-if="!currentRuleName" class="error-state">请先在“规则选择”页面选择一个规则组进行编辑。</div>
 
     <div v-else class="editor-body">
       <!-- 左侧：任务列表 -->
@@ -25,9 +23,7 @@
         </div>
 
         <div class="task-list custom-scrollbar">
-          <div v-if="sortedTasks.length === 0" class="empty-tip">
-            暂无任务，请新建
-          </div>
+          <div v-if="sortedTasks.length === 0" class="empty-tip">暂无任务，请新建</div>
 
           <div
             v-for="task in sortedTasks"
@@ -49,24 +45,18 @@
 
       <!-- 右侧：任务详情编辑器 -->
       <div class="main-content">
-        <div v-if="!currentTask" class="no-selection">
-          请选择或新建一个任务
-        </div>
+        <div v-if="!currentTask" class="no-selection">请选择或新建一个任务</div>
 
         <div v-else class="task-editor">
           <!-- 任务标题栏 -->
           <div class="task-header">
             <div class="task-title-edit">
               <span class="label">任务名称:</span>
-              <input
-                :value="currentTaskName"
-                @change="renameTask($event)"
-                class="name-input"
-              />
+              <input :value="currentTaskName" @change="renameTask($event)" class="name-input" />
             </div>
             <div class="task-actions">
               <label class="toggle-switch">
-                <input type="checkbox" v-model="currentTask.enable">
+                <input type="checkbox" v-model="currentTask.enable" />
                 <span class="slider"></span>
                 <span class="text">{{ currentTask.enable ? '已启用' : '已禁用' }}</span>
               </label>
@@ -76,37 +66,29 @@
 
           <!-- 内部标签页导航 -->
           <div class="inner-tabs">
-            <button
-              class="tab-btn"
-              :class="{ active: activeTab === 'basic' }"
-              @click="activeTab = 'basic'"
-            >
+            <button class="tab-btn" :class="{ active: activeTab === 'basic' }" @click="activeTab = 'basic'">
               基础与提示词
             </button>
-            <button
-              class="tab-btn"
-              :class="{ active: activeTab === 'worldbook' }"
-              @click="activeTab = 'worldbook'"
-            >
+            <button class="tab-btn" :class="{ active: activeTab === 'worldbook' }" @click="activeTab = 'worldbook'">
               世界书提取 ({{ Object.keys(currentTask.world_book || {}).length }})
             </button>
-            <button
-              class="tab-btn"
-              :class="{ active: activeTab === 'merge' }"
-              @click="activeTab = 'merge'"
-            >
+            <button class="tab-btn" :class="{ active: activeTab === 'merge' }" @click="activeTab = 'merge'">
               结果处理 ({{ Object.keys(currentTask.merge_setting || {}).length }})
             </button>
           </div>
 
           <!-- 标签页内容 -->
           <div class="tab-content custom-scrollbar">
-
             <!-- 1. 基础设置与提示词 -->
             <div v-show="activeTab === 'basic'" class="tab-pane">
               <div class="form-grid">
                 <div class="form-group">
-                  <label>执行顺序 (Order)</label>
+                  <label>任务备注</label>
+                  <input v-model="currentTask.comment" placeholder="在此输入任务用途或说明..." />
+                </div>
+
+                <div class="form-group">
+                  <label>执行顺序</label>
                   <input type="number" v-model.number="currentTask.order" placeholder="0" />
                 </div>
                 <div class="form-group">
@@ -119,21 +101,21 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label>触发间隔 (Trigger Index)</label>
+                  <label>触发间隔</label>
                   <input type="number" v-model.number="currentTask.trigger_index" min="1" />
                 </div>
                 <div class="form-group">
-                  <label>上下文楼层 (Chat History)</label>
+                  <label>上下文楼层</label>
                   <input type="number" v-model.number="currentTask.chat_history" min="0" />
                 </div>
                 <div class="form-group">
-                  <label>重试次数 (Reroll)</label>
+                  <label>重试次数</label>
                   <input type="number" v-model.number="currentTask.reroll_count" min="0" />
                 </div>
               </div>
 
               <div class="form-group full-height">
-                <label>提示词 (Prompt)</label>
+                <label>提示词</label>
                 <textarea
                   v-model="currentTask.prompt"
                   class="prompt-area"
@@ -209,16 +191,12 @@
                           <div v-if="loadingLores" class="dropdown-loading">加载中...</div>
                           <div v-else-if="currentBookLores.length === 0" class="dropdown-empty">该世界书无条目</div>
                           <template v-else>
-                            <label
-                              v-for="loreName in currentBookLores"
-                              :key="loreName"
-                              class="dropdown-item"
-                            >
+                            <label v-for="loreName in currentBookLores" :key="loreName" class="dropdown-item">
                               <input
                                 type="checkbox"
                                 :checked="currentTask.world_book[currentWbKey].lores.includes(loreName)"
                                 @change="toggleLoreSelection(currentWbKey, loreName)"
-                              >
+                              />
                               {{ loreName }}
                             </label>
                           </template>
@@ -235,7 +213,6 @@
                         ></textarea>
                       </details>
                     </div>
-
                   </div>
                   <div v-else class="empty-sub">请选择左侧规则或添加新规则</div>
                 </div>
@@ -319,7 +296,6 @@
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       </div>
@@ -328,11 +304,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, reactive, onUnmounted } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAsyncAnalyzeStore } from '@/ERA助手/stores/AsyncAnalyzeStore';
 import { Modal } from '@/ERA助手/utils/modal';
-import { WorldInfoUtil } from '@/ERA助手/utils/WorldInfoUtil';
+import { WorldInfoUtil } from '@/Utils/WorldInfoUtil';
 
 const store = useAsyncAnalyzeStore();
 const route = useRoute();
@@ -377,9 +353,7 @@ onUnmounted(() => {
 // --- API 交互逻辑 ---
 const fetchWorldBooks = async () => {
   try {
-    // @ts-ignore
     if (typeof window.getWorldbookNames === 'function') {
-      // @ts-ignore
       allWorldBooks.value = window.getWorldbookNames();
     } else {
       console.warn('无法找到 getWorldbookNames 全局函数');
@@ -464,10 +438,12 @@ const currentRule = computed(() => {
 
 const sortedTasks = computed(() => {
   if (!currentRule.value) return [];
-  return Object.entries(currentRule.value).map(([key, data]) => ({
-    key,
-    data
-  })).sort((a, b) => a.data.order - b.data.order);
+  return Object.entries(currentRule.value)
+    .map(([key, data]) => ({
+      key,
+      data,
+    }))
+    .sort((a, b) => a.data.order - b.data.order);
 });
 
 const currentTask = computed(() => {
@@ -502,6 +478,7 @@ const createTask = async () => {
     return;
   }
   currentRule.value[name] = {
+    comment: '',
     enable: true,
     order: 0,
     chat_history: 2,
@@ -511,7 +488,7 @@ const createTask = async () => {
     prompt: '',
     api_config: '',
     world_book: {},
-    merge_setting: {}
+    merge_setting: {},
   };
   currentTaskName.value = name;
 };
@@ -525,8 +502,7 @@ const renameTask = (event: Event) => {
     (event.target as HTMLInputElement).value = currentTaskName.value;
     return;
   }
-  const taskData = currentRule.value[currentTaskName.value];
-  currentRule.value[newName] = taskData;
+  currentRule.value[newName] = currentRule.value[currentTaskName.value];
   delete currentRule.value[currentTaskName.value];
   currentTaskName.value = newName;
 };
@@ -559,7 +535,7 @@ const confirmAddWb = () => {
   // 初始化
   currentTask.value.world_book[newWbName.value] = {
     lores: [],
-    lore_regex: ''
+    lore_regex: '',
   };
 
   selectWbKey(newWbName.value);
@@ -599,7 +575,7 @@ const addMergeItem = async () => {
     world_book: '',
     target_lore: '',
     content_regex: [],
-    replace_regex: ''
+    replace_regex: '',
   };
   currentMergeKey.value = name;
 };
@@ -624,7 +600,6 @@ const updateContentRegex = (key: string, event: Event) => {
     currentTask.value.merge_setting[key].content_regex = text.split('\n');
   }
 };
-
 </script>
 
 <style scoped lang="scss">
@@ -679,11 +654,19 @@ $dark-primary-bg: #312e81;
     cursor: pointer;
     padding: 0;
     font-weight: 600;
-    &:hover { text-decoration: underline; }
+    &:hover {
+      text-decoration: underline;
+    }
   }
 
-  .separator { margin: 0 8px; color: $light-text-sec; }
-  .current-rule { font-weight: 600; color: $light-text; }
+  .separator {
+    margin: 0 8px;
+    color: $light-text-sec;
+  }
+  .current-rule {
+    font-weight: 600;
+    color: $light-text;
+  }
 }
 
 .error-state {
@@ -735,17 +718,24 @@ $dark-primary-bg: #312e81;
   transition: all 0.2s;
   color: $light-text;
 
-  &:hover { background: $light-bg-hover; }
+  &:hover {
+    background: $light-bg-hover;
+  }
 
   &.active {
     background: $light-primary-bg;
     border-color: $light-primary;
-    .task-name { color: #312e81; font-weight: 700; }
+    .task-name {
+      color: #312e81;
+      font-weight: 700;
+    }
   }
 
   &.disabled {
     opacity: 0.6;
-    .task-name { text-decoration: line-through; }
+    .task-name {
+      text-decoration: line-through;
+    }
   }
 }
 
@@ -819,7 +809,10 @@ $dark-primary-bg: #312e81;
   gap: 8px;
   flex: 1;
 
-  .label { font-size: 14px; color: $light-text-sec; }
+  .label {
+    font-size: 14px;
+    color: $light-text-sec;
+  }
   .name-input {
     font-size: 16px;
     font-weight: 600;
@@ -828,7 +821,11 @@ $dark-primary-bg: #312e81;
     border-radius: 4px;
     color: $light-text;
     background: transparent;
-    &:hover, &:focus { border-color: $light-border; background: $light-bg; }
+    &:hover,
+    &:focus {
+      border-color: $light-border;
+      background: $light-bg;
+    }
   }
 }
 
@@ -845,7 +842,9 @@ $dark-primary-bg: #312e81;
   cursor: pointer;
   gap: 6px;
 
-  input { display: none; }
+  input {
+    display: none;
+  }
 
   .slider {
     width: 36px;
@@ -868,10 +867,17 @@ $dark-primary-bg: #312e81;
     }
   }
 
-  input:checked + .slider { background: $light-primary; }
-  input:checked + .slider::after { left: 18px; }
+  input:checked + .slider {
+    background: $light-primary;
+  }
+  input:checked + .slider::after {
+    left: 18px;
+  }
 
-  .text { font-size: 12px; color: $light-text-sec; }
+  .text {
+    font-size: 12px;
+    color: $light-text-sec;
+  }
 }
 
 /* Inner Tabs */
@@ -891,7 +897,9 @@ $dark-primary-bg: #312e81;
   color: $light-text-sec;
   font-size: 13px;
 
-  &:hover { color: $light-text; }
+  &:hover {
+    color: $light-text;
+  }
 
   &.active {
     color: $light-primary;
@@ -919,7 +927,9 @@ $dark-primary-bg: #312e81;
   gap: 12px;
   margin-bottom: 16px;
 
-  &.two-col { grid-template-columns: 1fr 1fr; }
+  &.two-col {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 .form-group {
@@ -933,7 +943,9 @@ $dark-primary-bg: #312e81;
     font-weight: 600;
   }
 
-  input, select, textarea {
+  input,
+  select,
+  textarea {
     width: 100%;
     padding: 6px 8px;
     border: 1px solid $light-border;
@@ -941,24 +953,43 @@ $dark-primary-bg: #312e81;
     font-size: 13px;
     background: $light-bg;
     color: $light-text;
-    &:focus { border-color: $light-primary; outline: none; }
+    &:focus {
+      border-color: $light-primary;
+      outline: none;
+    }
   }
 
   &.full-height {
     flex: 1;
     display: flex;
     flex-direction: column;
-    textarea { flex: 1; resize: none; }
+    textarea {
+      flex: 1;
+      resize: none;
+    }
   }
 
-  .tip { font-size: 11px; color: $light-text-sec; margin-bottom: 4px; }
+  .tip {
+    font-size: 11px;
+    color: $light-text-sec;
+    margin-bottom: 4px;
+  }
 }
 
 .checkbox-row {
   display: flex;
   align-items: center;
-  label { display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; color: $light-text; }
-  input { width: auto; }
+  label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    margin: 0;
+    color: $light-text;
+  }
+  input {
+    width: auto;
+  }
 }
 
 /* Sub-List Editor (WorldBook / Merge) */
@@ -988,8 +1019,15 @@ $dark-primary-bg: #312e81;
     cursor: pointer;
     border-bottom: 1px solid $light-border;
     color: $light-text;
-    &:hover { background: $light-border; }
-    &.active { background: $light-bg; color: $light-primary; font-weight: 600; border-left: 3px solid $light-primary; }
+    &:hover {
+      background: $light-border;
+    }
+    &.active {
+      background: $light-bg;
+      color: $light-primary;
+      font-weight: 600;
+      border-left: 3px solid $light-primary;
+    }
   }
 }
 
@@ -1009,7 +1047,9 @@ $dark-primary-bg: #312e81;
   .add-actions {
     display: flex;
     gap: 4px;
-    .btn { flex: 1; }
+    .btn {
+      flex: 1;
+    }
   }
 }
 
@@ -1027,7 +1067,9 @@ $dark-primary-bg: #312e81;
   margin-bottom: 12px;
   padding-bottom: 8px;
   border-bottom: 1px solid $light-bg-hover;
-  strong { color: $light-text; }
+  strong {
+    color: $light-text;
+  }
 }
 
 .empty-sub {
@@ -1078,7 +1120,9 @@ $dark-primary-bg: #312e81;
   .remove-tag {
     cursor: pointer;
     font-weight: bold;
-    &:hover { color: #1e1b4b; }
+    &:hover {
+      color: #1e1b4b;
+    }
   }
 }
 
@@ -1110,13 +1154,14 @@ $dark-primary-bg: #312e81;
     background: $light-bg-hover;
   }
 
-  input[type="checkbox"] {
+  input[type='checkbox'] {
     width: auto;
     margin: 0;
   }
 }
 
-.dropdown-loading, .dropdown-empty {
+.dropdown-loading,
+.dropdown-empty {
   padding: 8px;
   text-align: center;
   color: $light-text-sec;
@@ -1130,7 +1175,9 @@ $dark-primary-bg: #312e81;
 
   summary {
     cursor: pointer;
-    &:hover { color: $light-text; }
+    &:hover {
+      color: $light-text;
+    }
   }
 
   textarea {
@@ -1139,7 +1186,9 @@ $dark-primary-bg: #312e81;
   }
 }
 
-.mt-2 { margin-top: 8px; }
+.mt-2 {
+  margin-top: 8px;
+}
 
 /* Buttons */
 .btn {
@@ -1149,108 +1198,231 @@ $dark-primary-bg: #312e81;
   cursor: pointer;
   font-size: 13px;
 
-  &.primary { background: $light-primary; color: white; &:hover { background: #4338ca; } }
-  &.danger { background: #fee2e2; color: #991b1b; &:hover { background: #fecaca; } }
-  &.small { padding: 4px 8px; font-size: 12px; }
-  &.icon-btn { font-size: 16px; line-height: 1; padding: 0 8px; }
-  &.full { width: 100%; border-radius: 0; }
+  &.primary {
+    background: $light-primary;
+    color: white;
+    &:hover {
+      background: #4338ca;
+    }
+  }
+  &.danger {
+    background: #fee2e2;
+    color: #991b1b;
+    &:hover {
+      background: #fecaca;
+    }
+  }
+  &.small {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+  &.icon-btn {
+    font-size: 16px;
+    line-height: 1;
+    padding: 0 8px;
+  }
+  &.full {
+    width: 100%;
+    border-radius: 0;
+  }
 
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }
 
 /* Custom Scrollbar */
 .custom-scrollbar {
-  &::-webkit-scrollbar { width: 6px; height: 6px; }
-  &::-webkit-scrollbar-track { background: transparent; }
-  &::-webkit-scrollbar-thumb { background: $light-border; border-radius: 3px; }
-  &::-webkit-scrollbar-thumb:hover { background: $light-text-sec; }
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: $light-border;
+    border-radius: 3px;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: $light-text-sec;
+  }
 }
 
 /* --- Dark Mode Overrides (Forced Colors) --- */
 :global(.dark-mode) {
-  .rule-editor-container, .editor-body, .main-content, .list-content, .tab-pane, .add-panel {
+  .rule-editor-container,
+  .editor-body,
+  .main-content,
+  .list-content,
+  .tab-pane,
+  .add-panel {
     background: $dark-bg;
     color: $dark-text;
   }
 
-  .editor-header { border-bottom-color: $dark-border; }
-  .breadcrumb .text-btn { color: $dark-primary; }
-  .breadcrumb .current-rule { color: $dark-text; }
-  .breadcrumb .separator { color: $dark-text-sec; }
+  .editor-header {
+    border-bottom-color: $dark-border;
+  }
+  .breadcrumb .text-btn {
+    color: $dark-primary;
+  }
+  .breadcrumb .current-rule {
+    color: $dark-text;
+  }
+  .breadcrumb .separator {
+    color: $dark-text-sec;
+  }
 
-  .sidebar { border-right-color: $dark-border; }
-  .sidebar-title { color: $dark-text; }
+  .sidebar {
+    border-right-color: $dark-border;
+  }
+  .sidebar-title {
+    color: $dark-text;
+  }
 
   .task-item {
     background: $dark-bg-sec;
     color: $dark-text;
-    &:hover { background: $dark-bg-hover; }
-    &.active { background: $dark-primary-bg; border-color: $dark-primary; .task-name { color: #e0e7ff; } }
+    &:hover {
+      background: $dark-bg-hover;
+    }
+    &.active {
+      background: $dark-primary-bg;
+      border-color: $dark-primary;
+      .task-name {
+        color: #e0e7ff;
+      }
+    }
   }
-  .task-order { background: $dark-border; color: $dark-text; }
-  .task-name { color: $dark-text; }
-  .task-status { color: $dark-text-sec; }
+  .task-order {
+    background: $dark-border;
+    color: $dark-text;
+  }
+  .task-name {
+    color: $dark-text;
+  }
+  .task-status {
+    color: $dark-text-sec;
+  }
 
-  .no-selection { border-color: $dark-border; color: $dark-text-sec; }
+  .no-selection {
+    border-color: $dark-border;
+    color: $dark-text-sec;
+  }
 
-  .task-header { border-bottom-color: $dark-bg-hover; }
-  .task-title-edit .label { color: $dark-text-sec; }
+  .task-header {
+    border-bottom-color: $dark-bg-hover;
+  }
+  .task-title-edit .label {
+    color: $dark-text-sec;
+  }
   .task-title-edit .name-input {
     color: $dark-text;
-    &:hover, &:focus { border-color: $dark-border; background: $dark-bg-hover; }
+    &:hover,
+    &:focus {
+      border-color: $dark-border;
+      background: $dark-bg-hover;
+    }
   }
 
-  .toggle-switch .slider { background: $dark-border; }
-  .toggle-switch input:checked + .slider { background: $dark-primary; }
-  .toggle-switch .text { color: $dark-text-sec; }
+  .toggle-switch .slider {
+    background: $dark-border;
+  }
+  .toggle-switch input:checked + .slider {
+    background: $dark-primary;
+  }
+  .toggle-switch .text {
+    color: $dark-text-sec;
+  }
 
-  .inner-tabs { border-bottom-color: $dark-border; }
+  .inner-tabs {
+    border-bottom-color: $dark-border;
+  }
   .tab-btn {
     color: $dark-text-sec;
-    &:hover { color: $dark-text; }
-    &.active { color: $dark-primary; border-bottom-color: $dark-primary; }
+    &:hover {
+      color: $dark-text;
+    }
+    &.active {
+      color: $dark-primary;
+      border-bottom-color: $dark-primary;
+    }
   }
 
   .form-group {
-    label { color: $dark-text-sec; }
-    input, select, textarea {
+    label {
+      color: $dark-text-sec;
+    }
+    input,
+    select,
+    textarea {
       background: $dark-bg-sec;
       border-color: $dark-border;
       color: $dark-text;
-      &:focus { border-color: $dark-primary; }
+      &:focus {
+        border-color: $dark-primary;
+      }
     }
-    .tip { color: $dark-text-sec; }
+    .tip {
+      color: $dark-text-sec;
+    }
   }
 
-  .checkbox-row label { color: $dark-text; }
+  .checkbox-row label {
+    color: $dark-text;
+  }
 
-  .list-editor { border-color: $dark-border; }
+  .list-editor {
+    border-color: $dark-border;
+  }
   .list-sidebar {
     background: $dark-bg-sec;
     border-right-color: $dark-border;
     .sub-item {
       border-bottom-color: $dark-border;
       color: $dark-text-sec;
-      &:hover { background: $dark-bg-hover; }
-      &.active { background: $dark-bg; color: $dark-primary; }
+      &:hover {
+        background: $dark-bg-hover;
+      }
+      &.active {
+        background: $dark-bg;
+        color: $dark-primary;
+      }
     }
   }
-  .sub-header { border-bottom-color: $dark-border; strong { color: $dark-text; } }
+  .sub-header {
+    border-bottom-color: $dark-border;
+    strong {
+      color: $dark-text;
+    }
+  }
 
-  .btn.danger { background: #7f1d1d; color: #fecaca; &:hover { background: #991b1b; } }
+  .btn.danger {
+    background: #7f1d1d;
+    color: #fecaca;
+    &:hover {
+      background: #991b1b;
+    }
+  }
 
   /* Custom Select Dark */
   .custom-multiselect {
     background: $dark-bg-sec;
     border-color: $dark-border;
   }
-  .selected-tags .placeholder { color: $dark-text-sec; }
+  .selected-tags .placeholder {
+    color: $dark-text-sec;
+  }
 
   .tag {
     background: $dark-primary-bg;
     color: #e0e7ff;
     border-color: $dark-primary;
-    .remove-tag:hover { color: #fff; }
+    .remove-tag:hover {
+      color: #fff;
+    }
   }
 
   .dropdown-panel {
@@ -1260,18 +1432,26 @@ $dark-primary-bg: #312e81;
 
   .dropdown-item {
     color: $dark-text;
-    &:hover { background: $dark-bg-hover; }
+    &:hover {
+      background: $dark-bg-hover;
+    }
   }
 
   .manual-edit-details {
     color: $dark-text-sec;
-    summary:hover { color: $dark-text; }
+    summary:hover {
+      color: $dark-text;
+    }
   }
 
   /* Scrollbar Dark */
   .custom-scrollbar {
-    &::-webkit-scrollbar-thumb { background: $dark-border; }
-    &::-webkit-scrollbar-thumb:hover { background: $dark-text-sec; }
+    &::-webkit-scrollbar-thumb {
+      background: $dark-border;
+    }
+    &::-webkit-scrollbar-thumb:hover {
+      background: $dark-text-sec;
+    }
   }
 }
 </style>
