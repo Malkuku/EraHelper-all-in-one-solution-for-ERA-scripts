@@ -2,7 +2,7 @@ import { WorldInfoUtil } from '@/Utils/WorldInfoUtil';
 import { PromptUtil } from '@/Utils/PromptUtil';
 import { MessageUtil } from '@/Utils/MessageUtil';
 import { ERAEvents } from '@/Constants/ERAEvent';
-import { useAsyncAnalyzeStore } from '../stores/AsyncAnalyzeStore';
+import { useAsyncAnalyzeStore, AnalyzeBackupState } from '../stores/AsyncAnalyzeStore';
 import { eraLogger } from '../utils/EraHelperLogger';
 import { EraDataHandler } from '../EraDataHandler/EraDataHandler';
 import { useEraDataStore } from '../stores/EraDataStore';
@@ -57,7 +57,6 @@ const updateGlobalLoreList = async () => {
   }
 
   const rule = store.asyncAnalyzeSetting[store.activeRuleName];
-  // 检查 rule 是否存在以及是否有 world_book 配置
   if (!rule || !rule.world_book) {
     loreList.value = [];
     return;
@@ -65,7 +64,6 @@ const updateGlobalLoreList = async () => {
 
   try {
     loreList.value = await processWorldBookConfig(rule.world_book);
-    // eraLogger.log('Global Lore List Updated:', loreList.value);
   } catch (e) {
     eraLogger.error('Failed to update global lore list:', e);
     loreList.value = [];
@@ -80,27 +78,148 @@ const processWorldBookConfig = async (worldBookConfig: any): Promise<string[]> =
 
   for (const [bookName, wbConfig] of Object.entries(worldBookConfig)) {
     const config = wbConfig as any;
-    // 获取该书所有条目
     const allEntries = await WorldInfoUtil.getWorldBookLoresByName(bookName);
 
     if (config.lore_regex) {
       try {
         const regex = new RegExp(config.lore_regex);
         const matchedEntries = allEntries.filter(name => regex.test(name));
-        // 合并到配置的 lores 中 (去重)
         config.lores = [...new Set([...(config.lores || []), ...matchedEntries])];
       } catch (e) {
         eraLogger.error(`Regex error in world book config [${bookName}]:`, e);
       }
     }
 
-    // 收集条目
     if (config.lores && config.lores.length > 0) {
       resultLores.push(...config.lores);
     }
   }
 
-  return [...new Set(resultLores)]; // 最终去重
+  return [...new Set(resultLores)];
+};
+
+/**
+ * [新增] 创建备份快照
+ * 扫描所有任务的 merge_setting，保存当前状态
+ */
+const createBackup = async (message_id: number, ruleName: string) => {
+  const store = getAsyncAnalyzeStore();
+  const currentRule = store.asyncAnalyzeSetting[ruleName];
+  if (!currentRule || !currentRule.staged_setting) return;
+
+  const backup: AnalyzeBackupState = {
+    ruleName,
+    messageId: message_id,
+    timestamp: Date.now(),
+    triggerHistory: {},
+    worldBookData: {},
+    messageData: {}
+  };
+
+  // 1. 备份当前消息内容 (因为 is_inject 可能修改它)
+  try {
+    const msgContent = MessageUtil.getMessageById(message_id);
+    backup.messageData[message_id] = msgContent;
+  } catch (e) {
+    eraLogger.warn(`Backup: Failed to get message ${message_id}`);
+  }
+
+  // 2. 遍历所有任务，备份触发历史和目标数据
+  for (const [taskName, taskConfig] of Object.entries(currentRule.staged_setting)) {
+    // 备份触发历史
+    backup.triggerHistory[taskName] = taskConfig.trigger_history || 0;
+
+    if (taskConfig.merge_setting) {
+      for (const setting of Object.values(taskConfig.merge_setting)) {
+        const { is_inject, world_book, target_lore } = setting as any;
+
+        // 如果是写入世界书，备份该条目
+        if (!is_inject && world_book && target_lore) {
+          const key = `${world_book}:${target_lore}`;
+          // 避免重复读取
+          if (!(key in backup.worldBookData)) {
+            try {
+              const content = await WorldInfoUtil.getWorldBookLoreContent(world_book, target_lore);
+              backup.worldBookData[key] = content || null; // null 表示不存在
+            } catch (e) {
+              backup.worldBookData[key] = null;
+            }
+          }
+        }
+        // 如果是注入正文，已经在上面备份了 message_id
+        // 如果未来支持注入其他楼层，这里需要解析并备份对应楼层
+      }
+    }
+  }
+
+  store.savedBackupState = backup;
+  await store.saveModelSettings();
+  eraLogger.info('分步分析：已创建数据备份');
+};
+
+/**
+ * [新增] 执行回滚
+ * 恢复到 savedBackupState 中的状态
+ */
+export const performRollback = async () => {
+  const store = getAsyncAnalyzeStore();
+  const backup = store.savedBackupState;
+
+  if (!backup) {
+    toastr.warning('没有可用的备份数据');
+    return;
+  }
+
+  toastr.info('正在回滚分步分析数据...');
+  eraLogger.info('开始回滚分步分析数据...');
+
+  try {
+    // 1. 恢复触发历史
+    const rule = store.asyncAnalyzeSetting[backup.ruleName];
+    if (rule && rule.staged_setting) {
+      for (const [taskName, historyFloor] of Object.entries(backup.triggerHistory)) {
+        if (rule.staged_setting[taskName]) {
+          rule.staged_setting[taskName].trigger_history = historyFloor;
+        }
+      }
+    }
+
+    // 2. 恢复世界书条目
+    for (const [key, content] of Object.entries(backup.worldBookData)) {
+      const [bookName, loreName] = key.split(':');
+      if (bookName && loreName) {
+        // 如果内容为 null，说明之前不存在，视情况清空或保留空字符串
+        // 这里统一恢复为 content 或空字符串
+        const finalContent = content || '';
+        await WorldInfoUtil.updateOrCreateEntry(bookName, loreName, finalContent);
+      }
+    }
+
+    // 3. 恢复消息内容
+    const messagesToUpdate = [];
+    for (const [msgIdStr, content] of Object.entries(backup.messageData)) {
+      messagesToUpdate.push({
+        message_id: parseInt(msgIdStr),
+        message: content
+      });
+    }
+    if (messagesToUpdate.length > 0) {
+      await setChatMessages(messagesToUpdate);
+    }
+
+    // 保存恢复后的配置
+    await store.saveModelSettings();
+
+    toastr.success('回滚完成');
+    eraLogger.info('分步分析数据回滚完成');
+
+    // 触发刷新
+    await eventEmit(ERAEvents.FORCE_SYNC);
+
+  } catch (e) {
+    eraLogger.error('回滚失败:', e);
+    toastr.error('回滚失败，请检查日志');
+  }
 };
 
 /**
@@ -108,14 +227,13 @@ const processWorldBookConfig = async (worldBookConfig: any): Promise<string[]> =
  */
 export const handleMessageReceived = async (message_id: number) => {
   try {
-    initWatcher(); // 确保监听器已初始化
+    initWatcher();
 
     if (getLastMessageId() == 0 || message_id == 0) {
       return;
     }
 
     const store = getAsyncAnalyzeStore();
-    // 确保配置已加载
     if (!store.activeRuleName || !store.asyncAnalyzeSetting[store.activeRuleName]) {
       return;
     }
@@ -136,10 +254,7 @@ export const handleMessageReceived = async (message_id: number) => {
     toastr.error('分步分析执行出错');
   } finally {
     isAnalyzing = false;
-    // 任务完成后，恢复为全局配置
     await updateGlobalLoreList();
-
-    // 触发一次同步以确保UI更新
     await eventEmit(ERAEvents.FORCE_SYNC);
     await eventEmit('kat:handle_era_finished');
   }
@@ -155,19 +270,17 @@ export const handleAsyncAnalyzeTasks = async (message_id: number) => {
 
   if (!currentRule || !currentRule.staged_setting) return;
 
-  // 1. 任务分组与排序 (从 staged_setting 中获取)
+  // [新增] 1. 在任务开始前创建备份
+  await createBackup(message_id, ruleName);
+
+  // 任务分组与排序
   const tasks = Object.entries(currentRule.staged_setting).map(([taskName, config]) => ({
     taskName,
     ...config
   }));
-
-  // 过滤掉未启用的任务
   const enabledTasks = tasks.filter(t => t.enable);
-
-  // 按 order 排序
   const sortedTasks = enabledTasks.sort((a, b) => a.order - b.order);
 
-  // 按 order 分组 (Map<order, Task[]>)
   const taskGroups = new Map<number, typeof sortedTasks>();
   sortedTasks.forEach(task => {
     if (!taskGroups.has(task.order)) {
@@ -176,66 +289,80 @@ export const handleAsyncAnalyzeTasks = async (message_id: number) => {
     taskGroups.get(task.order)!.push(task);
   });
 
-  // 获取排序后的 order key
   const sortedOrders = Array.from(taskGroups.keys()).sort((a, b) => a - b);
+  const pendingTriggerUpdates: Map<string, number> = new Map();
 
-  // 2. 顺序执行分组，组内并行
-  for (const order of sortedOrders) {
-    const groupTasks = taskGroups.get(order)!;
-    eraLogger.log(`正在执行第 ${order} 阶任务组，共 ${groupTasks.length} 个任务`);
+  try {
+    // 2. 顺序执行分组，组内并行
+    for (const order of sortedOrders) {
+      const groupTasks = taskGroups.get(order)!;
+      eraLogger.log(`正在执行第 ${order} 阶任务组，共 ${groupTasks.length} 个任务`);
 
-    // 创建并行执行的 Promise 数组
-    const promises = groupTasks.map(async (task, index) => {
-      // 检查触发间隔
-      const currentFloor = message_id;
-      const lastTrigger = task.trigger_history || 0;
+      const promises = groupTasks.map(async (task, index) => {
+        const currentFloor = message_id;
+        const lastTrigger = task.trigger_history || 0;
 
-      // 如果 trigger_index > 1，则需要判断间隔
-      if (task.trigger_index > 1 && (currentFloor - lastTrigger) < task.trigger_index) {
-        eraLogger.log(`任务 [${task.taskName}] 跳过: 未达到触发间隔 (当前:${currentFloor}, 上次:${lastTrigger}, 间隔:${task.trigger_index})`);
-        return;
-      }
-
-      // 间隔防抖：组内任务每隔1秒启动一个
-      await new Promise(resolve => setTimeout(resolve, index * 1000));
-
-      try {
-        await executeSingleTask(task, message_id);
-
-        // 更新触发历史
-        if (store.asyncAnalyzeSetting[ruleName]?.staged_setting?.[task.taskName]) {
-          store.asyncAnalyzeSetting[ruleName].staged_setting[task.taskName].trigger_history = currentFloor;
+        if (task.trigger_index > 1 && (currentFloor - lastTrigger) < task.trigger_index) {
+          eraLogger.log(`任务 [${task.taskName}] 跳过: 未达到触发间隔`);
+          return;
         }
-      } catch (e) {
-        eraLogger.error(`任务 [${task.taskName}] 执行失败:`, e);
-        toastr.error(`任务 [${task.taskName}] 执行失败`);
 
-        // 简单的重试逻辑 (reroll_count)
-        if (task.reroll_count > 0) {
-          for(let i=0; i<task.reroll_count; i++){
-            try {
-              eraLogger.log(`任务 [${task.taskName}] 重试第 ${i+1} 次`);
-              await executeSingleTask(task, message_id);
-              // 成功则退出重试循环
-              if (store.asyncAnalyzeSetting[ruleName]?.staged_setting?.[task.taskName]) {
-                store.asyncAnalyzeSetting[ruleName].staged_setting[task.taskName].trigger_history = currentFloor;
+        await new Promise(resolve => setTimeout(resolve, index * 1000));
+
+        try {
+          await executeSingleTask(task, message_id);
+          pendingTriggerUpdates.set(task.taskName, currentFloor);
+        } catch (e) {
+          eraLogger.error(`任务 [${task.taskName}] 执行失败:`, e);
+
+          let retrySuccess = false;
+          if (task.reroll_count > 0) {
+            for(let i=0; i<task.reroll_count; i++){
+              try {
+                eraLogger.log(`任务 [${task.taskName}] 重试第 ${i+1} 次`);
+                await executeSingleTask(task, message_id);
+                pendingTriggerUpdates.set(task.taskName, currentFloor);
+                retrySuccess = true;
+                break;
+              } catch(retryE) {
+                eraLogger.error(`任务 [${task.taskName}] 重试失败:`, retryE);
               }
-              break;
-            } catch(retryE) {
-              eraLogger.error(`任务 [${task.taskName}] 重试失败:`, retryE);
             }
           }
+
+          // 如果重试也失败了，抛出异常以触发回滚
+          if (!retrySuccess) {
+            throw new Error(`任务 [${task.taskName}] 最终执行失败`);
+          }
         }
+      });
+
+      // 等待当前组完成，如果有任何一个抛出异常，Promise.all 会 reject
+      await Promise.all(promises);
+    }
+
+    // 3. 所有任务成功，更新触发历史
+    if (pendingTriggerUpdates.size > 0) {
+      let hasUpdates = false;
+      pendingTriggerUpdates.forEach((floor, taskName) => {
+        if (store.asyncAnalyzeSetting[ruleName]?.staged_setting?.[taskName]) {
+          store.asyncAnalyzeSetting[ruleName].staged_setting[taskName].trigger_history = floor;
+          hasUpdates = true;
+        }
+      });
+
+      if (hasUpdates) {
+        await store.saveModelSettings();
       }
-    });
+    }
+    toastr.success('所有分步分析任务执行完成');
 
-    // 等待当前组所有任务完成
-    await Promise.all(promises);
+  } catch (err) {
+    // [新增] 4. 捕获到严重错误（包含重试失败），执行全量回滚
+    eraLogger.error('分步分析流程发生严重错误，正在回滚...', err);
+    toastr.error('执行出错，正在回滚数据...');
+    await performRollback();
   }
-
-  // 所有任务完成后，保存状态
-  await store.saveModelSettings();
-  toastr.success('所有分步分析任务执行完成');
 };
 
 /**
@@ -244,29 +371,19 @@ export const handleAsyncAnalyzeTasks = async (message_id: number) => {
 async function executeSingleTask(task: any, message_id: number) {
   const store = getAsyncAnalyzeStore();
   eraLogger.info(`>>> 开始执行任务: ${task.taskName}`);
-  toastr.info(`开始执行任务: ${task.taskName}`);
 
-  // 1. 准备 API 配置
   const apiConfigName = task.api_config;
   const apiConfig = store.apiConfigSettings[apiConfigName];
-  if (!apiConfig) {
-    eraLogger.error(`找不到 API 配置: ${apiConfigName}`);
-    toastr.error(`找不到 API 配置: ${apiConfigName}`);
-    throw new Error(`找不到 API 配置: ${apiConfigName}`);
-  }
+  if (!apiConfig) throw new Error(`找不到 API 配置: ${apiConfigName}`);
 
-  // 2. 处理 World Book 逻辑 (任务级)
-  // 获取所有绑定世界书的条目，正则匹配，合并到 lores，并更新 loreList.value
   if (task.world_book) {
     loreList.value = await processWorldBookConfig(task.world_book);
   } else {
     loreList.value = [];
   }
 
-  // 3. 构建 Prompt
   const maxHistory = task.chat_history || 2;
   const user_input = task.prompt;
-
   const promptInjects = [
     {
       id: '1145141919',
@@ -278,12 +395,10 @@ async function executeSingleTask(task: any, message_id: number) {
     },
   ];
 
-  // 4. 切换/准备模型环境
   const originalPresetName = getLoadedPresetName();
   let tempPresetLoaded = false;
 
   try {
-    // 切换预设逻辑
     if (apiConfig.model_source === 'sample' && apiConfig.simple_preset_name && apiConfig.simple_preset_name !== 'in_use') {
       if (originalPresetName !== apiConfig.simple_preset_name) {
         loadPreset(apiConfig.simple_preset_name);
@@ -296,56 +411,24 @@ async function executeSingleTask(task: any, message_id: number) {
       }
     }
 
-    // 5. 发送请求
     let result = '';
     const is_should_stream = false;
 
     if (apiConfig.model_source === 'sample') {
-      result = await PromptUtil.sendPrompt(
-        user_input,
-        promptInjects,
-        maxHistory,
-        is_should_stream,
-        null,
-        null
-      );
+      result = await PromptUtil.sendPrompt(user_input, promptInjects, maxHistory, is_should_stream, null, null);
     } else if (apiConfig.model_source === 'profile') {
-      result = await PromptUtil.sendPrompt(
-        user_input,
-        promptInjects,
-        maxHistory,
-        is_should_stream,
-        null,
-        apiConfig.profileSetting
-      );
+      result = await PromptUtil.sendPrompt(user_input, promptInjects, maxHistory, is_should_stream, null, apiConfig.profileSetting);
     } else {
-      // External
-      result = await PromptUtil.sendPrompt(
-        user_input,
-        promptInjects,
-        maxHistory,
-        is_should_stream,
-        apiConfig.custom_model_settings,
-        null
-      );
+      result = await PromptUtil.sendPrompt(user_input, promptInjects, maxHistory, is_should_stream, apiConfig.custom_model_settings, null);
     }
 
     eraLogger.log(`任务 [${task.taskName}] 原始输出:`, result);
-
-    // 6. 处理结果合并
     await handleTaskResultMerge(task, result, message_id);
 
   } finally {
-    // 恢复预设
     if (tempPresetLoaded) {
       loadPreset(originalPresetName);
     }
-    // 注意：loreList 在这里不重置为空，而是由外层循环或 finally 块恢复为全局配置
-    // 但为了防止并行任务干扰，这里其实应该考虑并发问题。
-    // 目前逻辑是：任务组内并行。如果多个任务同时修改 loreList，会有冲突。
-    // 但 loreList 是全局 ref。
-    // TODO: 如果需要完全隔离，PromptUtil 需要支持传入 lores 而不是依赖全局 handleLoresFilter。
-    // 鉴于目前架构，假设任务组内的 world_book 配置不冲突，或者接受最后一次写入的值。
   }
 }
 
@@ -360,88 +443,52 @@ async function handleTaskResultMerge(task: any, result: string, message_id: numb
   for (const [mergeKey, setting] of Object.entries(mergeSettings)) {
     const { is_inject, world_book, target_lore, content_regex, replace_regex } = setting as any;
 
-    // ---------------------------------------------------------
-    // 1. 提取内容 (Parallel Extraction)
-    // ---------------------------------------------------------
     let finalExtractedContent = '';
 
-    // 如果定义了提取正则，则从 result 中提取
     if (content_regex && Array.isArray(content_regex) && content_regex.length > 0) {
       const extractedParts: string[] = [];
-      let allMatched = true;
-
       for (const regexStr of content_regex) {
         try {
-          // 使用 's' 标志允许 . 匹配换行符
           const regex = new RegExp(regexStr, 's');
-          // 注意：这里每次都匹配原始的 result
           const match = result.match(regex);
-
           if (match && match[1]) {
             extractedParts.push(match[1]);
           } else {
-            // 如果要求必须匹配但没匹配到，记录警告
             eraLogger.warn(`任务 [${task.taskName}] 合并 [${mergeKey}]: 正则未匹配到内容 "${regexStr}"`);
-            // 根据需求，这里可以选择是否中断。
-            // 如果 "必须逐个匹配" 意味着缺一不可，则标记失败
-            // allMatched = false;
           }
         } catch (e) {
           eraLogger.error(`任务 [${task.taskName}] 提取正则错误: ${regexStr}`, e);
-          allMatched = false;
         }
       }
-
-      // 将所有提取到的部分拼接（这里默认用换行符拼接，可根据需求调整）
       if (extractedParts.length > 0) {
         finalExtractedContent = extractedParts.join('\n');
       } else {
-        // 如果所有正则都没匹配到东西，跳过此合并项
         continue;
       }
     } else {
-      // 如果没定义 content_regex，则默认使用全部输出
       finalExtractedContent = result;
     }
 
-    // ---------------------------------------------------------
-    // 2. 处理注入/替换逻辑
-    // ---------------------------------------------------------
-
     if (is_inject) {
-      // === 场景 A: 注入到聊天正文 ===
-      // 忽略 world_book 设置
-
       if (replace_regex) {
-        // 策略：获取当前正文 -> 查找 replace_regex -> 替换为 finalExtractedContent -> 保存
         try {
           const currentMessageContent = MessageUtil.getMessageById(message_id);
-          const regex = new RegExp(replace_regex, 'g'); // 全局替换
-
+          const regex = new RegExp(replace_regex, 'g');
           if (regex.test(currentMessageContent)) {
             const newMessageContent = currentMessageContent.replace(regex, finalExtractedContent);
             await setChatMessages([{ message_id, message: newMessageContent }]);
             eraLogger.info(`任务 [${task.taskName}] 合并 [${mergeKey}]: 正文内容已根据正则替换`);
-          } else {
-            eraLogger.warn(`任务 [${task.taskName}] 合并 [${mergeKey}]: 正文中未找到可替换的内容 (正则: ${replace_regex})`);
           }
         } catch (e) {
           eraLogger.error(`任务 [${task.taskName}] 正文替换执行出错:`, e);
         }
       } else {
-        // 策略：直接追加到正文末尾
         await MessageUtil.mergeContentToMessage(message_id, `\n${finalExtractedContent}`);
         eraLogger.info(`任务 [${task.taskName}] 合并 [${mergeKey}]: 内容已追加到正文`);
       }
-
     } else if (world_book && target_lore) {
-      // === 场景 B: 写入世界书 ===
-      // 仅当 is_inject 为 false 时执行
-
       if (replace_regex) {
-        // 策略：获取条目内容 -> 查找 replace_regex -> 替换为 finalExtractedContent -> 保存
         const oldContent = await WorldInfoUtil.getWorldBookLoreContent(world_book, target_lore);
-
         if (oldContent) {
           try {
             const regex = new RegExp(replace_regex, 'g');
@@ -449,26 +496,15 @@ async function handleTaskResultMerge(task: any, result: string, message_id: numb
               const newContent = oldContent.replace(regex, finalExtractedContent);
               await WorldInfoUtil.updateOrCreateEntry(world_book, target_lore, newContent);
               eraLogger.info(`任务 [${task.taskName}] 合并 [${mergeKey}]: 世界书条目 [${target_lore}] 内容已替换更新`);
-            } else {
-              eraLogger.warn(`任务 [${task.taskName}] 合并 [${mergeKey}]: 世界书条目中未找到可替换的内容`);
             }
           } catch (e) {
             eraLogger.error(`任务 [${task.taskName}] 世界书替换执行出错:`, e);
           }
-        } else {
-          // 条目不存在，跳过
-          eraLogger.info(`任务 [${task.taskName}] 合并 [${mergeKey}]: 世界书条目不存在，跳过任务`);
         }
-      } else {
-        // 策略：覆盖/创建条目
-        // eslint-disable-next-line no-lonely-if
-        if (finalExtractedContent && finalExtractedContent.trim().length > 0) {
+      } else if (finalExtractedContent && finalExtractedContent.trim().length > 0) {
           await WorldInfoUtil.updateOrCreateEntry(world_book, target_lore, finalExtractedContent);
           eraLogger.info(`任务 [${task.taskName}] 合并 [${mergeKey}]: 世界书条目 [${target_lore}] 已覆盖更新`);
-        } else {
-          eraLogger.warn(`任务 [${task.taskName}] 合并 [${mergeKey}]: 提取内容为空，跳过写入世界书`);
         }
-      }
     }
 
     if (finalExtractedContent.includes('<VariableEdit>')) {
@@ -477,18 +513,12 @@ async function handleTaskResultMerge(task: any, result: string, message_id: numb
   }
 }
 
-/**
- * 处理ERA变量更新 (Legacy Logic Preserved)
- */
 async function handleEraRules(result: string) {
   const regexInnermost = /<VariableEdit>((?:(?!<VariableEdit>)[\s\S])*?)<\/VariableEdit>/g;
   const matches = Array.from(result.matchAll(regexInnermost));
-
   if (matches.length === 0) return result;
-
   let mergedEditData: Record<string, any> = {};
   let hasValidData = false;
-
   for (const match of matches) {
     const content = match[1];
     if (!content || !content.trim()) continue;
@@ -500,19 +530,14 @@ async function handleEraRules(result: string) {
       console.warn('忽略无效的 VariableEdit 内容:', content);
     }
   }
-
   if (!hasValidData) return result;
-
   try {
     const snapshotData = await getEraEditStore().getStatData();
     if (snapshotData == null) return result;
-
     const rules = getEraDataStore().eraDataRule;
     const { data: updatedData } = await EraDataHandler.applyRule(mergedEditData, snapshotData, rules);
-
     const updatedContent = JSON.stringify(updatedData);
     const newTag = `<VariableEdit>\n${updatedContent}\n</VariableEdit>`;
-
     let isFirstMatch = true;
     result = result.replace(regexInnermost, () => {
       if (isFirstMatch) {
@@ -522,7 +547,6 @@ async function handleEraRules(result: string) {
         return '';
       }
     });
-
   } catch (e) {
     eraLogger.error('变量更新失败：', e);
     toastr.error('变量更新失败');
@@ -530,25 +554,18 @@ async function handleEraRules(result: string) {
   return result;
 }
 
-/**
- * 重发变量更新
- */
 export const reSendEraUpdate = async () => {
   if (getLastMessageId() == 0) {
     toastr.warning('请不要重算0层变量');
     return;
   }
+  await performRollback();
   toastr.info('开始重算分步分析');
   await handleAsyncAnalyzeTasks(getLastMessageId());
 };
 
-/**
- * 处理世界书内容的排除
- * 此函数由事件系统自动调用
- */
 export const handleLoresFilter = async (lores: any) => {
-  initWatcher(); // 确保监听器已初始化
-
+  initWatcher();
   if (loreList.value.length > 0) {
     eraLogger.log('Applying WorldInfo Filter:', loreList.value, 'IsReversed:', isReversed.value);
     await WorldInfoUtil.removeLoresByArray(lores, loreList.value, isReversed.value);
