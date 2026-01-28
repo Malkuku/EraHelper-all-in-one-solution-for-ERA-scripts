@@ -16,7 +16,8 @@ const getEraEditStore = () => (window as any).EraEditStore as ReturnType<typeof 
 
 // Changed to ref to allow dynamic updates by tasks
 const loreList = ref<string[]>([]);
-const isReversed = ref(true);//反向过滤
+// [新增] 用于存储当前配置中涉及的世界书名称
+const targetBookList = ref<string[]>([]);
 
 // Global lock for analysis
 let isAnalyzing = false;
@@ -53,32 +54,50 @@ const updateGlobalLoreList = async () => {
   const store = getAsyncAnalyzeStore();
   if (!store || !store.activeRuleName) {
     loreList.value = [];
+    targetBookList.value = [];//清空
     return;
   }
 
   const rule = store.asyncAnalyzeSetting[store.activeRuleName];
   if (!rule || !rule.world_book) {
     loreList.value = [];
+    targetBookList.value = [];//清空
     return;
   }
 
   try {
-    loreList.value = await processWorldBookConfig(rule.world_book);
+    //解构获取 lores 和 books
+    const { lores, books } = await processWorldBookConfig(rule.world_book);
+    loreList.value = lores;
+    targetBookList.value = books;
   } catch (e) {
     eraLogger.error('Failed to update global lore list:', e);
     loreList.value = [];
+    targetBookList.value = [];
   }
 };
 
 /**
  * 辅助函数：处理 WorldBook 配置并返回条目列表
+ * [修改] 返回值改为对象，包含条目列表和涉及的书名列表
  */
-const processWorldBookConfig = async (worldBookConfig: any): Promise<string[]> => {
+const processWorldBookConfig = async (worldBookConfig: any): Promise<{ lores: string[], books: string[] }> => {
   const resultLores: string[] = [];
+  const resultBooks: string[] = [];
 
   for (const [bookName, wbConfig] of Object.entries(worldBookConfig)) {
+    // 记录涉及的世界书名称
+    resultBooks.push(bookName);
+
     const config = wbConfig as any;
-    const allEntries = await WorldInfoUtil.getWorldBookLoresByName(bookName);
+    // 获取该书所有条目用于正则匹配
+    let allEntries: string[] = [];
+    try {
+        allEntries = await WorldInfoUtil.getWorldBookLoresByName(bookName);
+    } catch (e) {
+        eraLogger.warn(`无法获取世界书 [${bookName}] 的条目，可能不存在。`);
+        continue;
+    }
 
     if (config.lore_regex) {
       try {
@@ -95,7 +114,10 @@ const processWorldBookConfig = async (worldBookConfig: any): Promise<string[]> =
     }
   }
 
-  return [...new Set(resultLores)];
+  return {
+    lores: [...new Set(resultLores)],
+    books: [...new Set(resultBooks)]
+  };
 };
 
 /**
@@ -377,9 +399,13 @@ async function executeSingleTask(task: any, message_id: number) {
   if (!apiConfig) throw new Error(`找不到 API 配置: ${apiConfigName}`);
 
   if (task.world_book) {
-    loreList.value = await processWorldBookConfig(task.world_book);
+    // [修改] 适配新的返回结构
+    const { lores, books } = await processWorldBookConfig(task.world_book);
+    loreList.value = lores;
+    targetBookList.value = books;
   } else {
     loreList.value = [];
+    targetBookList.value = [];
   }
 
   const maxHistory = task.chat_history || 2;
@@ -564,10 +590,57 @@ export const reSendEraUpdate = async () => {
   await handleAsyncAnalyzeTasks(getLastMessageId());
 };
 
+/**
+ * 处理世界书过滤
+ * 逻辑：
+ * 1. 找到所有被配置的世界书 (targetBookList)。
+ * 2. 获取这些书里的所有条目。
+ * 3. 排除掉 loreList (白名单) 中的条目。
+ * 4. 剩下的就是"属于被配置的世界书，但不被允许存在的条目"，将它们移除。
+ * 5. 未配置的世界书条目完全不受影响。
+ */
 export const handleLoresFilter = async (lores: any) => {
   initWatcher();
-  if (loreList.value.length > 0) {
-    eraLogger.log('Applying WorldInfo Filter:', loreList.value, 'IsReversed:', isReversed.value);
-    await WorldInfoUtil.removeLoresByArray(lores, loreList.value, isReversed.value);
+
+  // 如果没有配置任何世界书，则不进行任何过滤（保留原样）
+  if (targetBookList.value.length === 0) {
+    return;
+  }
+
+  try {
+    // 1. 获取所有受控世界书的全量条目
+    const allControlledEntries: string[] = [];
+    for (const bookName of targetBookList.value) {
+      try {
+        const entries = await WorldInfoUtil.getWorldBookLoresByName(bookName);
+        if (entries && entries.length > 0) {
+          allControlledEntries.push(...entries);
+        }
+      } catch (e) {
+        eraLogger.warn(`Filter: Failed to get entries for book [${bookName}]`, e);
+      }
+    }
+
+    // 2. 计算黑名单：(受控书全量条目) - (允许的条目 loreList)
+    // loreList.value 包含了我们希望保留的条目
+    const entriesToRemove = allControlledEntries.filter(
+      entryName => !loreList.value.includes(entryName)
+    );
+
+    // 3. 执行移除
+    if (entriesToRemove.length > 0) {
+      eraLogger.log('Applying Scoped WorldInfo Filter.');
+      eraLogger.log('Configured Books:', targetBookList.value);
+      eraLogger.log('Allowed Entries:', loreList.value);
+      eraLogger.log('Removing Entries (Blacklist):', entriesToRemove);
+
+      // 使用 isReversed = false，代表"移除数组中存在的条目"
+      await WorldInfoUtil.removeLoresByArray(lores, entriesToRemove, false);
+    } else {
+      eraLogger.log('Scoped WorldInfo Filter: No entries need removal.');
+    }
+
+  } catch (e) {
+    eraLogger.error('Error during handleLoresFilter:', e);
   }
 };

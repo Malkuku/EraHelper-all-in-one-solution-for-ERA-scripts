@@ -29,7 +29,7 @@
           </div>
           <div class="card-desc">
             配置发送给正文的世界书
-            <Tooltip content="这里配置的世界书条目就是正文AI能看到的所有条目，兼容酒馆设置（关闭的条目AI同样看不到，同理，绿灯条目会按照关键词触发）" placement="top" />
+            <Tooltip content="这里配置的世界书条目就是正文AI能看到的所有条目，兼容酒馆设置（关闭的条目AI同样看不到，同理，绿灯条目会按照关键词触发）；没有被配置的世界书也会按照原本酒馆的规则发送给AI" placement="top" />
           </div>
         </div>
 
