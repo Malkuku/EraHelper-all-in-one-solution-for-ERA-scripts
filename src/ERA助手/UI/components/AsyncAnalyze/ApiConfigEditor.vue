@@ -1,5 +1,5 @@
 <template>
-  <div class="api-config-container">
+  <div :class="{ 'dark-mode': uiStore.darkMode }" class="api-config-container">
     <!-- 左侧：配置列表 -->
     <div class="sidebar">
       <div class="sidebar-header">
@@ -173,6 +173,9 @@ import { useAsyncAnalyzeStore } from '@/ERA助手/stores/AsyncAnalyzeStore';
 import { eraLogger } from '@/ERA助手/utils/EraHelperLogger';
 // [新增] 引入组件
 import SearchableSelect from '../Dialog/SearchableSelect.vue';
+import { useUiStore } from '@/ERA助手/stores/UIStore';
+
+const uiStore = useUiStore();
 
 const store = useAsyncAnalyzeStore();
 const currentConfigName = ref<string>('');
@@ -590,7 +593,7 @@ onMounted(() => {
 }
 
 /* Dark Mode */
-:global(.dark-mode) {
+.dark-mode {
   .sidebar { border-right-color: #4b5563; }
 
   .config-item {

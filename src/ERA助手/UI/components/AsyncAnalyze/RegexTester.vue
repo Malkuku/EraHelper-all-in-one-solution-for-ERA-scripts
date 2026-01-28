@@ -1,5 +1,5 @@
 <template>
-  <div class="modal-mask">
+  <div class="modal-mask" :class="{ 'dark-mode': uiStore.darkMode }">
     <div class="modal-wrapper">
       <div class="regex-tester-layout">
 
@@ -136,6 +136,9 @@ import { ref, computed } from 'vue';
 import { useAsyncAnalyzeStore, SavedRegexConfig } from '@/ERA助手/stores/AsyncAnalyzeStore';
 import { eraLogger } from '@/ERA助手/utils/EraHelperLogger';
 import FileImportExport from '@/ERA助手/UI/components/File/FileImportExport.vue';
+import { useUiStore } from '@/ERA助手/stores/UIStore';
+
+const uiStore = useUiStore();
 
 // 定义 Emits 以便关闭弹窗
 const emit = defineEmits(['close']);
@@ -642,7 +645,7 @@ const handleMessage = (msg: string, type: string) => console.log(`[${type}] ${ms
 .group-value { color: #1f2937; }
 
 /* Dark Mode */
-:global(.dark-mode) {
+.dark-mode {
   .modal-wrapper { background: #1f2937; }
   .modal-header { background: #111827; border-color: #374151; }
   .modal-title { color: #f3f4f6; }

@@ -1,6 +1,6 @@
 <template>
   <Transition name="modal-fade">
-    <div v-if="state.visible" class="modal-overlay" @click.self="handleCancel">
+    <div v-if="state.visible" :class="{ 'dark-mode': uiStore.darkMode }" class="modal-overlay" @click.self="handleCancel">
       <div class="modal-container">
         <div class="modal-header">
           <h3>{{ state.title }}</h3>
@@ -15,8 +15,8 @@
               ref="inputRef"
               v-model="state.inputValue"
               :placeholder="state.placeholder"
-              @keyup.enter="handleConfirm"
               class="modal-input"
+              @keyup.enter="handleConfirm"
             />
           </div>
         </div>
@@ -32,9 +32,11 @@
 
 <script setup lang="ts">
 import { nextTick, watch, ref } from 'vue';
-import { modalState as state, closeModal } from '@/ERA助手/utils/modal'; // 请根据实际路径调整
+import { modalState as state, closeModal } from '@/ERA助手/utils/modal';
+import { useUiStore } from '@/ERA助手/stores/UIStore'; // 请根据实际路径调整
 
 const inputRef = ref<HTMLInputElement | null>(null);
+const uiStore = useUiStore();
 
 // 自动聚焦输入框
 watch(() => state.visible, (val) => {
@@ -136,7 +138,7 @@ const handleCancel = () => {
 }
 
 /* Dark Mode Support */
-:global(.dark-mode) .modal-container {
+.dark-mode .modal-container {
   background: #1f2937;
   border: 1px solid #374151;
 

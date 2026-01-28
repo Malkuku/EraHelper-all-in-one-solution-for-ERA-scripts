@@ -1,5 +1,5 @@
 <template>
-  <div class="searchable-select" :class="{ 'is-disabled': disabled }" ref="containerRef">
+  <div class="searchable-select" ref="containerRef" :class="{'dark-mode': uiStore.darkMode, 'is-disabled': disabled }">
     <!-- 触发区域 -->
     <div class="select-trigger" @click="toggleDropdown">
       <!-- 多选模式显示 -->
@@ -65,6 +65,9 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import { useUiStore } from '@/ERA助手/stores/UIStore';
+
+const uiStore = useUiStore();
 
 const props = defineProps({
   modelValue: {
@@ -328,7 +331,7 @@ onUnmounted(() => {
 }
 
 /* Dark Mode Adaptation */
-:global(.dark-mode) .searchable-select {
+.dark-mode .searchable-select {
   .select-trigger {
     background-color: #111827 !important; /* 覆盖默认的 !important */
     border-color: #4b5563;

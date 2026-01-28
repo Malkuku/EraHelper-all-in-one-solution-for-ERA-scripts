@@ -1,5 +1,5 @@
 <template>
-  <div class="rule-selector">
+  <div :class="{ 'dark-mode': uiStore.darkMode }" class="rule-selector">
     <div class="header-actions">
       <FileImportExport
         accept=".json"
@@ -69,10 +69,13 @@ import { useAsyncAnalyzeStore } from '@/ERA助手/stores/AsyncAnalyzeStore';
 import { AsyncAnalyzeSetting } from '@/ERA助手/AsyncAnalyze/types/AsyncAnalyzeSetting';
 import FileImportExport from '@/ERA助手/UI/components/File/FileImportExport.vue';
 import { Modal } from '@/ERA助手/utils/modal';
+import { useUiStore } from '@/ERA助手/stores/UIStore';
 
 const store = useAsyncAnalyzeStore();
 const router = useRouter();
 const newRuleName = ref('');
+
+const uiStore = useUiStore();
 
 // 创建新规则组
 const createNewRule = async () => {
@@ -249,6 +252,7 @@ const handleExportData = () => {
     display: flex;
     gap: 10px;
     max-width: 400px;
+    margin-top: 6px;
 
     input {
       flex: 1;
@@ -421,7 +425,7 @@ const handleExportData = () => {
 }
 
 /* Dark Mode Adaption */
-:global(.dark-mode) {
+.dark-mode {
   .header-actions input {
     background: #374151;
     border-color: #4b5563;
