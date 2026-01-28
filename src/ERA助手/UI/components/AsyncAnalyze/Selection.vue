@@ -1,15 +1,6 @@
 <template>
   <div class="rule-selector">
     <div class="header-actions">
-      <div class="input-group">
-        <input
-          v-model="newRuleName"
-          placeholder="输入新规则组名称..."
-          @keyup.enter="createNewRule"
-        />
-        <button class="btn primary small" @click="createNewRule">新建规则组</button>
-      </div>
-
       <FileImportExport
         accept=".json"
         import-text="导入配置"
@@ -19,11 +10,14 @@
         @import-confirmed="handleImportConfirmed"
         @export-data="handleExportData"
       />
+
+      <div class="input-group">
+        <input v-model="newRuleName" placeholder="输入新规则组名称..." @keyup.enter="createNewRule" />
+        <button class="btn primary small" @click="createNewRule">新建规则组</button>
+      </div>
     </div>
 
-    <div v-if="Object.keys(store.asyncAnalyzeSetting).length === 0" class="empty-state">
-      暂无规则配置，请新建一个。
-    </div>
+    <div v-if="Object.keys(store.asyncAnalyzeSetting).length === 0" class="empty-state">暂无规则配置，请新建一个。</div>
 
     <div class="rule-list">
       <div
@@ -40,25 +34,14 @@
             <span class="tag info">{{ Object.keys(setting.staged_setting || {}).length }} 个任务</span>
           </div>
           <div class="card-actions">
-            <button
-              v-if="store.activeRuleName !== key"
-              class="btn small primary"
-              @click="activateRule(key as string)"
-            >
+            <button v-if="store.activeRuleName !== key" class="btn small primary" @click="activateRule(key as string)">
               启用
             </button>
-            <button
-              class="btn small"
-              @click="editRule(key as string)"
-            >
-              编辑
-            </button>
-            <button
-              class="btn small danger"
-              @click="deleteRule(key as string)"
-            >
-              删除
-            </button>
+            <!-- 新增：复制按钮 -->
+            <button class="btn small secondary" @click="copyRule(key as string)">复制</button>
+            <!-- 修改：编辑按钮添加 info 类，改变颜色 -->
+            <button class="btn small info" @click="editRule(key as string)">编辑</button>
+            <button class="btn small danger" @click="deleteRule(key as string)">删除</button>
           </div>
         </div>
 
@@ -69,7 +52,7 @@
 
         <div class="card-preview">
           <!-- 简单预览该规则组下的任务名称 -->
-          <span v-for="(task, taskName) in (setting.staged_setting || {})" :key="taskName" class="task-pill">
+          <span v-for="(task, taskName) in setting.staged_setting || {}" :key="taskName" class="task-pill">
             {{ taskName }}
           </span>
           <span v-if="Object.keys(setting.staged_setting || {}).length === 0" class="no-task-tip">暂无任务</span>
@@ -84,6 +67,8 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAsyncAnalyzeStore } from '@/ERA助手/stores/AsyncAnalyzeStore';
 import { AsyncAnalyzeSetting } from '@/ERA助手/AsyncAnalyze/types/AsyncAnalyzeSetting';
+import FileImportExport from '@/ERA助手/UI/components/File/FileImportExport.vue';
+import { Modal } from '@/ERA助手/utils/modal';
 
 const store = useAsyncAnalyzeStore();
 const router = useRouter();
@@ -105,7 +90,7 @@ const createNewRule = async () => {
   store.asyncAnalyzeSetting[name] = {
     comment: '',
     staged_setting: {},
-    world_book: {}
+    world_book: {},
   };
   newRuleName.value = '';
 
@@ -118,6 +103,45 @@ const createNewRule = async () => {
   toastr.success(`规则组 "${name}" 已创建`);
 };
 
+// 复制规则组
+const copyRule = async (key: string) => {
+  const originalSetting = store.asyncAnalyzeSetting[key];
+  if (!originalSetting) return;
+
+  // 使用 Modal.prompt 获取新名称
+  const newName = await Modal.prompt(
+    '复制规则组',
+    '请输入新规则组名称',
+    `${key}_copy`, // 默认值
+  );
+
+  // 用户取消或未输入
+  if (!newName) return;
+
+  const trimmedName = newName.trim();
+  if (!trimmedName) {
+    toastr.warning('名称不能为空');
+    return;
+  }
+
+  // 检查重名
+  if (store.asyncAnalyzeSetting[trimmedName]) {
+    toastr.error(`规则组 "${trimmedName}" 已存在，请使用其他名称`);
+    return;
+  }
+
+  // 深拷贝配置
+  try {
+    store.asyncAnalyzeSetting[trimmedName] = JSON.parse(JSON.stringify(originalSetting));
+
+    await store.saveModelSettings();
+    toastr.success(`成功复制为 "${trimmedName}"`);
+  } catch (e) {
+    console.error(e);
+    toastr.error('复制失败');
+  }
+};
+
 // 激活规则
 const activateRule = async (key: string) => {
   store.activeRuleName = key;
@@ -127,6 +151,7 @@ const activateRule = async (key: string) => {
 
 // 删除规则
 const deleteRule = async (key: string) => {
+  // 使用原生 confirm 或者也可以改为 Modal.confirm
   if (!confirm(`确定要删除规则组 "${key}" 吗？此操作不可恢复。`)) return;
 
   delete store.asyncAnalyzeSetting[key];
@@ -232,6 +257,7 @@ const handleExportData = () => {
       border-radius: 6px;
       outline: none;
       transition: border-color 0.2s;
+      color: #111827;
 
       &:focus {
         border-color: #6366f1;
@@ -361,13 +387,36 @@ const handleExportData = () => {
   &.primary {
     background: #6366f1;
     color: white;
-    &:hover { background: #4f46e5; }
+    &:hover {
+      background: #4f46e5;
+    }
+  }
+
+  /* 新增：Info 按钮样式 (用于编辑) - 青色/蓝绿色 */
+  &.info {
+    background: #0ea5e9; /* Sky blue / Cyan */
+    color: white;
+    &:hover {
+      background: #0284c7;
+    }
+  }
+
+  /* 新增：Secondary 按钮样式 (用于复制) - 灰色边框 */
+  &.secondary {
+    background: #fff;
+    border: 1px solid #d1d5db;
+    color: #374151;
+    &:hover {
+      background: #f3f4f6;
+    }
   }
 
   &.danger {
     background: #fee2e2;
     color: #991b1b;
-    &:hover { background: #fecaca; }
+    &:hover {
+      background: #fecaca;
+    }
   }
 }
 
@@ -377,7 +426,9 @@ const handleExportData = () => {
     background: #374151;
     border-color: #4b5563;
     color: #e2e8f0;
-    &:focus { border-color: #818cf8; }
+    &:focus {
+      border-color: #818cf8;
+    }
   }
 
   .empty-state {
@@ -396,7 +447,9 @@ const handleExportData = () => {
       box-shadow: 0 0 0 1px #818cf8;
     }
 
-    .rule-name { color: #e2e8f0; }
+    .rule-name {
+      color: #e2e8f0;
+    }
   }
 
   .rule-comment {
@@ -419,10 +472,30 @@ const handleExportData = () => {
     color: #bfdbfe;
   }
 
+  /* Dark mode for new buttons */
+  .btn.info {
+    background: #0369a1;
+    color: #e0f2fe;
+    &:hover {
+      background: #075985;
+    }
+  }
+
+  .btn.secondary {
+    background: #374151;
+    border-color: #4b5563;
+    color: #e2e8f0;
+    &:hover {
+      background: #4b5563;
+    }
+  }
+
   .btn.danger {
     background: #7f1d1d;
     color: #fecaca;
-    &:hover { background: #991b1b; }
+    &:hover {
+      background: #991b1b;
+    }
   }
 }
 </style>

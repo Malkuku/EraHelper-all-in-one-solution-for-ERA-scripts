@@ -70,7 +70,7 @@ export const useAsyncAnalyzeStore = defineStore('KatAsyncAnalyze', () => {
       savedBackupState.value = variables.saved_analyze_backup;
     }
 
-    eraLogger.log('获取分步分析设置完成');
+    eraLogger.log('获取分步分析设置完成', asyncAnalyzeSetting.value);
   };
 
   /**
