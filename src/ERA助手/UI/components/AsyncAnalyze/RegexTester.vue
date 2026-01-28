@@ -662,7 +662,7 @@ const handleMessage = (msg: string, type: string) => console.log(`[${type}] ${ms
   .item-name { color: #e5e7eb; }
   .item-pattern { color: #9ca3af; }
 
-  .input-group label, .pane-label { color: #d1d5db; }
+  .input-group label, .pane-label { color: #d1d5db !important; }
 
   .form-input, .form-textarea {
     /* 2. 强制覆盖浏览器样式 (Dark Mode) */

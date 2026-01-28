@@ -267,28 +267,28 @@
                       </div>
                     </div>
 
-                  <!-- 替换正则 -->
-                  <div class="form-group">
-                    <label>
-                      替换正则
-                      <Tooltip content="替换正则匹配,会将匹配到的内容替换为“内容捕获正则”的匹配内容，为空则默认在尾部添加内容" placement="top" />
-                    </label>
-                    <div class="regex-input-group">
-                      <input
-                        v-model="editingData.merge_setting[currentMergeKey].replace_regex"
-                        placeholder="输入正则..."
-                        class="flex-grow"
-                      />
-                      <div class="preset-select-wrapper">
-                        <SearchableSelect
-                          :model-value="''"
-                          :options="regexPresetOptions"
-                          placeholder="选择预设..."
-                          @update:model-value="(name) => applyRegexPreset(currentMergeKey, 'replace', name)"
+                    <!-- 替换正则 -->
+                    <div class="form-group">
+                      <label>
+                        替换正则
+                        <Tooltip content="替换正则匹配,会将匹配到的内容替换为“内容捕获正则”的匹配内容，为空则默认在尾部添加内容" placement="top" />
+                      </label>
+                      <div class="regex-input-group">
+                        <input
+                          v-model="editingData.merge_setting[currentMergeKey].replace_regex"
+                          placeholder="输入正则..."
+                          class="flex-grow"
                         />
+                        <div class="preset-select-wrapper">
+                          <SearchableSelect
+                            :model-value="''"
+                            :options="regexPresetOptions"
+                            placeholder="选择预设..."
+                            @update:model-value="(name) => applyRegexPreset(currentMergeKey, 'replace', name)"
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
 
 
 
@@ -643,34 +643,92 @@ const updateRegexItem = (key: string, index: number, event: Event) => {
 
     .task-header { border-bottom-color: #374151; }
     .inner-tabs { border-bottom-color: #4b5563; }
-    .tab-btn { color: #9ca3af; &.active { color: #818cf8; border-bottom-color: #818cf8; } }
+    .tab-btn {
+      color: #9ca3af;
+      &:hover { color: #e2e8f0; }
+      &.active { color: #818cf8; border-bottom-color: #818cf8; }
+    }
 
-    /* 强制深色模式下的输入框颜色 */
-    .form-group input,
-    .form-group textarea {
-      background: #111827 !important;
-      color: #e2e8f0 !important;
-      border-color: #4b5563 !important;
+    /* 强制深色模式下的输入框颜色 - 必须使用 !important 覆盖浅色模式 */
+    .form-group {
+      /* 覆盖 label 的黑色 !important */
+      label { color: #e2e8f0 !important; }
+      .tip { color: #9ca3af; }
+
+      input,
+      textarea,
+      select {
+        background: #374151 !important;
+        color: #e2e8f0 !important;
+        border-color: #4b5563 !important;
+        &:focus { border-color: #818cf8 !important; }
+      }
     }
 
     /* 强制深色模式下的标题输入框 */
     .name-input {
       color: #e2e8f0 !important;
+      background: #374151 !important;
       &:hover, &:focus {
-        background: #374151 !important;
+        background: #4b5563 !important;
         border-color: #4b5563 !important;
       }
     }
 
+    .name-static {
+      color: #e2e8f0 !important;
+    }
+
     .list-sidebar { background: #111827; border-right-color: #4b5563; }
     .list-editor { border-color: #4b5563; }
-    .sub-item { color: #9ca3af; border-bottom-color: #4b5563; &.active { background: #1f2937; color: #818cf8; } &:hover { background: #374151; } }
+
+    /* 列表项适配 */
+    .sub-item {
+      color: #9ca3af;
+      border-bottom-color: #4b5563;
+      &.active { background: #1f2937; color: #818cf8; }
+      &:hover { background: #374151; }
+    }
+
+    /* 添加面板适配 */
+    .add-panel {
+      background: #1f2937;
+      border-bottom-color: #4b5563;
+    }
+
+    /* 列表内容区适配 */
+    .list-content {
+      background: #1f2937;
+    }
+
     .sub-header { border-bottom-color: #4b5563; strong { color: #e2e8f0; } }
+    .empty-sub { color: #9ca3af; }
     .close-btn { color: #e2e8f0; &:hover { background: #374151; } }
 
-    .label { color: #e2e8f0; }
-    .tip { color: #9ca3af; }
+    .label { color: #e2e8f0 !important; }
     .text { color: #e2e8f0; }
+
+    /* 深色模式下额外的表单元素样式 */
+    .toggle-switch {
+      .slider { background: #4b5563; }
+      input:checked + .slider { background: #6366f1; }
+      .text { color: #e2e8f0; }
+    }
+
+    .checkbox-row label { color: #e2e8f0; }
+
+    /* 按钮适配 */
+    .btn.danger {
+      background: #7f1d1d;
+      color: #fecaca;
+      &:hover { background: #991b1b; }
+    }
+
+    /* 滚动条适配 */
+    .custom-scrollbar {
+      &::-webkit-scrollbar-thumb { background: #4b5563; }
+      &::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+    }
   }
 }
 

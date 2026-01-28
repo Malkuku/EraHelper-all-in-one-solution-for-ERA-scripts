@@ -528,24 +528,21 @@ const openTaskEditor = (taskKey: string) => {
   .status-badge.active { background: #064e3b; color: #6ee7b7; }
 
   .card-body { color: #9ca3af; }
-  .info-row .label { color: #6b7280; }
+  .info-row .label { color: #6b7280 !important; }  // 添加 !important 以确保暗色模式下正确显示
   .info-row .value { color: #d1d5db; }
 
-  /*
-   * 修复：强制覆盖输入框颜色
-   * 使用 :deep() 穿透到子组件 (TaskEditorModal)
-   */
-  :deep(input),
-  :deep(textarea),
-  :deep(select) {
+
+  input,
+  textarea,
+  select {
     color: #e2e8f0 !important;
-    background-color: #374151; /* 建议同时也设置背景色以防万一 */
-    border-color: #4b5563;
+    background-color: #374151 !important; /* 建议同时也设置背景色以防万一 */
+    border-color: #4b5563 !important;
   }
 
   /* 针对 placeholder 的颜色修复 (可选) */
-  :deep(input::placeholder),
-  :deep(textarea::placeholder) {
+  input::placeholder,
+  textarea::placeholder {
     color: #6b7280 !important;
   }
 }

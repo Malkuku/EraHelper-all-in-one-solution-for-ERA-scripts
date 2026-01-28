@@ -631,7 +631,7 @@ onMounted(() => {
   .panel-header { border-bottom-color: #4b5563; h4 { color: #e2e8f0; } }
 
   .form-group {
-    label { color: #cbd5e1; }
+    label { color: #cbd5e1 !important; }
     input, select {
       /* 强制覆盖深色模式下的背景和颜色 */
       background: #374151 !important;
