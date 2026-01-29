@@ -1,58 +1,87 @@
 <template>
+  <!-- 1. 外层容器：增加 position: relative -->
   <div
-    :class="{ 'dark-mode': uiStore.darkMode }"
+    ref="referenceRef"
     class="tooltip-wrapper"
     @mouseenter="show"
     @mouseleave="hide"
   >
-    <!-- 触发元素插槽 -->
-    <!-- 如果外部没有传入内容，将显示内部的 SVG 默认图标 -->
+    <!-- 图标插槽 -->
     <slot>
-      <svg
-        class="default-icon"
-        viewBox="0 0 24 24"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
+      <svg class="default-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
         <path d="M12 16V12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         <circle cx="12" cy="8" r="1" fill="currentColor"/>
       </svg>
     </slot>
 
-    <!-- 提示文本 -->
+    <!-- 2. 提示框：直接写在这里，不要 Teleport -->
     <Transition name="tooltip-fade">
       <div
         v-if="visible"
+        ref="floatingRef"
         class="tooltip-content"
-        :class="placement"
+        :style="floatingStyles"
       >
-        {{ content }}
-        <!-- 小箭头 -->
-        <span class="tooltip-arrow"></span>
+        {{ content || '无内容' }}
+
+        <!-- 箭头 -->
+        <div
+          ref="arrowRef"
+          class="tooltip-arrow"
+          :style="{
+            position: 'absolute',
+            left: middlewareData.arrow?.x != null ? `${middlewareData.arrow.x}px` : '',
+            top: middlewareData.arrow?.y != null ? `${middlewareData.arrow.y}px` : '',
+            [staticSide]: '-4px',
+          }"
+        ></div>
       </div>
     </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useUiStore } from '@/ERA助手/stores/UIStore';
-const uiStore = useUiStore();
+import { ref, computed } from 'vue';
+import { useFloating, offset, flip, shift, arrow, autoUpdate } from '@floating-ui/vue';
 
-// 定义 Props
 interface Props {
-  content: string; // 提示文字内容
-  placement?: 'top' | 'bottom' | 'left' | 'right'; // 弹出方向，默认 top
-  delay?: number; // 显示延迟 (毫秒)
+  content?: string;
+  placement?: 'top' | 'bottom' | 'left' | 'right';
+  delay?: number;
 }
-
 const props = withDefaults(defineProps<Props>(), {
+  content: '',
   placement: 'top',
   delay: 200
 });
 
 const visible = ref(false);
+const referenceRef = ref(null);
+const floatingRef = ref(null);
+const arrowRef = ref(null);
+
+const { floatingStyles, middlewareData, placement: finalPlacement } = useFloating(referenceRef, floatingRef, {
+  placement: props.placement,
+  strategy: 'absolute', // 改为 absolute，相对于父级定位
+  whileElementsMounted: autoUpdate,
+  middleware: [
+    offset(8),
+    flip(),
+    shift(),
+    arrow({ element: arrowRef }),
+  ],
+});
+
+const staticSide = computed(() => {
+  return {
+    top: 'bottom',
+    right: 'left',
+    bottom: 'top',
+    left: 'right',
+  }[finalPlacement.value.split('-')[0]] || 'bottom';
+});
+
 let timer: number | null = null;
 
 const show = () => {
@@ -70,140 +99,45 @@ const hide = () => {
 
 <style scoped lang="scss">
 .tooltip-wrapper {
-  position: relative;
+  position: relative; /* 关键：为内部的 absolute 元素提供定位基准 */
   display: inline-block;
-  line-height: 1; /* 防止高度塌陷 */
-  vertical-align: middle; /* 优化与文字混排时的对齐 */
+  vertical-align: middle;
+  line-height: 1;
 }
 
-/* 默认图标样式 */
 .default-icon {
-  width: 16px;      /* 默认大小 */
+  width: 16px;
   height: 16px;
-  color: #9ca3af;   /* 默认灰色 (Tailwind gray-400) */
-  cursor: help;     /* 鼠标放上去显示问号光标 */
-  transition: color 0.2s;
-  vertical-align: text-bottom; /* 微调图标垂直对齐 */
-
-  &:hover {
-    color: #4b5563; /* 悬停变深 (Tailwind gray-600) */
-  }
+  color: #9ca3af;
+  cursor: help;
+  &:hover { color: #4b5563; }
 }
+
 .tooltip-content {
-  position: absolute;
+  width: max-content;
+  max-width: 200px;
   background-color: #333;
-  color: #fff;
   padding: 6px 10px;
   border-radius: 4px;
-  font-size: 12px;
-  white-space: nowrap;
-  z-index: 20000;
+
+  /* 强制样式：确保可见 */
+  font-size: 12px !important;
+  line-height: 1.5 !important;
+  color: #fff !important;
+  z-index: 9999;
+
   pointer-events: none;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  line-height: 1.4;
-  text-align: left;
-
-  &.top {
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    margin-bottom: 8px;
-    .tooltip-arrow {
-      top: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      border-top-color: #333;
-    }
-  }
-
-  &.bottom {
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    margin-top: 8px;
-    .tooltip-arrow {
-      bottom: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      border-bottom-color: #333;
-    }
-  }
-
-  &.left {
-    top: 50%;
-    right: 100%;
-    transform: translateY(-50%);
-    margin-right: 8px;
-    .tooltip-arrow {
-      top: 50%;
-      left: 100%;
-      transform: translateY(-50%);
-      border-left-color: #333;
-    }
-  }
-
-  &.right {
-    top: 50%;
-    left: 100%;
-    transform: translateY(-50%);
-    margin-left: 8px;
-    .tooltip-arrow {
-      top: 50%;
-      right: 100%;
-      transform: translateY(-50%);
-      border-right-color: #333;
-    }
-  }
 }
 
-/* 小箭头通用样式 */
 .tooltip-arrow {
   position: absolute;
-  width: 0;
-  height: 0;
-  border: 5px solid transparent;
+  width: 8px;
+  height: 8px;
+  background-color: #333;
+  transform: rotate(45deg);
 }
 
-/* 动画效果 */
-.tooltip-fade-enter-active,
-.tooltip-fade-leave-active {
-  transition: opacity 0.2s, transform 0.2s;
-}
-
-.tooltip-fade-enter-from,
-.tooltip-fade-leave-to {
-  opacity: 0;
-}
-
-/* 针对不同方向的微调动画，让它看起来是滑出来的 */
-.tooltip-content.top.tooltip-fade-enter-from,
-.tooltip-content.top.tooltip-fade-leave-to {
-  transform: translate(-50%, 5px);
-}
-.tooltip-content.bottom.tooltip-fade-enter-from,
-.tooltip-content.bottom.tooltip-fade-leave-to {
-  transform: translate(-50%, -5px);
-}
-
-/* Dark Mode 适配 */
-.dark-mode {
-  /* 针对默认图标的 Dark Mode 适配 */
-  .default-icon {
-    color: #9ca3af;
-    &:hover {
-      color: #e5e7eb; /* 深色模式下悬停变亮 */
-    }
-  }
-
-  .tooltip-content {
-    background-color: #e5e7eb; /* 亮色背景 */
-    color: #1f2937; /* 深色文字 */
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-
-    &.top .tooltip-arrow { border-top-color: #e5e7eb; }
-    &.bottom .tooltip-arrow { border-bottom-color: #e5e7eb; }
-    &.left .tooltip-arrow { border-left-color: #e5e7eb; }
-    &.right .tooltip-arrow { border-right-color: #e5e7eb; }
-  }
-}
+.tooltip-fade-enter-active, .tooltip-fade-leave-active { transition: opacity 0.2s; }
+.tooltip-fade-enter-from, .tooltip-fade-leave-to { opacity: 0; }
 </style>
