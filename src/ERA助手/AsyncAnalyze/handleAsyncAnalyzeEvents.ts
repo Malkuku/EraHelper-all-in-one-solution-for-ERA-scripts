@@ -183,13 +183,24 @@ const createBackup = async (message_id: number, ruleName: string) => {
 /**
  * [新增] 执行回滚
  * 恢复到 savedBackupState 中的状态
+ * 添加楼层验证：只有当当前楼层与备份的楼层相同时才进行回滚
  */
-export const performRollback = async () => {
+export const performRollback = async (currentMessageId?: number) => {
   const store = getAsyncAnalyzeStore();
   const backup = store.savedBackupState;
 
   if (!backup) {
     toastr.warning('没有可用的备份数据');
+    return;
+  }
+
+  // 获取当前楼层，优先使用参数传入的楼层，否则使用 getLastMessageId()
+  const actualCurrentMessageId = currentMessageId !== undefined ? currentMessageId : getLastMessageId();
+
+  // 验证当前楼层是否与备份的楼层相同
+  if (actualCurrentMessageId !== backup.messageId) {
+    toastr.info(`当前楼层 (${actualCurrentMessageId}) 与备份楼层 (${backup.messageId}) 不同，跳过回滚`);
+    eraLogger.info(`当前楼层 (${actualCurrentMessageId}) 与备份楼层 (${backup.messageId}) 不同，跳过回滚`);
     return;
   }
 
@@ -580,13 +591,13 @@ async function handleEraRules(result: string) {
 }
 
 export const reSendEraUpdate = async () => {
-  if (getLastMessageId() == 0) {
+  const currentMessageId = getLastMessageId();
+  if (currentMessageId == 0) {
     toastr.warning('请不要重算0层变量');
     return;
   }
-  await performRollback();
   toastr.info('开始重算分步分析');
-  await handleAsyncAnalyzeTasks(getLastMessageId());
+  await handleAsyncAnalyzeTasks(currentMessageId);
 };
 
 /**
