@@ -51,7 +51,7 @@
           <div class="card-body">
             <div class="info-row">
               <span class="label">触发:</span>
-              <span class="value">触发间隔：{{ task.data.trigger_index }}/上下文长度：{{ task.data.chat_history }}</span>
+              <span class="value">执行顺序：{{ task.data.order }}/触发间隔：{{ task.data.trigger_index }}/上下文长度：{{ task.data.chat_history }}</span>
             </div>
             <div class="info-row">
               <span class="label">备注:</span>
@@ -239,7 +239,7 @@ const handleDeleteTask = async () => {
 
   // 2. 调用 Modal 进行确认
   const confirmed = await Modal.confirm(
-    '确认删除', 
+    '确认删除',
     `确定要删除任务 "${currentTaskName.value}" 吗？此操作无法撤销。`
   );
 
@@ -248,11 +248,11 @@ const handleDeleteTask = async () => {
   // 3. 操作 Store 数据
   // currentRule 是基于 store 的 computed 属性，直接修改其内部对象会触发 Pinia 状态更新
   delete currentRule.value.staged_setting[currentTaskName.value];
-  
+
   // 4. 关闭弹窗并清理状态
   showTaskModal.value = false;
   currentTaskName.value = '';
-  
+
   // 5. (可选) 自动保存到后端/本地存储
   // 如果你希望删除后立即持久化保存，取消下面这行的注释：
   // await store.saveModelSettings();

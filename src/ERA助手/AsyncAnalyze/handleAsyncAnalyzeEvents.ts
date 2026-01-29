@@ -15,115 +15,116 @@ const getAsyncAnalyzeStore = () => (window as any).AsyncAnalyzeStore as ReturnTy
 const getEraDataStore = () => (window as any).EraDataStore as ReturnType<typeof useEraDataStore>;
 const getEraEditStore = () => (window as any).EraEditStore as ReturnType<typeof useEraEditStore>;
 
-// Changed to ref to allow dynamic updates by tasks
-const loreList = ref<string[]>([]);
-// [新增] 用于存储当前配置中涉及的世界书名称
-const targetBookList = ref<string[]>([]);
+// [核心修改] 使用 blacklistLores 缓存计算结果，避免在事件中进行 IO 操作
+const blacklistLores = ref<string[]>([]);
 
 // Global lock for analysis
 let isAnalyzing = false;
 let watcherInitialized = false;
 
 /**
- * 初始化监听器，确保 loreList 与 Store 中的全局配置同步
+ * 初始化监听器
  */
 const initWatcher = () => {
   if (watcherInitialized) return;
   const store = getAsyncAnalyzeStore();
   if (!store) return;
 
-  // 监听 activeRuleName 和 asyncAnalyzeSetting 的变化
+  // 监听配置变化，在空闲时预计算黑名单
   watch(
     [() => store.activeRuleName, () => store.asyncAnalyzeSetting],
     () => {
-      // 只有在非分析状态下才同步全局配置，避免分析过程中被覆盖
       if (!isAnalyzing) {
-        updateGlobalLoreList();
+        updateGlobalBlacklist();
       }
     },
     { deep: true }
   );
 
   watcherInitialized = true;
-  updateGlobalLoreList(); // 初始同步
+  updateGlobalBlacklist(); // 初始同步
 };
 
 /**
- * 更新全局 Lore List (基于当前激活规则的 world_book 配置)
+ * [核心修复] 预计算黑名单
+ * 这个函数负责所有的 IO 操作和正则匹配。
+ * 它计算出所有“属于目标世界书”但“不符合保留条件”的条目。
  */
-const updateGlobalLoreList = async () => {
+const updateGlobalBlacklist = async () => {
+  console.info('updateGlobalBlacklist: ', '开始计算黑名单');
   const store = getAsyncAnalyzeStore();
   if (!store || !store.activeRuleName) {
-    loreList.value = [];
-    targetBookList.value = [];//清空
+    blacklistLores.value = [];
     return;
   }
 
   const rule = store.asyncAnalyzeSetting[store.activeRuleName];
   if (!rule || !rule.world_book) {
-    loreList.value = [];
-    targetBookList.value = [];//清空
+    blacklistLores.value = [];
     return;
   }
 
   try {
-    //解构获取 lores 和 books
-    const { lores, books } = await processWorldBookConfig(rule.world_book);
-    loreList.value = lores;
-    targetBookList.value = books;
-  } catch (e) {
-    eraLogger.error('Failed to update global lore list:', e);
-    loreList.value = [];
-    targetBookList.value = [];
-  }
-};
+    const calculatedBlacklist: string[] = [];
 
-/**
- * 辅助函数：处理 WorldBook 配置并返回条目列表
- * [修改] 返回值改为对象，包含条目列表和涉及的书名列表
- */
-const processWorldBookConfig = async (worldBookConfig: any): Promise<{ lores: string[], books: string[] }> => {
-  const resultLores: string[] = [];
-  const resultBooks: string[] = [];
+    // 遍历配置的每一本世界书
+    for (const [bookName, wbConfig] of Object.entries(rule.world_book)) {
+      const config = wbConfig as any;
 
-  for (const [bookName, wbConfig] of Object.entries(worldBookConfig)) {
-    // 记录涉及的世界书名称
-    resultBooks.push(bookName);
-
-    const config = wbConfig as any;
-    // 获取该书所有条目用于正则匹配
-    let allEntries: string[] = [];
-    try {
-      allEntries = await WorldInfoUtil.getWorldBookLoresByName(bookName);
-    } catch (e) {
-      eraLogger.warn(`无法获取世界书 [${bookName}] 的条目，可能不存在。`);
-      continue;
-    }
-
-    if (config.lore_regex) {
+      // 1. 获取该书的所有条目 (IO 操作在这里进行，此时不在事件死锁区)
+      let allEntriesInBook: string[] = [];
       try {
-        const regex = new RegExp(config.lore_regex);
-        const matchedEntries = allEntries.filter(name => regex.test(name));
-        config.lores = [...new Set([...(config.lores || []), ...matchedEntries])];
+        allEntriesInBook = await WorldInfoUtil.getWorldBookLoresByName(bookName);
       } catch (e) {
-        eraLogger.error(`Regex error in world book config [${bookName}]:`, e);
+        eraLogger.warn(`无法获取世界书 [${bookName}] 的条目，可能不存在。`);
+        continue;
       }
+
+      if (!allEntriesInBook || allEntriesInBook.length === 0) {
+        continue;
+      }
+
+      // 2. 计算白名单 (允许存在的条目)
+      const whitelistForBook = new Set<string>();
+
+      // 2.1 添加显式配置的 lores
+      if (config.lores && Array.isArray(config.lores)) {
+        config.lores.forEach((lore: string) => whitelistForBook.add(lore));
+      }
+
+      // 2.2 [修复] 处理 lore_regex (支持数组)
+      if (config.lore_regex) {
+        // 兼容 string 和 string[]
+        const regexList = Array.isArray(config.lore_regex) ? config.lore_regex : [config.lore_regex];
+
+        for (const regexStr of regexList) {
+          try {
+            const regex = new RegExp(regexStr);
+            // 在内存中匹配，不涉及 IO
+            const matchedEntries = allEntriesInBook.filter(name => regex.test(name));
+            matchedEntries.forEach(lore => whitelistForBook.add(lore));
+          } catch (e) {
+            eraLogger.error(`Regex error in world book config [${bookName}]: ${regexStr}`, e);
+          }
+        }
+      }
+
+      // 3. 计算该书的黑名单：(全量 - 白名单)
+      const blacklistForBook = allEntriesInBook.filter(entry => !whitelistForBook.has(entry));
+      calculatedBlacklist.push(...blacklistForBook);
     }
 
-    if (config.lores && config.lores.length > 0) {
-      resultLores.push(...config.lores);
-    }
+    // 更新缓存
+    blacklistLores.value = [...new Set(calculatedBlacklist)];
+
+  } catch (e) {
+    eraLogger.error('Failed to update global blacklist:', e);
+    blacklistLores.value = [];
   }
-
-  return {
-    lores: [...new Set(resultLores)],
-    books: [...new Set(resultBooks)]
-  };
 };
 
 /**
  * [新增] 创建备份快照
- * 扫描所有任务的 merge_setting，保存当前状态
  */
 const createBackup = async (message_id: number, ruleName: string) => {
   const store = getAsyncAnalyzeStore();
@@ -139,7 +140,6 @@ const createBackup = async (message_id: number, ruleName: string) => {
     messageData: {}
   };
 
-  // 1. 备份当前消息内容 (因为 is_inject 可能修改它)
   try {
     const msgContent = MessageUtil.getMessageById(message_id);
     backup.messageData[message_id] = msgContent;
@@ -147,30 +147,23 @@ const createBackup = async (message_id: number, ruleName: string) => {
     eraLogger.warn(`Backup: Failed to get message ${message_id}`);
   }
 
-  // 2. 遍历所有任务，备份触发历史和目标数据
   for (const [taskName, taskConfig] of Object.entries(currentRule.staged_setting)) {
-    // 备份触发历史
     backup.triggerHistory[taskName] = taskConfig.trigger_history || 0;
 
     if (taskConfig.merge_setting) {
       for (const setting of Object.values(taskConfig.merge_setting)) {
         const { is_inject, world_book, target_lore } = setting as any;
-
-        // 如果是写入世界书，备份该条目
         if (!is_inject && world_book && target_lore) {
           const key = `${world_book}:${target_lore}`;
-          // 避免重复读取
           if (!(key in backup.worldBookData)) {
             try {
               const content = await WorldInfoUtil.getWorldBookLoreContent(world_book, target_lore);
-              backup.worldBookData[key] = content || null; // null 表示不存在
+              backup.worldBookData[key] = content || null;
             } catch (e) {
               backup.worldBookData[key] = null;
             }
           }
         }
-        // 如果是注入正文，已经在上面备份了 message_id
-        // 如果未来支持注入其他楼层，这里需要解析并备份对应楼层
       }
     }
   }
@@ -182,8 +175,6 @@ const createBackup = async (message_id: number, ruleName: string) => {
 
 /**
  * [新增] 执行回滚
- * 恢复到 savedBackupState 中的状态
- * 添加楼层验证：只有当当前楼层与备份的楼层相同时才进行回滚
  */
 export const performRollback = async (currentMessageId?: number) => {
   const store = getAsyncAnalyzeStore();
@@ -194,10 +185,8 @@ export const performRollback = async (currentMessageId?: number) => {
     return;
   }
 
-  // 获取当前楼层，优先使用参数传入的楼层，否则使用 getLastMessageId()
   const actualCurrentMessageId = currentMessageId !== undefined ? currentMessageId : getLastMessageId();
 
-  // 验证当前楼层是否与备份的楼层相同
   if (actualCurrentMessageId !== backup.messageId) {
     toastr.info(`当前楼层 (${actualCurrentMessageId}) 与备份楼层 (${backup.messageId}) 不同，跳过回滚`);
     eraLogger.info(`当前楼层 (${actualCurrentMessageId}) 与备份楼层 (${backup.messageId}) 不同，跳过回滚`);
@@ -208,7 +197,6 @@ export const performRollback = async (currentMessageId?: number) => {
   eraLogger.info('开始回滚分步分析数据...');
 
   try {
-    // 1. 恢复触发历史
     const rule = store.asyncAnalyzeSetting[backup.ruleName];
     if (rule && rule.staged_setting) {
       for (const [taskName, historyFloor] of Object.entries(backup.triggerHistory)) {
@@ -218,18 +206,14 @@ export const performRollback = async (currentMessageId?: number) => {
       }
     }
 
-    // 2. 恢复世界书条目
     for (const [key, content] of Object.entries(backup.worldBookData)) {
       const [bookName, loreName] = key.split(':');
       if (bookName && loreName) {
-        // 如果内容为 null，说明之前不存在，视情况清空或保留空字符串
-        // 这里统一恢复为 content 或空字符串
         const finalContent = content || '';
         await WorldInfoUtil.updateOrCreateEntry(bookName, loreName, finalContent);
       }
     }
 
-    // 3. 恢复消息内容
     const messagesToUpdate = [];
     for (const [msgIdStr, content] of Object.entries(backup.messageData)) {
       messagesToUpdate.push({
@@ -284,7 +268,8 @@ export const handleMessageReceived = async (message_id: number) => {
     toastr.error('分步分析执行出错');
   } finally {
     isAnalyzing = false;
-    await updateGlobalLoreList();
+    // 任务结束后，重新计算一次黑名单，确保最新的世界书变动被捕获
+    await updateGlobalBlacklist();
     await eventEmit(ERAEvents.FORCE_SYNC);
     await eventEmit('kat:handle_era_finished');
   }
@@ -300,10 +285,8 @@ export const handleAsyncAnalyzeTasks = async (message_id: number) => {
 
   if (!currentRule || !currentRule.staged_setting) return;
 
-  // [新增] 1. 在任务开始前创建备份
   await createBackup(message_id, ruleName);
 
-  // 任务分组与排序
   const tasks = Object.entries(currentRule.staged_setting).map(([taskName, config]) => ({
     taskName,
     ...config
@@ -323,7 +306,6 @@ export const handleAsyncAnalyzeTasks = async (message_id: number) => {
   const pendingTriggerUpdates: Map<string, number> = new Map();
 
   try {
-    // 2. 顺序执行分组，组内并行
     for (const order of sortedOrders) {
       const groupTasks = taskGroups.get(order)!;
       eraLogger.log(`正在执行第 ${order} 阶任务组，共 ${groupTasks.length} 个任务`);
@@ -361,18 +343,15 @@ export const handleAsyncAnalyzeTasks = async (message_id: number) => {
             }
           }
 
-          // 如果重试也失败了，抛出异常以触发回滚
           if (!retrySuccess) {
             throw new Error(`任务 [${task.taskName}] 最终执行失败`);
           }
         }
       });
 
-      // 等待当前组完成，如果有任何一个抛出异常，Promise.all 会 reject
       await Promise.all(promises);
     }
 
-    // 3. 所有任务成功，更新触发历史
     if (pendingTriggerUpdates.size > 0) {
       let hasUpdates = false;
       pendingTriggerUpdates.forEach((floor, taskName) => {
@@ -389,7 +368,6 @@ export const handleAsyncAnalyzeTasks = async (message_id: number) => {
     toastr.success('所有分步分析任务执行完成');
 
   } catch (err) {
-    // [新增] 4. 捕获到严重错误（包含重试失败），执行全量回滚
     eraLogger.error('分步分析流程发生严重错误，正在回滚...', err);
     toastr.error('执行出错，正在回滚数据...');
     await performRollback();
@@ -408,14 +386,39 @@ async function executeSingleTask(task: any, message_id: number) {
   const apiConfig = store.apiConfigSettings[apiConfigName];
   if (!apiConfig) throw new Error(`找不到 API 配置: ${apiConfigName}`);
 
+  // [修改] 任务执行时，如果任务本身有 world_book 配置，需要临时更新黑名单
+  // 这里我们复用 updateGlobalBlacklist 的逻辑，但针对任务配置
   if (task.world_book) {
-    // [修改] 适配新的返回结构
-    const { lores, books } = await processWorldBookConfig(task.world_book);
-    loreList.value = lores;
-    targetBookList.value = books;
+    try {
+      // 临时构建一个类似 rule 的对象来复用逻辑，或者直接提取逻辑
+      // 这里简单起见，手动计算一下任务的黑名单
+      const taskBlacklist: string[] = [];
+      for (const [bookName, wbConfig] of Object.entries(task.world_book)) {
+        const config = wbConfig as any;
+        let allEntries: string[] = [];
+        allEntries = await WorldInfoUtil.getWorldBookLoresByName(bookName);
+
+        if(allEntries.length > 0) {
+          const whitelist = new Set<string>();
+          if(config.lores) config.lores.forEach((l:string) => whitelist.add(l));
+          if(config.lore_regex) {
+            const regexList = Array.isArray(config.lore_regex) ? config.lore_regex : [config.lore_regex];
+            for(const rStr of regexList) {
+                const regex = new RegExp(rStr);
+                allEntries.filter(n => regex.test(n)).forEach(l => whitelist.add(l));
+            }
+          }
+          taskBlacklist.push(...allEntries.filter(e => !whitelist.has(e)));
+        }
+      }
+      blacklistLores.value = [...new Set(taskBlacklist)];
+    } catch(e) {
+      eraLogger.error('Task world_book processing failed', e);
+      blacklistLores.value = [];
+    }
   } else {
-    loreList.value = [];
-    targetBookList.value = [];
+    // 任务没有指定世界书配置，清空黑名单（即不拦截任何内容）
+    blacklistLores.value = [];
   }
 
   const maxHistory = task.chat_history || 2;
@@ -484,7 +487,6 @@ async function handleTaskResultMerge(task: any, result: string, message_id: numb
     if (content_regex && Array.isArray(content_regex) && content_regex.length > 0) {
       const extractedParts: string[] = [];
       for (const regexStr of content_regex) {
-        // [修改] 使用统一的提取函数，支持无捕获组的情况
         const parts = RegexUtils.extractContentByRegex(result, regexStr);
         if (parts.length > 0) {
           extractedParts.push(...parts);
@@ -596,11 +598,8 @@ export const reSendEraUpdate = async () => {
   const store = getAsyncAnalyzeStore();
   const backup = store.savedBackupState;
 
-  // 检查是否存在当前楼层的备份如果存在，说明之前已经运行过分析（无论成功与否），我们需要先回滚到“分析前”的干净状态
   if (backup && backup.messageId === currentMessageId) {
     eraLogger.info('重算检测：发现当前楼层存在历史备份，正在回滚以重置状态...');
-
-    // 调用 performRollback 恢复数据
     await performRollback(currentMessageId);
   }
 
@@ -609,56 +608,46 @@ export const reSendEraUpdate = async () => {
 };
 
 /**
- * 处理世界书过滤
- * 逻辑：
- * 1. 找到所有被配置的世界书 (targetBookList)。
- * 2. 获取这些书里的所有条目。
- * 3. 排除掉 loreList (白名单) 中的条目。
- * 4. 剩下的就是"属于被配置的世界书，但不被允许存在的条目"，将它们移除。
- * 5. 未配置的世界书条目完全不受影响。
+ * [核心修复] 处理世界书过滤
+ * 绝对不在此函数中调用任何 WorldInfoUtil 的查询方法 (getWorldBookLoresByName 等)
+ * 仅使用预先计算好的 blacklistLores 进行过滤
  */
 export const handleLoresFilter = async (lores: any) => {
-  initWatcher();
+  // 移除 initWatcher()，防止触发不必要的更新
 
-  // 如果没有配置任何世界书，则不进行任何过滤（保留原样）
-  if (targetBookList.value.length === 0) {
+  console.info('handleLoresFilter: ', '接收到过滤请求');
+  if (blacklistLores.value.length === 0) {
     return;
   }
 
   try {
-    // 1. 获取所有受控世界书的全量条目
-    const allControlledEntries: string[] = [];
-    for (const bookName of targetBookList.value) {
-      try {
-        const entries = await WorldInfoUtil.getWorldBookLoresByName(bookName);
-        if (entries && entries.length > 0) {
-          allControlledEntries.push(...entries);
-        }
-      } catch (e) {
-        eraLogger.warn(`Filter: Failed to get entries for book [${bookName}]`, e);
-      }
-    }
+    // 直接使用预计算的黑名单进行移除
+    // isReversed = false: 移除数组中存在的条目
+    await WorldInfoUtil.removeLoresByArray(lores, blacklistLores.value, false);
 
-    // 2. 计算黑名单：(受控书全量条目) - (允许的条目 loreList)
-    // loreList.value 包含了我们希望保留的条目
-    const entriesToRemove = allControlledEntries.filter(
-      entryName => !loreList.value.includes(entryName)
-    );
-
-    // 3. 执行移除
-    if (entriesToRemove.length > 0) {
-      eraLogger.log('Applying Scoped WorldInfo Filter.');
-      eraLogger.log('Configured Books:', targetBookList.value);
-      eraLogger.log('Allowed Entries:', loreList.value);
-      eraLogger.log('Removing Entries (Blacklist):', entriesToRemove);
-
-      // 使用 isReversed = false，代表"移除数组中存在的条目"
-      await WorldInfoUtil.removeLoresByArray(lores, entriesToRemove, false);
-    } else {
-      eraLogger.log('Scoped WorldInfo Filter: No entries need removal.');
-    }
-
+    // eraLogger.log('Scoped WorldInfo Filter Applied. Removed entries:', blacklistLores.value.length);
   } catch (e) {
     eraLogger.error('Error during handleLoresFilter:', e);
   }
 };
+
+/**
+ * [修复初始化顺序问题]
+ * 启动一个轮询检查，等待 AsyncAnalyzeStore 在 window 上挂载完成后再初始化监听器。
+ * 避免因脚本加载早于 Store 初始化导致 initWatcher 失败。
+ */
+const waitForStoreAndInit = () => {
+  const store = getAsyncAnalyzeStore();
+
+  if (store) {
+    // Store 已就绪，执行初始化
+    initWatcher();
+    console.info('AsyncAnalyzeStore detected, watcher initialized.');
+  } else {
+    // Store 尚未就绪，200ms 后重试
+    setTimeout(waitForStoreAndInit, 200);
+  }
+};
+
+// 启动等待循环
+waitForStoreAndInit();
