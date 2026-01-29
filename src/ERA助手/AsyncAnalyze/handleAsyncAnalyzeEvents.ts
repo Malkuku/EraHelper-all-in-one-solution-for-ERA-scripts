@@ -25,6 +25,9 @@ let watcherInitialized = false;
 // [核心修复] 过滤锁，用于解决并行过滤的竞态问题
 let filterLockChain = Promise.resolve();
 
+// [新增] 生成锁，用于解决并行任务中切换预设/宏的竞态问题
+let generationLock = Promise.resolve();
+
 /**
  * 初始化监听器
  */
@@ -404,6 +407,7 @@ export const handleAsyncAnalyzeTasks = async (message_id: number) => {
 
 /**
  * 执行单个任务 - 仅生成和提取，不修改数据
+ * [修改] 引入 generationLock 确保生成过程（含预设切换）串行执行
  */
 async function executeSingleTask(task: any, message_id: number): Promise<TaskResult | null> {
   const store = getAsyncAnalyzeStore();
@@ -458,50 +462,83 @@ async function executeSingleTask(task: any, message_id: number): Promise<TaskRes
     },
   ];
 
-  const originalPresetName = getLoadedPresetName();
-  let tempPresetLoaded = false;
+  let result = '';
 
-  try {
-    if (apiConfig.model_source === 'sample' && apiConfig.simple_preset_name && apiConfig.simple_preset_name !== 'in_use') {
-      if (originalPresetName !== apiConfig.simple_preset_name) {
-        loadPreset(apiConfig.simple_preset_name);
-        tempPresetLoaded = true;
+  // [核心修改] 使用锁串行执行生成过程，防止并行任务切换预设冲突
+  await (generationLock = generationLock.then(async () => {
+    // 1. 注册宏 (因为部分预设会用到 {{lastUserMessage}})
+    (window as any).SillyTavern.registerMacro('lastUserMessage', () => {
+      return user_input;
+    });
+
+    const originalPresetName = getLoadedPresetName();
+    let tempPresetLoaded = false;
+    let tempProfileSetting = null;
+
+    try {
+      // 2. 切换预设 (Profile / Preset)
+
+      // Case A: Profile Setting (Slash Command)
+      if (apiConfig.model_source === 'profile' && apiConfig.profileSetting) {
+        console.log('切换预设', apiConfig.profileSetting);
+        tempProfileSetting = ((await (window as any).SillyTavern.executeSlashCommands('/profile')) as any).pipe;
+        await (window as any).SillyTavern.executeSlashCommands(`/profile ${apiConfig.profileSetting}`);
       }
-    } else if (apiConfig.model_source === 'external' && apiConfig.custom_model_settings?.presetName && apiConfig.custom_model_settings.presetName !== 'in_use') {
-      if (originalPresetName !== apiConfig.custom_model_settings.presetName) {
-        loadPreset(apiConfig.custom_model_settings.presetName);
-        tempPresetLoaded = true;
+
+      // Case B: Simple/Custom Preset (loadPreset)
+      if (apiConfig.model_source === 'sample' && apiConfig.simple_preset_name && apiConfig.simple_preset_name !== 'in_use') {
+        if (originalPresetName !== apiConfig.simple_preset_name) {
+          loadPreset(apiConfig.simple_preset_name);
+          tempPresetLoaded = true;
+        }
+      } else if (apiConfig.model_source === 'external' && apiConfig.custom_model_settings?.presetName && apiConfig.custom_model_settings.presetName !== 'in_use') {
+        if (originalPresetName !== apiConfig.custom_model_settings.presetName) {
+          loadPreset(apiConfig.custom_model_settings.presetName);
+          tempPresetLoaded = true;
+        }
       }
+
+      // 3. 发送请求
+      const is_should_stream = false;
+
+      if (apiConfig.model_source === 'sample') {
+        result = await PromptUtil.sendPrompt(user_input, promptInjects, maxHistory, is_should_stream, null, null);
+      } else if (apiConfig.model_source === 'profile') {
+        // 注意：这里传入 null，因为切换逻辑已移至外部
+        result = await PromptUtil.sendPrompt(user_input, promptInjects, maxHistory, is_should_stream, null, null);
+      } else {
+        result = await PromptUtil.sendPrompt(user_input, promptInjects, maxHistory, is_should_stream, apiConfig.custom_model_settings, null);
+      }
+
+      eraLogger.log(`任务 [${task.taskName}] 原始输出:`, result);
+
+    } finally {
+      // 4. 恢复预设
+      if (tempProfileSetting) {
+        await (window as any).SillyTavern.executeSlashCommands(`/profile ${tempProfileSetting}`);
+      }
+
+      if (tempPresetLoaded) {
+        loadPreset(originalPresetName);
+      }
+
+      // 5. 注销宏
+      (window as any).SillyTavern.unregisterMacro('lastUserMessage');
     }
+  }).catch(e => {
+    // 捕获锁内错误，避免阻塞后续任务，但需向上抛出以便重试逻辑捕获
+    throw e;
+  }));
 
-    let result = '';
-    const is_should_stream = false;
+  // 提取变量修改数据，但不应用
+  const { cleanContent, variableEdits } = extractVariableEdits(result);
 
-    if (apiConfig.model_source === 'sample') {
-      result = await PromptUtil.sendPrompt(user_input, promptInjects, maxHistory, is_should_stream, null, null);
-    } else if (apiConfig.model_source === 'profile') {
-      result = await PromptUtil.sendPrompt(user_input, promptInjects, maxHistory, is_should_stream, null, apiConfig.profileSetting);
-    } else {
-      result = await PromptUtil.sendPrompt(user_input, promptInjects, maxHistory, is_should_stream, apiConfig.custom_model_settings, null);
-    }
-
-    eraLogger.log(`任务 [${task.taskName}] 原始输出:`, result);
-
-    // 提取变量修改数据，但不应用
-    const { cleanContent, variableEdits } = extractVariableEdits(result);
-
-    return {
-      taskName: task.taskName,
-      extractedContent: cleanContent,
-      mergeSettings: task.merge_setting,
-      variableEdits: variableEdits
-    };
-
-  } finally {
-    if (tempPresetLoaded) {
-      loadPreset(originalPresetName);
-    }
-  }
+  return {
+    taskName: task.taskName,
+    extractedContent: cleanContent,
+    mergeSettings: task.merge_setting,
+    variableEdits: variableEdits
+  };
 }
 
 /**
