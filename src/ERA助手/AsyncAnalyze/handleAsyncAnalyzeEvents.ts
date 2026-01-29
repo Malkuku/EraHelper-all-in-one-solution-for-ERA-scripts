@@ -24,6 +24,9 @@ const targetBookList = ref<string[]>([]);
 let isAnalyzing = false;
 let watcherInitialized = false;
 
+// Global chain for scan operations to prevent concurrent modifications to loreList
+let scanChain = Promise.resolve();
+
 /**
  * 初始化监听器，确保 loreList 与 Store 中的全局配置同步
  */
@@ -80,7 +83,7 @@ const updateGlobalLoreList = async () => {
 
 /**
  * 辅助函数：处理 WorldBook 配置并返回条目列表
- * [修改] 返回值改为对象，包含条目列表和涉及的书名列表
+ * [修改] 支持 lore_regex 为数组，满足任意一个正则即可
  */
 const processWorldBookConfig = async (worldBookConfig: any): Promise<{ lores: string[], books: string[] }> => {
   const resultLores: string[] = [];
@@ -100,11 +103,31 @@ const processWorldBookConfig = async (worldBookConfig: any): Promise<{ lores: st
       continue;
     }
 
+    // [修改] 处理正则匹配逻辑
     if (config.lore_regex) {
       try {
-        const regex = new RegExp(config.lore_regex);
-        const matchedEntries = allEntries.filter(name => regex.test(name));
-        config.lores = [...new Set([...(config.lores || []), ...matchedEntries])];
+        // 确保是数组处理
+        const regexList: string[] = Array.isArray(config.lore_regex)
+          ? config.lore_regex
+          : [];
+
+        // 过滤出有效的正则字符串
+        const validRegexList = regexList.filter(r => r && r.trim() !== '');
+
+        if (validRegexList.length > 0) {
+          const matchedEntries = allEntries.filter(name => {
+            // 只要满足数组中任意一个正则即可 (OR 逻辑)
+            return validRegexList.some(regexStr => {
+              try {
+                return new RegExp(regexStr).test(name);
+              } catch (err) {
+                return false;
+              }
+            });
+          });
+          // 合并结果
+          config.lores = [...new Set([...(config.lores || []), ...matchedEntries])];
+        }
       } catch (e) {
         eraLogger.error(`Regex error in world book config [${bookName}]:`, e);
       }
@@ -412,16 +435,6 @@ async function executeSingleTask(task: any, message_id: number) {
   const apiConfig = store.apiConfigSettings[apiConfigName];
   if (!apiConfig) throw new Error(`找不到 API 配置: ${apiConfigName}`);
 
-  if (task.world_book) {
-    // [修改] 适配新的返回结构
-    const { lores, books } = await processWorldBookConfig(task.world_book);
-    loreList.value = lores;
-    targetBookList.value = books;
-  } else {
-    loreList.value = [];
-    targetBookList.value = [];
-  }
-
   const maxHistory = task.chat_history || 2;
   const user_input = task.prompt;
   const promptInjects = [
@@ -454,14 +467,72 @@ async function executeSingleTask(task: any, message_id: number) {
     let result = '';
     const is_should_stream = false;
 
-    if (apiConfig.model_source === 'sample') {
-      result = await PromptUtil.sendPrompt(user_input, promptInjects, maxHistory, is_should_stream, null, null);
-    } else if (apiConfig.model_source === 'profile') {
-      result = await PromptUtil.sendPrompt(user_input, promptInjects, maxHistory, is_should_stream, null, apiConfig.profileSetting);
-    } else {
-      result = await PromptUtil.sendPrompt(user_input, promptInjects, maxHistory, is_should_stream, apiConfig.custom_model_settings, null);
-    }
+    // --- 关键修改开始 ---
 
+    // 我们需要把 "设置 loreList" 和 "触发 sendPrompt 直到扫描结束" 这一段保护起来
+    let promptResultPromise: Promise<string>;
+
+    // 加入等待队列
+    await new Promise<void>((resolveChain) => {
+      // 链接到上一个任务的完成点
+      const nextStep = async () => {
+        try {
+          // 1. 设置全局变量 (现在是安全的，因为上一个任务已经扫描完了)
+          if (task.world_book) {
+            const { lores, books } = await processWorldBookConfig(task.world_book);
+            loreList.value = lores;
+            targetBookList.value = books;
+          } else {
+            loreList.value = [];
+            targetBookList.value = [];
+          }
+
+          // 2. 准备扫描完成的信号
+          const scanDoneSignal = new Promise<void>(resolveScan => {
+              const handler = () => {
+                  resolveScan();
+                  // 监听器会自动移除
+              };
+              // 监听 ST 事件
+              (window as any).eventSource.once('worldinfo_scan_done', handler);
+
+              // 超时兜底 (比如 2000ms)，防止没有世界书导致不触发事件而卡死
+              setTimeout(resolveScan, 2000);
+          });
+
+          // 3. 触发生成 (注意：这里不要 await 它，否则会变成串行生成)
+          // 我们把 Promise 存下来，后面再 await
+          if (apiConfig.model_source === 'sample') {
+             promptResultPromise = PromptUtil.sendPrompt(user_input, promptInjects, maxHistory, is_should_stream, null, null);
+          } else if (apiConfig.model_source === 'profile') {
+             promptResultPromise = PromptUtil.sendPrompt(user_input, promptInjects, maxHistory, is_should_stream, null, apiConfig.profileSetting);
+          } else {
+             promptResultPromise = PromptUtil.sendPrompt(user_input, promptInjects, maxHistory, is_should_stream, apiConfig.custom_model_settings, null);
+          }
+
+          // 4. 等待扫描完成
+          // 只有扫描完成了，我们才允许 resolveChain() 被调用，从而让下一个任务进入
+          await scanDoneSignal;
+
+        } catch (e) {
+          eraLogger.error(`任务 [${task.taskName}] 启动阶段失败:`, e);
+          // 即使失败也要赋值，防止后面 crash
+          promptResultPromise = Promise.reject(e);
+        } finally {
+          // 5. 释放锁，允许下一个任务修改 loreList
+          resolveChain();
+        }
+      };
+
+      // 将当前任务挂载到全局链上
+      scanChain = scanChain.then(nextStep);
+    });
+
+    // --- 关键修改结束 ---
+
+    // 现在锁已经释放了，下一个任务可能正在修改 loreList，
+    // 但当前任务的 promptResultPromise 已经在后台运行（且上下文已固化），我们可以安全地等待结果
+    result = await promptResultPromise!; // 等待生成结束
     eraLogger.log(`任务 [${task.taskName}] 原始输出:`, result);
     await handleTaskResultMerge(task, result, message_id);
 

@@ -148,18 +148,35 @@
                   <div class="form-group">
                     <label>
                       正则匹配条目
-                      <Tooltip content="通过正则匹配条目,它会将匹配到的条目发送给AI" placement="top" />
+                      <Tooltip content="通过正则匹配条目,它会将匹配到的条目发送给AI (满足任一正则即可)" placement="top" />
                     </label>
-                    <div class="regex-input-group">
-                      <input v-model="editingData.world_book[currentWbKey].lore_regex" placeholder="正则表达式..." class="flex-grow" />
-                      <div class="preset-select-wrapper">
-                        <SearchableSelect
-                          :model-value="''"
-                          :options="regexPresetOptions"
-                          placeholder="选择预设..."
-                          @update:model-value="(name) => applyRegexPresetToLoreRegex(currentWbKey, name)"
+                    <div class="tip">每行一条正则，可手动输入或选择预设</div>
+
+                    <!-- [修改] 改为列表形式 -->
+                    <div class="regex-list-container">
+                      <div
+                        v-for="(regex, index) in (ensureArray(editingData.world_book[currentWbKey].lore_regex))"
+                        :key="index"
+                        class="regex-row"
+                      >
+                        <input
+                          :value="regex"
+                          placeholder="输入正则表达式..."
+                          @input="updateLoreRegexItem(currentWbKey, index, $event)"
                         />
+                        <div class="preset-select-wrapper small">
+                          <SearchableSelect
+                            :model-value="''"
+                            :options="regexPresetOptions"
+                            placeholder="预设"
+                            @update:model-value="(name) => applyRegexPresetToLoreRegexItem(currentWbKey, index, name)"
+                          />
+                        </div>
+                        <button class="btn danger icon-btn" @click="removeLoreRegexItem(currentWbKey, index)">×</button>
                       </div>
+                    </div>
+                    <div class="regex-actions">
+                      <button class="btn small primary" @click="addEmptyLoreRegex(currentWbKey)">+ 添加一行</button>
                     </div>
                   </div>
 
@@ -509,7 +526,7 @@ const confirmAddWb = () => {
 
   editingData.value.world_book[newWbName.value] = {
     lores: [],
-    lore_regex: '',
+    lore_regex: [], // [修改] 初始化为数组
   };
 
   selectWbKey(newWbName.value);
@@ -639,11 +656,19 @@ const applyRegexPresetToItem = (key: string, index: number, presetName: string) 
   }
 };
 
-const applyRegexPresetToLoreRegex = (wbKey: string, presetName: string) => {
+// [修改] 应用预设到 lore regex 的某一行 (替换原有的 applyRegexPresetToLoreRegex)
+const applyRegexPresetToLoreRegexItem = (wbKey: string, index: number, presetName: string) => {
   if (!presetName) return;
   const pattern = getPatternByName(presetName);
-  if (pattern && validateRegex(pattern) && editingData.value?.world_book?.[wbKey]) {
-    editingData.value.world_book[wbKey].lore_regex = pattern;
+  if (pattern && validateRegex(pattern)) {
+     if (!editingData.value?.world_book?.[wbKey]) return;
+     const wbConfig = editingData.value.world_book[wbKey];
+     
+     if (!Array.isArray(wbConfig.lore_regex)) {
+        wbConfig.lore_regex = wbConfig.lore_regex ? [wbConfig.lore_regex] : [];
+     }
+     
+     wbConfig.lore_regex[index] = pattern;
   } else {
     console.error(`Invalid regex pattern for preset: ${presetName}`);
   }
@@ -670,6 +695,51 @@ const updateRegexItem = (key: string, index: number, event: Event) => {
   if (taskData.merge_setting[key].content_regex) {
     taskData.merge_setting[key].content_regex[index] = val;
   }
+};
+
+// --- 新增：用于处理 lore_regex 数组的相关函数 ---
+
+// [新增] 确保数据是数组
+const ensureArray = (val: any): string[] => {
+  if (Array.isArray(val)) return val;
+  return [];
+};
+
+// [新增] 添加一行空的 lore regex
+const addEmptyLoreRegex = (wbKey: string) => {
+  if (!editingData.value?.world_book?.[wbKey]) return;
+  const wbConfig = editingData.value.world_book[wbKey];
+  
+  // 确保是数组
+  if (!Array.isArray(wbConfig.lore_regex)) {
+    wbConfig.lore_regex = [];
+  }
+  
+  wbConfig.lore_regex.push('');
+};
+
+// [新增] 删除一行 lore regex
+const removeLoreRegexItem = (wbKey: string, index: number) => {
+  if (!editingData.value?.world_book?.[wbKey]) return;
+  const wbConfig = editingData.value.world_book[wbKey];
+  
+  if (Array.isArray(wbConfig.lore_regex)) {
+    wbConfig.lore_regex.splice(index, 1);
+  }
+};
+
+// [新增] 更新 lore regex 输入
+const updateLoreRegexItem = (wbKey: string, index: number, event: Event) => {
+  if (!editingData.value?.world_book?.[wbKey]) return;
+  const val = (event.target as HTMLInputElement).value;
+  const wbConfig = editingData.value.world_book[wbKey];
+  
+  // 确保是数组
+  if (!Array.isArray(wbConfig.lore_regex)) {
+    wbConfig.lore_regex = [];
+  }
+  
+  wbConfig.lore_regex[index] = val;
 };
 </script>
 

@@ -5,7 +5,7 @@ export interface AsyncAnalyzeSetting{ //允许规则处理
     world_book: { //这一层级的world_book代表正文的世界书配置，初始化时默认会加入角色世界书的全部条目
       [key: string]:{ //世界书名称
         lores: string[]; //收集的世界书条目
-        lore_regex: string; //正则条目匹配,它会将匹配到的条目加入到lores中
+        lore_regex: string[]; //正则条目匹配,它会将匹配到的条目加入到lores中
       }
     }
   }
@@ -24,7 +24,7 @@ export interface StagedSetting{
     world_book: {
       [key: string]:{ //世界书名称,将由系统获取和指定
         lores: string[]; //收集的世界书条目
-        lore_regex: string; //正则条目匹配,它会将匹配到的条目加入到lores中
+        lore_regex: string[]; //正则条目匹配,它会将匹配到的条目加入到lores中
       }
     }
     merge_setting: {

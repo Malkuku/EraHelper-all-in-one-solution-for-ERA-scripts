@@ -16,6 +16,13 @@ const author = ref({
 // 版本更新历史记录
 const versionHistory = ref([
   {
+    version: 'v2.0.0',
+    date: '2026-01-29',
+    changes: [
+      '大幅度地重构了分步分析设置相关的内容了，现在支持多任务处理',
+    ],
+  },
+  {
     version: 'v1.2.3',
     date: '2026-01-21',
     changes: [

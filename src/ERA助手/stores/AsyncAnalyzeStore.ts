@@ -7,9 +7,7 @@ import { AsyncAnalyzeSetting, ApiConfigSetting } from '@/ERA助手/AsyncAnalyze/
 export interface SavedRegexConfig {
   id: string;      // 唯一标识 (保留，用于列表管理)
   name: string;    // 规则名称
-  regex: string;   // [修改] 完整的正则字符串 (例如: "/abc/gi")
-  // pattern: string; // [删除]
-  // flags: string;   // [删除]
+  regex: string;   // 完整的正则字符串 (例如: "/abc/gi")
   note?: string;   // 备注
 }
 
