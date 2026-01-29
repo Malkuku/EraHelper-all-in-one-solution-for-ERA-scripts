@@ -408,6 +408,7 @@ export const handleAsyncAnalyzeTasks = async (message_id: number) => {
 /**
  * 执行单个任务 - 仅生成和提取，不修改数据
  * [修改] 引入 generationLock 确保生成过程（含预设切换）串行执行
+ * [修复] 解决并行任务中 blacklistLores 全局变量被覆盖的竞态问题
  */
 async function executeSingleTask(task: any, message_id: number): Promise<TaskResult | null> {
   const store = getAsyncAnalyzeStore();
@@ -418,13 +419,16 @@ async function executeSingleTask(task: any, message_id: number): Promise<TaskRes
   const apiConfig = store.apiConfigSettings[apiConfigName];
   if (!apiConfig) throw new Error(`找不到 API 配置: ${apiConfigName}`);
 
-  // 处理临时黑名单
+  // 1. [修改] 在锁外先计算好当前任务需要的黑名单，暂存到局部变量，不修改全局 ref
+  let localTaskBlacklist: string[] = [];
+
   if (task.world_book) {
     try {
-      const taskBlacklist: string[] = [];
+      const tempBlacklist: string[] = [];
       for (const [bookName, wbConfig] of Object.entries(task.world_book)) {
         const config = wbConfig as any;
         let allEntries: string[] = [];
+        // 这里可能有 IO，放在锁外并行执行效率更高
         allEntries = await WorldInfoUtil.getWorldBookLoresByName(bookName);
 
         if(allEntries.length > 0) {
@@ -437,16 +441,16 @@ async function executeSingleTask(task: any, message_id: number): Promise<TaskRes
               allEntries.filter(n => regex.test(n)).forEach(l => whitelist.add(l));
             }
           }
-          taskBlacklist.push(...allEntries.filter(e => !whitelist.has(e)));
+          tempBlacklist.push(...allEntries.filter(e => !whitelist.has(e)));
         }
       }
-      blacklistLores.value = [...new Set(taskBlacklist)];
+      localTaskBlacklist = [...new Set(tempBlacklist)];
     } catch(e) {
       eraLogger.error('Task world_book processing failed', e);
-      blacklistLores.value = [];
+      localTaskBlacklist = [];
     }
   } else {
-    blacklistLores.value = [];
+    localTaskBlacklist = [];
   }
 
   const maxHistory = task.chat_history || 2;
@@ -464,9 +468,14 @@ async function executeSingleTask(task: any, message_id: number): Promise<TaskRes
 
   let result = '';
 
-  // [核心修改] 使用锁串行执行生成过程，防止并行任务切换预设冲突
+  // [核心修改] 使用锁串行执行生成过程
   await (generationLock = generationLock.then(async () => {
-    // 1. 注册宏 (因为部分预设会用到 {{lastUserMessage}})
+    // 2. [核心修复] 进入锁之后，才将局部计算的黑名单应用到全局变量
+    // 这样保证了在 sendPrompt 执行期间，blacklistLores.value 绝对是当前任务的数据
+    blacklistLores.value = localTaskBlacklist;
+    console.log(`任务 [${task.taskName}] 已应用黑名单，数量: ${blacklistLores.value.length}`);
+
+    // 3. 注册宏
     (window as any).SillyTavern.registerMacro('lastUserMessage', () => {
       return user_input;
     });
@@ -476,16 +485,12 @@ async function executeSingleTask(task: any, message_id: number): Promise<TaskRes
     let tempProfileSetting = null;
 
     try {
-      // 2. 切换预设 (Profile / Preset)
-
-      // Case A: Profile Setting (Slash Command)
+      // 4. 切换预设 (Profile / Preset)
       if (apiConfig.model_source === 'profile' && apiConfig.profileSetting) {
-        console.log('切换预设', apiConfig.profileSetting);
         tempProfileSetting = ((await (window as any).SillyTavern.executeSlashCommands('/profile')) as any).pipe;
         await (window as any).SillyTavern.executeSlashCommands(`/profile ${apiConfig.profileSetting}`);
       }
 
-      // Case B: Simple/Custom Preset (loadPreset)
       if (apiConfig.model_source === 'sample' && apiConfig.simple_preset_name && apiConfig.simple_preset_name !== 'in_use') {
         if (originalPresetName !== apiConfig.simple_preset_name) {
           loadPreset(apiConfig.simple_preset_name);
@@ -498,13 +503,12 @@ async function executeSingleTask(task: any, message_id: number): Promise<TaskRes
         }
       }
 
-      // 3. 发送请求
+      // 5. 发送请求 (此时触发事件，handleLoresFilter 会读取到正确的 blacklistLores)
       const is_should_stream = false;
 
       if (apiConfig.model_source === 'sample') {
         result = await PromptUtil.sendPrompt(user_input, promptInjects, maxHistory, is_should_stream, null, null);
       } else if (apiConfig.model_source === 'profile') {
-        // 注意：这里传入 null，因为切换逻辑已移至外部
         result = await PromptUtil.sendPrompt(user_input, promptInjects, maxHistory, is_should_stream, null, null);
       } else {
         result = await PromptUtil.sendPrompt(user_input, promptInjects, maxHistory, is_should_stream, apiConfig.custom_model_settings, null);
@@ -513,7 +517,7 @@ async function executeSingleTask(task: any, message_id: number): Promise<TaskRes
       eraLogger.log(`任务 [${task.taskName}] 原始输出:`, result);
 
     } finally {
-      // 4. 恢复预设
+      // 6. 恢复预设
       if (tempProfileSetting) {
         await (window as any).SillyTavern.executeSlashCommands(`/profile ${tempProfileSetting}`);
       }
@@ -522,15 +526,17 @@ async function executeSingleTask(task: any, message_id: number): Promise<TaskRes
         loadPreset(originalPresetName);
       }
 
-      // 5. 注销宏
+      // 7. 注销宏
       (window as any).SillyTavern.unregisterMacro('lastUserMessage');
+
+      // 可选：任务完成后清空黑名单，防止影响后续非任务操作（虽然下一个任务会覆盖它）
+      // blacklistLores.value = [];
     }
   }).catch(e => {
-    // 捕获锁内错误，避免阻塞后续任务，但需向上抛出以便重试逻辑捕获
     throw e;
   }));
 
-  // 提取变量修改数据，但不应用
+  // 提取变量修改数据
   const { cleanContent, variableEdits } = extractVariableEdits(result);
 
   return {
@@ -540,6 +546,7 @@ async function executeSingleTask(task: any, message_id: number): Promise<TaskRes
     variableEdits: variableEdits
   };
 }
+
 
 /**
  * 辅助函数：从文本中提取 <VariableEdit> 并返回 JSON 对象和清理后的文本
