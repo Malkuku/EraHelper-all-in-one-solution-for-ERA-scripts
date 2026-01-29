@@ -276,6 +276,9 @@
                         <button class="btn danger icon-btn" @click="removeRegexItem(currentMergeKey, index)">×</button>
                       </div>
                     </div>
+                    <div class="regex-actions">
+                      <button class="btn small primary" @click="addEmptyRegex(currentMergeKey)">+ 添加一行</button>
+                    </div>
 
                     <!-- 替换正则 -->
                     <div class="form-group">
@@ -300,11 +303,6 @@
                       </div>
                     </div>
 
-
-
-                    <div class="regex-actions">
-                      <button class="btn small primary" @click="addEmptyRegex(currentMergeKey)">+ 添加一行</button>
-                    </div>
                   </div>
                 </div>
                 <div v-else class="empty-sub">请选择左侧规则或添加新规则</div>
@@ -961,7 +959,7 @@ const updateRegexItem = (key: string, index: number, event: Event) => {
   display: flex;
   gap: 8px;
   align-items: center;
-  .flex-grow { 
+  .flex-grow {
     flex: 1;
     font-weight: 600; /* 加深字体以提升可读性 */
   }

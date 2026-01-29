@@ -51,7 +51,7 @@
           <div class="card-body">
             <div class="info-row">
               <span class="label">触发:</span>
-              <span class="value">触发间隔：{{ task.data.trigger_index }} | 上下文长度：{{ task.data.trigger_history }}</span>
+              <span class="value">触发间隔：{{ task.data.trigger_index }}/上下文长度：{{ task.data.trigger_history }}</span>
             </div>
             <div class="info-row">
               <span class="label">备注:</span>
@@ -87,7 +87,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAsyncAnalyzeStore } from '@/ERA助手/stores/AsyncAnalyzeStore';
 import { useUiStore } from '@/ERA助手/stores/UIStore';
@@ -149,6 +149,16 @@ const GLOBAL_ID = '__GLOBAL__';
 const currentRuleName = ref<string>('');
 const currentTaskName = ref<string>('');
 const showTaskModal = ref(false);
+
+// 监听路由参数变化，确保能正确切换规则
+watch(
+  () => route.query.rule,
+  (newRule) => {
+    if (newRule) {
+      currentRuleName.value = newRule as string;
+    }
+  }
+);
 
 // 初始化
 onMounted(async () => {
