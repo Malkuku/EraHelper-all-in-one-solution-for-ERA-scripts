@@ -51,7 +51,7 @@
           <div class="card-body">
             <div class="info-row">
               <span class="label">触发:</span>
-              <span class="value">触发间隔：{{ task.data.trigger_index }}/上下文长度：{{ task.data.trigger_history }}</span>
+              <span class="value">触发间隔：{{ task.data.trigger_index }}/上下文长度：{{ task.data.chat_history }}</span>
             </div>
             <div class="info-row">
               <span class="label">备注:</span>
