@@ -26,6 +26,8 @@ let watcherInitialized = false;
 
 // Global chain for scan operations to prevent concurrent modifications to loreList
 let scanChain = Promise.resolve();
+// Global chain for merge operations to prevent concurrent writes to shared resources
+let mergeChain = Promise.resolve();
 
 /**
  * 初始化监听器，确保 loreList 与 Store 中的全局配置同步
@@ -534,7 +536,26 @@ async function executeSingleTask(task: any, message_id: number) {
     // 但当前任务的 promptResultPromise 已经在后台运行（且上下文已固化），我们可以安全地等待结果
     result = await promptResultPromise!; // 等待生成结束
     eraLogger.log(`任务 [${task.taskName}] 原始输出:`, result);
-    await handleTaskResultMerge(task, result, message_id);
+
+    // --- 合并阶段串行化 ---
+    // 将合并操作包装在 mergeChain 中，防止并发写入导致的数据竞争
+    // 保持生成的并行性，仅使写入操作串行化
+    await new Promise<void>((resolveMerge) => {
+      const nextMergeStep = async () => {
+        try {
+          // 在这里执行所有的读取-修改-写入操作
+          // 因为是串行的，所以读取到的数据一定是最新的
+          await handleTaskResultMerge(task, result, message_id);
+        } catch (e) {
+          eraLogger.error(`任务 [${task.taskName}] 合并结果失败:`, e);
+        } finally {
+          resolveMerge(); // 无论成功失败，都释放锁，让下一个任务合并
+        }
+      };
+
+      // 挂载到合并链上
+      mergeChain = mergeChain.then(nextMergeStep);
+    });
 
   } finally {
     if (tempPresetLoaded) {
