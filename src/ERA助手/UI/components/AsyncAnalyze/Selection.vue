@@ -21,7 +21,7 @@
 
     <div class="rule-list">
       <div
-        v-for="(setting, key) in store.asyncAnalyzeSetting"
+        v-for="(setting, key, index) in store.asyncAnalyzeSetting"
         :key="key"
         class="rule-card"
         :class="{ 'active-card': store.activeRuleName === key }"
@@ -34,6 +34,24 @@
             <span class="tag info">{{ Object.keys(setting.staged_setting || {}).length }} 个任务</span>
           </div>
           <div class="card-actions">
+            <!-- 新增：移动位置按钮 -->
+            <button
+              class="btn small secondary"
+              :disabled="index === 0"
+              @click="moveRule(key as string, -1)"
+              title="上移"
+            >
+              ↑
+            </button>
+            <button
+              class="btn small secondary"
+              :disabled="index === Object.keys(store.asyncAnalyzeSetting).length - 1"
+              @click="moveRule(key as string, 1)"
+              title="下移"
+            >
+              ↓
+            </button>
+
             <button v-if="store.activeRuleName !== key" class="btn small primary" @click="activateRule(key as string)">
               启用
             </button>
@@ -143,6 +161,31 @@ const copyRule = async (key: string) => {
     console.error(e);
     toastr.error('复制失败');
   }
+};
+
+// 新增：调整规则组位置
+const moveRule = async (key: string, direction: number) => {
+  const keys = Object.keys(store.asyncAnalyzeSetting);
+  const index = keys.indexOf(key);
+  const newIndex = index + direction;
+
+  if (newIndex < 0 || newIndex >= keys.length) return;
+
+  // 交换键顺序
+  const newKeys = [...keys];
+  [newKeys[index], newKeys[newIndex]] = [newKeys[newIndex], newKeys[index]];
+
+  // 重建对象以保持顺序
+  // 注意：这里假设 store.asyncAnalyzeSetting 是一个普通对象，
+  // JS 引擎通常会按照插入顺序遍历字符串键（非整数）。
+  const newSettings: any = {};
+  for (const k of newKeys) {
+    newSettings[k] = store.asyncAnalyzeSetting[k];
+  }
+
+  // 更新 store
+  store.asyncAnalyzeSetting = newSettings;
+  await store.saveModelSettings();
 };
 
 // 激活规则
@@ -428,6 +471,17 @@ const handleExportData = () => {
     color: #991b1b;
     &:hover {
       background: #fecaca;
+    }
+  }
+
+  /* Disabled state */
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    &:hover {
+      background: inherit;
+      border-color: inherit;
+      color: inherit;
     }
   }
 }

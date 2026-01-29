@@ -22,6 +22,9 @@ const blacklistLores = ref<string[]>([]);
 let isAnalyzing = false;
 let watcherInitialized = false;
 
+// [核心修复] 过滤锁，用于解决并行过滤的竞态问题
+let filterLockChain = Promise.resolve();
+
 /**
  * 初始化监听器
  */
@@ -266,14 +269,16 @@ export const handleMessageReceived = async (message_id: number) => {
   } catch (e) {
     eraLogger.error('分步分析主流程异常:', e);
     toastr.error('分步分析执行出错');
-  } finally {
-    isAnalyzing = false;
-    // 任务结束后，重新计算一次黑名单，确保最新的世界书变动被捕获
-    await updateGlobalBlacklist();
-    await eventEmit(ERAEvents.FORCE_SYNC);
-    await eventEmit('kat:handle_era_finished');
   }
 };
+
+// 定义任务结果接口
+interface TaskResult {
+  taskName: string;
+  extractedContent: string;
+  mergeSettings: any;
+  variableEdits: Record<string, any>; // 提取出的变量修改
+}
 
 /**
  * 核心：处理分步分析任务队列
@@ -311,6 +316,9 @@ export const handleAsyncAnalyzeTasks = async (message_id: number) => {
       eraLogger.log(`正在执行第 ${order} 阶任务组，共 ${groupTasks.length} 个任务`);
       toastr.info(`正在执行第 ${order} 阶任务组，共 ${groupTasks.length} 个任务`);
 
+      // [核心修复] 并行执行任务，但不立即修改数据，而是收集结果
+      const groupResults: TaskResult[] = [];
+
       const promises = groupTasks.map(async (task, index) => {
         const currentFloor = message_id;
         const lastTrigger = task.trigger_history || 0;
@@ -323,7 +331,11 @@ export const handleAsyncAnalyzeTasks = async (message_id: number) => {
         await new Promise(resolve => setTimeout(resolve, index * 1000));
 
         try {
-          await executeSingleTask(task, message_id);
+          // 执行任务并获取结果，不进行副作用修改
+          const result = await executeSingleTask(task, message_id);
+          if (result) {
+            groupResults.push(result);
+          }
           pendingTriggerUpdates.set(task.taskName, currentFloor);
         } catch (e) {
           eraLogger.error(`任务 [${task.taskName}] 执行失败:`, e);
@@ -333,7 +345,10 @@ export const handleAsyncAnalyzeTasks = async (message_id: number) => {
             for(let i=0; i<task.reroll_count; i++){
               try {
                 eraLogger.log(`任务 [${task.taskName}] 重试第 ${i+1} 次`);
-                await executeSingleTask(task, message_id);
+                const result = await executeSingleTask(task, message_id);
+                if (result) {
+                  groupResults.push(result);
+                }
                 pendingTriggerUpdates.set(task.taskName, currentFloor);
                 retrySuccess = true;
                 break;
@@ -350,6 +365,12 @@ export const handleAsyncAnalyzeTasks = async (message_id: number) => {
       });
 
       await Promise.all(promises);
+
+      // [核心修复] 并行任务全部结束后，统一顺序应用修改
+      // 这样可以解决并行修改信息的竞态问题，同时保证下一组任务能获取到更新后的信息
+      if (groupResults.length > 0) {
+        await applyGroupResults(groupResults, message_id);
+      }
     }
 
     if (pendingTriggerUpdates.size > 0) {
@@ -371,13 +392,20 @@ export const handleAsyncAnalyzeTasks = async (message_id: number) => {
     eraLogger.error('分步分析流程发生严重错误，正在回滚...', err);
     toastr.error('执行出错，正在回滚数据...');
     await performRollback();
+  }finally {
+    isAnalyzing = false;
+    // 任务结束后，重新计算一次黑名单，确保最新的世界书变动被捕获
+    await updateGlobalBlacklist();
+    await eventEmit(ERAEvents.FORCE_SYNC);
+    await eventEmit('kat:handle_era_finished');
+    await setChatMessages([{ message_id: message_id}]);
   }
 };
 
 /**
- * 执行单个任务
+ * 执行单个任务 - 仅生成和提取，不修改数据
  */
-async function executeSingleTask(task: any, message_id: number) {
+async function executeSingleTask(task: any, message_id: number): Promise<TaskResult | null> {
   const store = getAsyncAnalyzeStore();
   eraLogger.info(`>>> 开始执行任务: ${task.taskName}`);
   toastr.info(`正在执行分步任务: ${task.taskName}`);
@@ -386,12 +414,9 @@ async function executeSingleTask(task: any, message_id: number) {
   const apiConfig = store.apiConfigSettings[apiConfigName];
   if (!apiConfig) throw new Error(`找不到 API 配置: ${apiConfigName}`);
 
-  // [修改] 任务执行时，如果任务本身有 world_book 配置，需要临时更新黑名单
-  // 这里我们复用 updateGlobalBlacklist 的逻辑，但针对任务配置
+  // 处理临时黑名单
   if (task.world_book) {
     try {
-      // 临时构建一个类似 rule 的对象来复用逻辑，或者直接提取逻辑
-      // 这里简单起见，手动计算一下任务的黑名单
       const taskBlacklist: string[] = [];
       for (const [bookName, wbConfig] of Object.entries(task.world_book)) {
         const config = wbConfig as any;
@@ -404,8 +429,8 @@ async function executeSingleTask(task: any, message_id: number) {
           if(config.lore_regex) {
             const regexList = Array.isArray(config.lore_regex) ? config.lore_regex : [config.lore_regex];
             for(const rStr of regexList) {
-                const regex = new RegExp(rStr);
-                allEntries.filter(n => regex.test(n)).forEach(l => whitelist.add(l));
+              const regex = new RegExp(rStr);
+              allEntries.filter(n => regex.test(n)).forEach(l => whitelist.add(l));
             }
           }
           taskBlacklist.push(...allEntries.filter(e => !whitelist.has(e)));
@@ -417,7 +442,6 @@ async function executeSingleTask(task: any, message_id: number) {
       blacklistLores.value = [];
     }
   } else {
-    // 任务没有指定世界书配置，清空黑名单（即不拦截任何内容）
     blacklistLores.value = [];
   }
 
@@ -462,7 +486,16 @@ async function executeSingleTask(task: any, message_id: number) {
     }
 
     eraLogger.log(`任务 [${task.taskName}] 原始输出:`, result);
-    await handleTaskResultMerge(task, result, message_id);
+
+    // 提取变量修改数据，但不应用
+    const { cleanContent, variableEdits } = extractVariableEdits(result);
+
+    return {
+      taskName: task.taskName,
+      extractedContent: cleanContent,
+      mergeSettings: task.merge_setting,
+      variableEdits: variableEdits
+    };
 
   } finally {
     if (tempPresetLoaded) {
@@ -472,120 +505,146 @@ async function executeSingleTask(task: any, message_id: number) {
 }
 
 /**
- * 处理任务结果的合并逻辑
+ * 辅助函数：从文本中提取 <VariableEdit> 并返回 JSON 对象和清理后的文本
  */
-async function handleTaskResultMerge(task: any, result: string, message_id: number) {
-  if (!task.merge_setting) return;
+function extractVariableEdits(content: string): { cleanContent: string, variableEdits: Record<string, any> } {
+  const regexInnermost = /<VariableEdit>((?:(?!<VariableEdit>)[\s\S])*?)<\/VariableEdit>/g;
+  const matches = Array.from(content.matchAll(regexInnermost));
 
-  const mergeSettings = task.merge_setting;
+  let mergedEditData: Record<string, any> = {};
 
-  for (const [mergeKey, setting] of Object.entries(mergeSettings)) {
-    const { is_inject, world_book, target_lore, content_regex, replace_regex } = setting as any;
+  if (matches.length === 0) {
+    return { cleanContent: content, variableEdits: {} };
+  }
 
-    let finalExtractedContent = '';
-
-    if (content_regex && Array.isArray(content_regex) && content_regex.length > 0) {
-      const extractedParts: string[] = [];
-      for (const regexStr of content_regex) {
-        const parts = RegexUtils.extractContentByRegex(result, regexStr);
-        if (parts.length > 0) {
-          extractedParts.push(...parts);
-        } else {
-          eraLogger.warn(`任务 [${task.taskName}] 合并 [${mergeKey}]: 正则未匹配到内容 "${regexStr}"`);
-        }
-      }
-      if (extractedParts.length > 0) {
-        finalExtractedContent = extractedParts.join('\n');
-      } else {
-        continue;
-      }
-    } else {
-      finalExtractedContent = result;
-    }
-
-    if (is_inject) {
-      if (replace_regex) {
-        try {
-          const currentMessageContent = MessageUtil.getMessageById(message_id);
-          const regex = new RegExp(replace_regex, 'g');
-          if (regex.test(currentMessageContent)) {
-            const newMessageContent = currentMessageContent.replace(regex, finalExtractedContent);
-            await setChatMessages([{ message_id, message: newMessageContent }]);
-            eraLogger.info(`任务 [${task.taskName}] 合并 [${mergeKey}]: 正文内容已根据正则替换`);
-          }
-        } catch (e) {
-          eraLogger.error(`任务 [${task.taskName}] 正文替换执行出错:`, e);
-        }
-      } else {
-        await MessageUtil.mergeContentToMessage(message_id, `\n${finalExtractedContent}`);
-        eraLogger.info(`任务 [${task.taskName}] 合并 [${mergeKey}]: 内容已追加到正文`);
-      }
-    } else if (world_book && target_lore) {
-      if (replace_regex) {
-        const oldContent = await WorldInfoUtil.getWorldBookLoreContent(world_book, target_lore);
-        if (oldContent) {
-          try {
-            const regex = new RegExp(replace_regex, 'g');
-            if (regex.test(oldContent)) {
-              const newContent = oldContent.replace(regex, finalExtractedContent);
-              await WorldInfoUtil.updateOrCreateEntry(world_book, target_lore, newContent);
-              eraLogger.info(`任务 [${task.taskName}] 合并 [${mergeKey}]: 世界书条目 [${target_lore}] 内容已替换更新`);
-            }
-          } catch (e) {
-            eraLogger.error(`任务 [${task.taskName}] 世界书替换执行出错:`, e);
-          }
-        }
-      } else if (finalExtractedContent && finalExtractedContent.trim().length > 0) {
-        await WorldInfoUtil.updateOrCreateEntry(world_book, target_lore, finalExtractedContent);
-        eraLogger.info(`任务 [${task.taskName}] 合并 [${mergeKey}]: 世界书条目 [${target_lore}] 已覆盖更新`);
-      }
-    }
-
-    if (finalExtractedContent.includes('<VariableEdit>')) {
-      await handleEraRules(finalExtractedContent);
+  for (const match of matches) {
+    const jsonStr = match[1];
+    if (!jsonStr || !jsonStr.trim()) continue;
+    try {
+      const editData = JSON.parse(jsonStr);
+      mergedEditData = JsonUtil.mergeDeep(mergedEditData, editData);
+    } catch (e) {
+      console.warn('忽略无效的 VariableEdit 内容:', jsonStr);
     }
   }
+
+  // 暂时保留标签占位符，后续应用时会替换为新的状态
+  return { cleanContent: content, variableEdits: mergedEditData };
 }
 
-async function handleEraRules(result: string) {
-  const regexInnermost = /<VariableEdit>((?:(?!<VariableEdit>)[\s\S])*?)<\/VariableEdit>/g;
-  const matches = Array.from(result.matchAll(regexInnermost));
-  if (matches.length === 0) return result;
-  let mergedEditData: Record<string, any> = {};
-  let hasValidData = false;
-  for (const match of matches) {
-    const content = match[1];
-    if (!content || !content.trim()) continue;
+/**
+ * [核心修复] 统一应用一组任务的结果
+ */
+async function applyGroupResults(results: TaskResult[], message_id: number) {
+  // 1. 合并并应用所有变量修改
+  let allVariableEdits: Record<string, any> = {};
+  for (const res of results) {
+    allVariableEdits = JsonUtil.mergeDeep(allVariableEdits, res.variableEdits);
+  }
+
+  let newVariableStateString = '';
+  if (Object.keys(allVariableEdits).length > 0) {
     try {
-      const editData = JSON.parse(content);
-      mergedEditData = JsonUtil.mergeDeep(mergedEditData, editData);
-      hasValidData = true;
+      const snapshotData = await getEraEditStore().getStatData();
+      if (snapshotData != null) {
+        const rules = getEraDataStore().eraDataRule;
+        const { data: updatedData } = await EraDataHandler.applyRule(allVariableEdits, snapshotData, rules);
+        const updatedContent = JSON.stringify(updatedData);
+        newVariableStateString = `<VariableEdit>\n${updatedContent}\n</VariableEdit>`;
+      }
     } catch (e) {
-      console.warn('忽略无效的 VariableEdit 内容:', content);
+      eraLogger.error('变量批量更新失败：', e);
+      toastr.error('变量更新失败');
     }
   }
-  if (!hasValidData) return result;
-  try {
-    const snapshotData = await getEraEditStore().getStatData();
-    if (snapshotData == null) return result;
-    const rules = getEraDataStore().eraDataRule;
-    const { data: updatedData } = await EraDataHandler.applyRule(mergedEditData, snapshotData, rules);
-    const updatedContent = JSON.stringify(updatedData);
-    const newTag = `<VariableEdit>\n${updatedContent}\n</VariableEdit>`;
-    let isFirstMatch = true;
-    result = result.replace(regexInnermost, () => {
-      if (isFirstMatch) {
-        isFirstMatch = false;
-        return newTag;
+
+  // 2. 依次应用每个任务的文本修改（世界书/消息）
+  for (const res of results) {
+    if (!res.mergeSettings) continue;
+
+    // 如果有新的变量状态，替换结果中的占位符
+    // 注意：这里假设 extractedContent 中仍然包含 <VariableEdit> 标签
+    // 如果 extractVariableEdits 没有移除标签，我们需要用正则替换
+    let finalResultContent = res.extractedContent;
+    if (newVariableStateString) {
+      const regexInnermost = /<VariableEdit>((?:(?!<VariableEdit>)[\s\S])*?)<\/VariableEdit>/g;
+      let isFirstMatch = true;
+      finalResultContent = finalResultContent.replace(regexInnermost, () => {
+        if (isFirstMatch) {
+          isFirstMatch = false;
+          return newVariableStateString;
+        } else {
+          return '';
+        }
+      });
+    } else {
+      // 如果没有变量更新，清除标签
+      finalResultContent = finalResultContent.replace(/<VariableEdit>[\s\S]*?<\/VariableEdit>/g, '');
+    }
+
+    for (const [mergeKey, setting] of Object.entries(res.mergeSettings)) {
+      const { is_inject, world_book, target_lore, content_regex, replace_regex } = setting as any;
+
+      let contentToApply = '';
+
+      if (content_regex && Array.isArray(content_regex) && content_regex.length > 0) {
+        const extractedParts: string[] = [];
+        for (const regexStr of content_regex) {
+          const parts = RegexUtils.extractContentByRegex(finalResultContent, regexStr);
+          if (parts.length > 0) {
+            extractedParts.push(...parts);
+          }
+        }
+        if (extractedParts.length > 0) {
+          contentToApply = extractedParts.join('\n');
+        } else {
+          continue;
+        }
       } else {
-        return '';
+        contentToApply = finalResultContent;
       }
-    });
-  } catch (e) {
-    eraLogger.error('变量更新失败：', e);
-    toastr.error('变量更新失败');
+
+      // 串行执行 IO 修改，避免竞态
+      if (is_inject) {
+        if (replace_regex) {
+          try {
+            // 重新获取最新的消息内容（可能被同组前一个任务修改过）
+            const currentMessageContent = MessageUtil.getMessageById(message_id);
+            const regex = new RegExp(replace_regex, 'g');
+            if (regex.test(currentMessageContent)) {
+              const newMessageContent = currentMessageContent.replace(regex, contentToApply);
+              await setChatMessages([{ message_id, message: newMessageContent }]);
+              eraLogger.info(`任务 [${res.taskName}] 合并 [${mergeKey}]: 正文内容已根据正则替换`);
+            }
+          } catch (e) {
+            eraLogger.error(`任务 [${res.taskName}] 正文替换执行出错:`, e);
+          }
+        } else {
+          await MessageUtil.mergeContentToMessage(message_id, `\n${contentToApply}`);
+          eraLogger.info(`任务 [${res.taskName}] 合并 [${mergeKey}]: 内容已追加到正文`);
+        }
+      } else if (world_book && target_lore) {
+        if (replace_regex) {
+          const oldContent = await WorldInfoUtil.getWorldBookLoreContent(world_book, target_lore);
+          if (oldContent) {
+            try {
+              const regex = new RegExp(replace_regex, 'g');
+              if (regex.test(oldContent)) {
+                const newContent = oldContent.replace(regex, contentToApply);
+                await WorldInfoUtil.updateOrCreateEntry(world_book, target_lore, newContent);
+                eraLogger.info(`任务 [${res.taskName}] 合并 [${mergeKey}]: 世界书条目 [${target_lore}] 内容已替换更新`);
+              }
+            } catch (e) {
+              eraLogger.error(`任务 [${res.taskName}] 世界书替换执行出错:`, e);
+            }
+          }
+        } else if (contentToApply && contentToApply.trim().length > 0) {
+          await WorldInfoUtil.updateOrCreateEntry(world_book, target_lore, contentToApply);
+          eraLogger.info(`任务 [${res.taskName}] 合并 [${mergeKey}]: 世界书条目 [${target_lore}] 已覆盖更新`);
+        }
+      }
+    }
   }
-  return result;
 }
 
 export const reSendEraUpdate = async () => {
@@ -609,26 +668,30 @@ export const reSendEraUpdate = async () => {
 
 /**
  * [核心修复] 处理世界书过滤
- * 绝对不在此函数中调用任何 WorldInfoUtil 的查询方法 (getWorldBookLoresByName 等)
- * 仅使用预先计算好的 blacklistLores 进行过滤
+ * 使用 Promise 链 (Mutex) 解决并行过滤的竞态问题
+ * 确保同一时间只有一个过滤操作在进行，且按顺序执行
  */
 export const handleLoresFilter = async (lores: any) => {
-  // 移除 initWatcher()，防止触发不必要的更新
+  // 将本次过滤任务加入 Promise 链
+  // 无论之前的任务成功与否，都会执行当前任务
+  await (filterLockChain = filterLockChain.then(async () => {
+    console.info('handleLoresFilter: ', '接收到过滤请求，开始执行');
 
-  console.info('handleLoresFilter: ', '接收到过滤请求');
-  if (blacklistLores.value.length === 0) {
-    return;
-  }
+    if (blacklistLores.value.length === 0) {
+      return;
+    }
 
-  try {
-    // 直接使用预计算的黑名单进行移除
-    // isReversed = false: 移除数组中存在的条目
-    await WorldInfoUtil.removeLoresByArray(lores, blacklistLores.value, false);
-
-    // eraLogger.log('Scoped WorldInfo Filter Applied. Removed entries:', blacklistLores.value.length);
-  } catch (e) {
-    eraLogger.error('Error during handleLoresFilter:', e);
-  }
+    try {
+      // 直接使用预计算的黑名单进行移除
+      // isReversed = false: 移除数组中存在的条目
+      await WorldInfoUtil.removeLoresByArray(lores, blacklistLores.value, false);
+      // eraLogger.log('Scoped WorldInfo Filter Applied. Removed entries:', blacklistLores.value.length);
+    } catch (e) {
+      eraLogger.error('Error during handleLoresFilter:', e);
+    }
+  }).catch(e => {
+    eraLogger.error('Critical error in filter lock chain:', e);
+  }));
 };
 
 /**
