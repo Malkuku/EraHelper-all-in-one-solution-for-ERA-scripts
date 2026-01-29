@@ -688,9 +688,22 @@ export const reSendEraUpdate = async () => {
     toastr.warning('请不要重算0层变量');
     return;
   }
+
+  const store = getAsyncAnalyzeStore();
+  const backup = store.savedBackupState;
+
+  // 检查是否存在当前楼层的备份如果存在，说明之前已经运行过分析（无论成功与否），我们需要先回滚到“分析前”的干净状态
+  if (backup && backup.messageId === currentMessageId) {
+    eraLogger.info('重算检测：发现当前楼层存在历史备份，正在回滚以重置状态...');
+
+    // 调用 performRollback 恢复数据
+    await performRollback(currentMessageId);
+  }
+
   toastr.info('开始重算分步分析');
   await handleAsyncAnalyzeTasks(currentMessageId);
 };
+
 
 /**
  * 处理世界书过滤
