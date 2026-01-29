@@ -9,6 +9,7 @@ import { useEraDataStore } from '../stores/EraDataStore';
 import { useEraEditStore } from '../stores/EraEditStore';
 import { JsonUtil } from '@/Utils/JsonUtil';
 import { ref, watch } from 'vue';
+import { RegexUtils } from '@/Utils/RegexUtils';
 
 const getAsyncAnalyzeStore = () => (window as any).AsyncAnalyzeStore as ReturnType<typeof useAsyncAnalyzeStore>;
 const getEraDataStore = () => (window as any).EraDataStore as ReturnType<typeof useEraDataStore>;
@@ -93,10 +94,10 @@ const processWorldBookConfig = async (worldBookConfig: any): Promise<{ lores: st
     // 获取该书所有条目用于正则匹配
     let allEntries: string[] = [];
     try {
-        allEntries = await WorldInfoUtil.getWorldBookLoresByName(bookName);
+      allEntries = await WorldInfoUtil.getWorldBookLoresByName(bookName);
     } catch (e) {
-        eraLogger.warn(`无法获取世界书 [${bookName}] 的条目，可能不存在。`);
-        continue;
+      eraLogger.warn(`无法获取世界书 [${bookName}] 的条目，可能不存在。`);
+      continue;
     }
 
     if (config.lore_regex) {
@@ -269,7 +270,7 @@ export const handleMessageReceived = async (message_id: number) => {
     toastr.info('开始执行分步分析规则...');
     eraLogger.info(`开始执行分步分析规则: ${store.activeRuleName}`);
 
-    await handleAsyncAnalyzeTasks(message_id);
+    handleAsyncAnalyzeTasks(message_id);
 
   } catch (e) {
     eraLogger.error('分步分析主流程异常:', e);
@@ -319,6 +320,7 @@ export const handleAsyncAnalyzeTasks = async (message_id: number) => {
     for (const order of sortedOrders) {
       const groupTasks = taskGroups.get(order)!;
       eraLogger.log(`正在执行第 ${order} 阶任务组，共 ${groupTasks.length} 个任务`);
+      toastr.info(`正在执行第 ${order} 阶任务组，共 ${groupTasks.length} 个任务`);
 
       const promises = groupTasks.map(async (task, index) => {
         const currentFloor = message_id;
@@ -393,6 +395,7 @@ export const handleAsyncAnalyzeTasks = async (message_id: number) => {
 async function executeSingleTask(task: any, message_id: number) {
   const store = getAsyncAnalyzeStore();
   eraLogger.info(`>>> 开始执行任务: ${task.taskName}`);
+  toastr.info(`正在执行分步任务: ${task.taskName}`);
 
   const apiConfigName = task.api_config;
   const apiConfig = store.apiConfigSettings[apiConfigName];
@@ -474,16 +477,12 @@ async function handleTaskResultMerge(task: any, result: string, message_id: numb
     if (content_regex && Array.isArray(content_regex) && content_regex.length > 0) {
       const extractedParts: string[] = [];
       for (const regexStr of content_regex) {
-        try {
-          const regex = new RegExp(regexStr, 's');
-          const match = result.match(regex);
-          if (match && match[1]) {
-            extractedParts.push(match[1]);
-          } else {
-            eraLogger.warn(`任务 [${task.taskName}] 合并 [${mergeKey}]: 正则未匹配到内容 "${regexStr}"`);
-          }
-        } catch (e) {
-          eraLogger.error(`任务 [${task.taskName}] 提取正则错误: ${regexStr}`, e);
+        // [修改] 使用统一的提取函数，支持无捕获组的情况
+        const parts = RegexUtils.extractContentByRegex(result, regexStr);
+        if (parts.length > 0) {
+          extractedParts.push(...parts);
+        } else {
+          eraLogger.warn(`任务 [${task.taskName}] 合并 [${mergeKey}]: 正则未匹配到内容 "${regexStr}"`);
         }
       }
       if (extractedParts.length > 0) {
@@ -528,9 +527,9 @@ async function handleTaskResultMerge(task: any, result: string, message_id: numb
           }
         }
       } else if (finalExtractedContent && finalExtractedContent.trim().length > 0) {
-          await WorldInfoUtil.updateOrCreateEntry(world_book, target_lore, finalExtractedContent);
-          eraLogger.info(`任务 [${task.taskName}] 合并 [${mergeKey}]: 世界书条目 [${target_lore}] 已覆盖更新`);
-        }
+        await WorldInfoUtil.updateOrCreateEntry(world_book, target_lore, finalExtractedContent);
+        eraLogger.info(`任务 [${task.taskName}] 合并 [${mergeKey}]: 世界书条目 [${target_lore}] 已覆盖更新`);
+      }
     }
 
     if (finalExtractedContent.includes('<VariableEdit>')) {

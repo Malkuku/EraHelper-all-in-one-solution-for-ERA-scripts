@@ -3,7 +3,7 @@
     <div class="modal-wrapper">
       <div class="regex-tester-layout">
 
-        <!-- 顶部标题栏 (新增) -->
+        <!-- 顶部标题栏 -->
         <div class="modal-header">
           <h3 class="modal-title">正则调试助手</h3>
           <button class="close-btn" @click="$emit('close')">×</button>
@@ -73,8 +73,8 @@
 
               <div class="regex-input-area">
                 <div class="input-group flex-1">
-                  <!-- 3. 不需要选择修饰符，用户输入的字符串就是带修饰的正则 -->
-                  <label>正则表达式 (例如: /pattern/flags):</label>
+                  <!-- 不需要选择修饰符，用户输入的字符串就是带修饰的正则 -->
+                  <label>正则表达式 (例如: /pattern/flags 或 直接输入 pattern):</label>
                   <input
                     v-model="regexInputString"
                     type="text"
@@ -100,23 +100,43 @@
 
                 <div class="split-pane">
                   <label class="pane-label">
-                    匹配结果 <span v-if="matches.length" class="badge">{{ matches.length }}</span>
+                    匹配详情 <span v-if="matches.length" class="badge">{{ matches.length }}</span>
                   </label>
+
+                  <!-- 结果展示区 -->
                   <div class="results-container">
+
+                    <!-- 新增：运行时提取预览 -->
+                    <div class="preview-section" v-if="runtimePreview.length > 0">
+                      <div class="preview-header">
+                        <span class="preview-title">🚀 运行时提取预览 (实际保存内容)</span>
+                      </div>
+                      <div class="preview-content">
+                        <div v-for="(text, idx) in runtimePreview" :key="idx" class="preview-item">
+                          {{ text }}
+                        </div>
+                      </div>
+                    </div>
+
                     <div v-if="matches.length === 0" class="empty-state">
                       {{ testText ? '未找到匹配项' : '等待输入...' }}
                     </div>
+
                     <div v-else class="match-list">
+                      <div class="list-divider">详细匹配信息</div>
                       <div v-for="(match, index) in matches" :key="index" class="match-item">
                         <div class="match-header">
                           <span class="match-index">#{{ index + 1 }}</span>
-                          <span class="match-full">{{ match[0] }}</span>
+                          <div class="match-full">{{ match[0] }}</div>
                         </div>
                         <div v-if="match.length > 1" class="capture-groups">
                           <div v-for="(group, gIndex) in match.slice(1)" :key="gIndex" class="group-item">
                             <span class="group-label">${{ gIndex + 1 }}:</span>
-                            <span class="group-value">{{ group }}</span>
+                            <div class="group-value">{{ group }}</div>
                           </div>
+                        </div>
+                        <div v-else class="no-groups-hint">
+                          (无捕获组，运行时将提取完整匹配)
                         </div>
                       </div>
                     </div>
@@ -137,51 +157,52 @@ import { useAsyncAnalyzeStore, SavedRegexConfig } from '@/ERA助手/stores/Async
 import { eraLogger } from '@/ERA助手/utils/EraHelperLogger';
 import FileImportExport from '@/ERA助手/UI/components/File/FileImportExport.vue';
 import { useUiStore } from '@/ERA助手/stores/UIStore';
+import { RegexUtils } from '@/Utils/RegexUtils';
 
 const uiStore = useUiStore();
-
-// 定义 Emits 以便关闭弹窗
 const emit = defineEmits(['close']);
-
 const asyncAnalyzeStore = useAsyncAnalyzeStore();
 
 // 编辑器状态
 const currentId = ref<string>('');
 const currentName = ref('');
-// 3. 合并后的正则输入字符串
 const regexInputString = ref('/.*/g');
 const testText = ref('');
 const errorMsg = ref('');
 
-// 解析正则字符串的辅助函数
-const parseRegexString = (input: string) => {
-  // 匹配 /pattern/flags 格式
-  // 注意：这里简单的正则可能无法处理 pattern 中包含转义 / 的情况，但对于基础调试足够
-  // 更严谨的做法是从后往前找最后一个 /
-  const lastSlashIndex = input.lastIndexOf('/');
-  const firstSlashIndex = input.indexOf('/');
+// [新增] 计算运行时实际会提取的内容
+const runtimePreview = computed(() => {
+  if (!regexInputString.value || !testText.value) return [];
+  return RegexUtils.extractContentByRegex(testText.value, regexInputString.value);
+});
 
-  if (firstSlashIndex === 0 && lastSlashIndex > 0 && lastSlashIndex > firstSlashIndex) {
-    const pattern = input.substring(1, lastSlashIndex);
-    const flags = input.substring(lastSlashIndex + 1);
-    return { pattern, flags };
-  }
-
-  // 如果用户没写 /.../，默认当做 pattern，flags 默认为 g
-  return { pattern: input, flags: 'g' };
-};
-
-// 计算匹配结果
+// 计算匹配结果 (用于调试显示详情)
 const matches = computed(() => {
   // eslint-disable-next-line vue/no-side-effects-in-computed-properties
   errorMsg.value = '';
   if (!regexInputString.value || !testText.value) return [];
 
   try {
-    const { pattern, flags } = parseRegexString(regexInputString.value);
+    // 使用统一的解析逻辑
+    const { pattern, flags } = RegexUtils.parseRegexString(regexInputString.value);
     if (!pattern) return [];
 
-    const re = new RegExp(pattern, flags);
+    // 强制使用 'g' 以便 matchAll 能工作并显示所有结果，
+    // 即使 parseRegexString 返回的 flags 没有 g (例如默认 s)，
+    // 在调试器中我们也希望能看到所有潜在匹配。
+    // 但为了准确性，我们应该尽量尊重用户输入。
+    // 如果用户输入 raw string，parseRegexString 返回 's'。
+    // 这里为了展示列表，我们临时添加 'g' 如果它不存在?
+    // 不，为了严谨，我们应该完全遵循 parseRegexString 的结果。
+    // 但是 matchAll 必须要有 'g' 标志吗？在 ES2020 中，String.prototype.matchAll 要求正则必须有 /g 标志。
+    // 所以如果 flags 里没有 g，我们需要加上，仅用于这里的展示。
+
+    let displayFlags = flags;
+    if (!displayFlags.includes('g')) {
+      displayFlags += 'g';
+    }
+
+    const re = new RegExp(pattern, displayFlags);
     return Array.from(testText.value.matchAll(re));
   } catch (e: any) {
     // eslint-disable-next-line vue/no-side-effects-in-computed-properties
@@ -192,28 +213,23 @@ const matches = computed(() => {
 
 // --- 列表管理逻辑 ---
 
-// 新建
 const createNew = () => {
   currentId.value = '';
   currentName.value = '';
-  regexInputString.value = '//g'; // 默认空正则
+  regexInputString.value = '//g';
   testText.value = '';
 };
 
-// 加载配置
 const loadConfig = (config: SavedRegexConfig) => {
   currentId.value = config.id;
   currentName.value = config.name;
-  // 将存储的分离数据合并为字符串显示
   regexInputString.value = `/${config.pattern}/${config.flags}`;
 };
 
-// 保存配置
 const saveCurrentConfig = async () => {
   if (!currentName.value) return;
 
-  // 解析当前输入框的内容以便存储
-  const { pattern, flags } = parseRegexString(regexInputString.value);
+  const { pattern, flags } = RegexUtils.parseRegexString(regexInputString.value);
 
   const newConfig: SavedRegexConfig = {
     id: currentId.value || Date.now().toString(),
@@ -236,10 +252,8 @@ const saveCurrentConfig = async () => {
   toastr.success('保存成功');
 };
 
-// 删除配置
 const deleteConfig = async (id: string) => {
   if (!confirm('确定要删除这个正则配置吗？')) return;
-
   asyncAnalyzeStore.savedRegexConfigs = asyncAnalyzeStore.savedRegexConfigs.filter(c => c.id !== id);
   if (currentId.value === id) {
     createNew();
@@ -281,7 +295,7 @@ const handleMessage = (msg: string, type: string) => console.log(`[${type}] ${ms
 </script>
 
 <style scoped lang="scss">
-/* 4. UI优化：弹窗样式 */
+/* 保持原有样式，新增 Preview 样式 */
 .modal-mask {
   position: fixed;
   top: 0;
@@ -318,7 +332,7 @@ const handleMessage = (msg: string, type: string) => console.log(`[${type}] ${ms
     margin: 0;
     font-size: 18px;
     font-weight: 700;
-    color: #111827; /* 1. 字体加深 */
+    color: #111827;
   }
 
   .close-btn {
@@ -366,7 +380,7 @@ const handleMessage = (msg: string, type: string) => console.log(`[${type}] ${ms
     margin: 0 0 10px 0;
     font-size: 15px;
     font-weight: 700;
-    color: #111827; /* 1. 字体加深 */
+    color: #111827;
   }
 }
 
@@ -394,7 +408,7 @@ const handleMessage = (msg: string, type: string) => console.log(`[${type}] ${ms
   &.active {
     background: #e0e7ff;
     border-color: #c7d2fe;
-    .item-name { color: #312e81; font-weight: 600; } /* 1. 字体加深 */
+    .item-name { color: #312e81; font-weight: 600; }
   }
 }
 
@@ -405,8 +419,8 @@ const handleMessage = (msg: string, type: string) => console.log(`[${type}] ${ms
 
 .item-name {
   font-size: 14px;
-  font-weight: 600; /* 1. 加粗 */
-  color: #1f2937; /* 1. 字体加深 */
+  font-weight: 600;
+  color: #1f2937;
   margin-bottom: 2px;
   white-space: nowrap;
   overflow: hidden;
@@ -415,7 +429,7 @@ const handleMessage = (msg: string, type: string) => console.log(`[${type}] ${ms
 
 .item-pattern {
   font-size: 12px;
-  color: #4b5563; /* 1. 字体加深 */
+  color: #4b5563;
   font-family: monospace;
   white-space: nowrap;
   overflow: hidden;
@@ -472,13 +486,15 @@ const handleMessage = (msg: string, type: string) => console.log(`[${type}] ${ms
   padding: 15px;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .section-title {
   margin: 0 0 15px 0;
   font-size: 16px;
   font-weight: 700;
-  color: #111827; /* 1. 字体加深 */
+  color: #111827;
   border-left: 4px solid #4f46e5;
   padding-left: 8px;
 }
@@ -492,7 +508,7 @@ const handleMessage = (msg: string, type: string) => console.log(`[${type}] ${ms
   label {
     font-size: 13px;
     font-weight: 600;
-    color: #000000 !important; /* 使用纯黑色提高可读性 */
+    color: #000000 !important;
   }
 }
 
@@ -501,8 +517,6 @@ const handleMessage = (msg: string, type: string) => console.log(`[${type}] ${ms
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: 14px;
-
-  /* 2. 强制覆盖浏览器样式 */
   background: #ffffff !important;
   color: #000000 !important;
 
@@ -566,6 +580,7 @@ const handleMessage = (msg: string, type: string) => console.log(`[${type}] ${ms
   gap: 15px;
   flex: 1;
   min-height: 0;
+  width: 100%;
 }
 
 .split-pane {
@@ -578,7 +593,7 @@ const handleMessage = (msg: string, type: string) => console.log(`[${type}] ${ms
 .pane-label {
   font-size: 13px;
   font-weight: 700;
-  color: #374151; /* 1. 字体加深 */
+  color: #374151;
   margin-bottom: 8px;
   display: flex;
   justify-content: space-between;
@@ -599,7 +614,52 @@ const handleMessage = (msg: string, type: string) => console.log(`[${type}] ${ms
   border-radius: 6px;
   background: #f9fafb;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Preview Section */
+.preview-section {
+  margin-bottom: 15px;
+  border: 1px solid #d1fae5;
+  background: #ecfdf5;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.preview-header {
+  background: #d1fae5;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #065f46;
+}
+
+.preview-content {
+  padding: 10px;
+}
+
+.preview-item {
+  font-family: monospace;
+  font-size: 13px;
+  color: #064e3b;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin-bottom: 8px;
+  border-bottom: 1px dashed #a7f3d0;
+  padding-bottom: 8px;
+  &:last-child { margin-bottom: 0; border-bottom: none; padding-bottom: 0; }
+}
+
+.list-divider {
+  font-size: 11px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 10px 0 5px 0;
+  font-weight: 700;
 }
 
 .empty-state {
@@ -616,17 +676,44 @@ const handleMessage = (msg: string, type: string) => console.log(`[${type}] ${ms
   padding: 10px;
   margin-bottom: 8px;
   font-size: 13px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .match-header {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   gap: 8px;
   margin-bottom: 6px;
+  width: 100%;
+  min-width: 0;
 }
 
-.match-index { color: #6b7280; font-size: 11px; font-family: monospace; }
-.match-full { color: #047857; font-family: monospace; font-weight: 700; word-break: break-all; }
+.match-index {
+  color: #6b7280;
+  font-size: 11px;
+  font-family: monospace;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.match-full {
+  color: #047857;
+  font-family: monospace;
+  font-weight: 700;
+  display: block;
+  flex: 1;
+  width: 100%;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 300px;
+  background: #f0fdf4;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #d1fae5;
+}
 
 .capture-groups {
   margin-top: 6px;
@@ -634,15 +721,45 @@ const handleMessage = (msg: string, type: string) => console.log(`[${type}] ${ms
   border-top: 1px dashed #e5e7eb;
 }
 
+.no-groups-hint {
+  font-size: 11px;
+  color: #9ca3af;
+  font-style: italic;
+  margin-top: 4px;
+}
+
 .group-item {
   display: flex;
   gap: 8px;
   margin-top: 4px;
   font-family: monospace;
+  align-items: flex-start;
+  width: 100%;
+  min-width: 0;
 }
 
-.group-label { color: #4b5563; font-size: 11px; min-width: 24px; font-weight: 600; }
-.group-value { color: #1f2937; }
+.group-label {
+  color: #4b5563;
+  font-size: 11px;
+  min-width: 24px;
+  font-weight: 600;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.group-value {
+  color: #1f2937;
+  display: block;
+  flex: 1;
+  width: 100%;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 200px;
+  background: #f3f4f6;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
 
 /* Dark Mode */
 .dark-mode {
@@ -665,24 +782,45 @@ const handleMessage = (msg: string, type: string) => console.log(`[${type}] ${ms
   .input-group label, .pane-label { color: #d1d5db !important; }
 
   .form-input, .form-textarea {
-    /* 2. 强制覆盖浏览器样式 (Dark Mode) */
     background: #374151 !important;
     border-color: #4b5563;
     color: #f3f4f6 !important;
-
     &:focus { border-color: #818cf8; background: #1f2937 !important; }
   }
 
   .results-container { background: #111827; border-color: #374151; }
   .match-item { background: #1f2937; border-color: #374151; }
-  .match-full { color: #34d399; }
-  .group-value { color: #e5e7eb; }
+
+  .match-full {
+    color: #34d399;
+    background: #064e3b;
+    border-color: #065f46;
+  }
+
+  .group-value {
+    color: #e5e7eb;
+    background: #374151;
+  }
+
   .group-label { color: #9ca3af; }
 
   .btn {
     background: #374151; border-color: #4b5563; color: #e5e7eb;
     &:hover:not(:disabled) { background: #4b5563; }
     &.primary { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+  }
+
+  .preview-section {
+    border-color: #065f46;
+    background: #064e3b;
+  }
+  .preview-header {
+    background: #065f46;
+    color: #a7f3d0;
+  }
+  .preview-item {
+    color: #d1fae5;
+    border-bottom-color: #047857;
   }
 }
 </style>
