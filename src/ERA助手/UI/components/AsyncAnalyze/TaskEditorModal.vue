@@ -150,7 +150,17 @@
                       正则匹配条目
                       <Tooltip content="通过正则匹配条目,它会将匹配到的条目发送给AI" placement="top" />
                     </label>
-                    <input v-model="editingData.world_book[currentWbKey].lore_regex" placeholder="正则表达式..." />
+                    <div class="regex-input-group">
+                      <input v-model="editingData.world_book[currentWbKey].lore_regex" placeholder="正则表达式..." class="flex-grow" />
+                      <div class="preset-select-wrapper">
+                        <SearchableSelect
+                          :model-value="''"
+                          :options="regexPresetOptions"
+                          placeholder="选择预设..."
+                          @update:model-value="(name) => applyRegexPresetToLoreRegex(currentWbKey, name)"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   <!-- 自定义多选下拉框 -->
@@ -585,6 +595,14 @@ const applyRegexPresetToItem = (key: string, index: number, presetName: string) 
   }
 };
 
+const applyRegexPresetToLoreRegex = (wbKey: string, presetName: string) => {
+  if (!presetName) return;
+  const pattern = getPatternByName(presetName);
+  if (pattern) {
+    editingData.value.world_book[wbKey].lore_regex = pattern;
+  }
+};
+
 const addEmptyRegex = (key: string) => {
   const taskData = editingData.value as StagedSetting[string];
   if (!taskData.merge_setting[key].content_regex) {
@@ -943,11 +961,20 @@ const updateRegexItem = (key: string, index: number, event: Event) => {
   display: flex;
   gap: 8px;
   align-items: center;
-  .flex-grow { flex: 1; }
+  .flex-grow { 
+    flex: 1;
+    font-weight: 600; /* 加深字体以提升可读性 */
+  }
   .preset-select-wrapper {
     width: 140px;
     flex-shrink: 0;
   }
+}
+
+/* 为正则表达式输入框单独设置字体粗细 */
+input[placeholder*="正则"],
+input[placeholder*="regex"] {
+  font-weight: 600 !important;
 }
 
 .regex-list-container {
