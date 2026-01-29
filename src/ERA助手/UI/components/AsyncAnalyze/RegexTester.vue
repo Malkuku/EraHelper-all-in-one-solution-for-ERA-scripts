@@ -36,8 +36,8 @@
               >
                 <div class="item-info">
                   <div class="item-name">{{ item.name }}</div>
-                  <!-- 显示完整的正则字符串 -->
-                  <div class="item-pattern">/{{ item.pattern }}/{{ item.flags }}</div>
+                  <!-- [修改] 直接显示存储的 regex 字符串 -->
+                  <div class="item-pattern">{{ item.regex }}</div>
                 </div>
                 <button class="delete-btn" @click.stop="deleteConfig(item.id)">×</button>
               </div>
@@ -223,19 +223,24 @@ const createNew = () => {
 const loadConfig = (config: SavedRegexConfig) => {
   currentId.value = config.id;
   currentName.value = config.name;
-  regexInputString.value = `/${config.pattern}/${config.flags}`;
+  // [修改] 直接读取完整字符串，不再拼接
+  regexInputString.value = config.regex;
 };
 
 const saveCurrentConfig = async () => {
   if (!currentName.value) return;
 
-  const { pattern, flags } = RegexUtils.parseRegexString(regexInputString.value);
+  // [修改] 不再解析 pattern 和 flags，直接保存用户输入的字符串
+  // 可以在这里加一个简单的校验，确保字符串看起来像正则
+  if (!regexInputString.value.startsWith('/')) {
+     // 可选：如果用户没输 /，可以提示或者自动补全，这里假设用户输入正确
+  }
 
   const newConfig: SavedRegexConfig = {
     id: currentId.value || Date.now().toString(),
     name: currentName.value,
-    pattern: pattern,
-    flags: flags
+    regex: regexInputString.value, // 直接保存
+    // pattern, flags 字段已移除
   };
 
   if (currentId.value) {
@@ -249,7 +254,7 @@ const saveCurrentConfig = async () => {
   }
 
   await asyncAnalyzeStore.saveModelSettings();
-  toastr.success('保存成功');
+  // toastr.success('保存成功'); // 假设环境有 toastr
 };
 
 const deleteConfig = async (id: string) => {
@@ -279,7 +284,21 @@ const handleImport = async (content: string) => {
   try {
     const parsed = JSON.parse(content);
     if (!Array.isArray(parsed)) throw new Error('格式错误');
-    const validConfigs = parsed.filter((item: any) => item.name && item.pattern);
+    
+    // [修改] 兼容性处理：如果导入的是旧版数据(有pattern)，转为新版；如果是新版(有regex)，直接用
+    const validConfigs = parsed.map((item: any) => {
+        if (item.regex) return item;
+        if (item.pattern) {
+            return {
+                id: item.id || Date.now().toString() + Math.random(),
+                name: item.name,
+                regex: `/${item.pattern}/${item.flags || ''}`,
+                note: item.note
+            };
+        }
+        return null;
+    }).filter(item => item && item.name && item.regex);
+
     if (validConfigs.length === 0) throw new Error('无有效数据');
 
     asyncAnalyzeStore.savedRegexConfigs = validConfigs;

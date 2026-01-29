@@ -23,7 +23,7 @@ const parseRegexString = (input: string): { pattern: string, flags: string } => 
  * [新增] 统一的正则提取逻辑
  * 1. 解析正则字符串
  * 2. 执行匹配 (支持 global)
- * 3. 提取内容：优先返回捕获组 1 (match[1])，如果没有捕获组，返回整个匹配 (match[0])
+ * 3. 返回整个匹配 (match[0])
  */
 const extractContentByRegex = (text: string, regexStr: string): string[] => {
   const results: string[] = [];
@@ -35,14 +35,13 @@ const extractContentByRegex = (text: string, regexStr: string): string[] => {
     if (flags.includes('g')) {
       const matches = Array.from(text.matchAll(regex));
       for (const m of matches) {
-        // 优先取第一个捕获组，否则取整体
-        results.push(m[1] !== undefined ? m[1] : m[0]);
+        results.push(m[0]);
       }
     } else {
       // 单次匹配
       const m = text.match(regex);
       if (m) {
-        results.push(m[1] !== undefined ? m[1] : m[0]);
+        results.push(m[0]);
       }
     }
   } catch (e) {

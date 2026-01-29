@@ -5,14 +5,15 @@ import { AsyncAnalyzeSetting, ApiConfigSetting } from '@/ERA助手/AsyncAnalyze/
 
 // 定义正则配置的类型接口
 export interface SavedRegexConfig {
-  id: string;      // 唯一标识
+  id: string;      // 唯一标识 (保留，用于列表管理)
   name: string;    // 规则名称
-  pattern: string; // 正则表达式
-  flags: string;   // 修饰符
-  note?: string;   // 备注（可选）
+  regex: string;   // [修改] 完整的正则字符串 (例如: "/abc/gi")
+  // pattern: string; // [删除]
+  // flags: string;   // [删除]
+  note?: string;   // 备注
 }
 
-// [新增] 备份状态接口
+//备份状态接口
 export interface AnalyzeBackupState {
   ruleName: string;       // 备份时的规则名
   messageId: number;      // 触发时的楼层

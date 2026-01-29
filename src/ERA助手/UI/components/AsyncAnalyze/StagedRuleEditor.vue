@@ -81,7 +81,7 @@
       :task-name="currentTaskName"
       @close="showTaskModal = false"
       @update:task-name="currentTaskName = $event"
-      @delete-task="showTaskModal = false"
+      @delete-task="handleDeleteTask"
     />
   </div>
 </template>
@@ -226,9 +226,41 @@ const createTask = async () => {
   openTaskEditor(name);
 };
 
+// ... existing code ...
 const openTaskEditor = (taskKey: string) => {
   currentTaskName.value = taskKey;
   showTaskModal.value = true;
+};
+
+// === 新增：带确认的删除逻辑 ===
+const handleDeleteTask = async () => {
+  // 1. 基础校验
+  if (!currentRule.value || !currentRule.value.staged_setting || !currentTaskName.value) return;
+
+  // 2. 调用 Modal 进行确认
+  const confirmed = await Modal.confirm(
+    '确认删除', 
+    `确定要删除任务 "${currentTaskName.value}" 吗？此操作无法撤销。`
+  );
+
+  if (!confirmed) return;
+
+  // 3. 操作 Store 数据
+  // currentRule 是基于 store 的 computed 属性，直接修改其内部对象会触发 Pinia 状态更新
+  delete currentRule.value.staged_setting[currentTaskName.value];
+  
+  // 4. 关闭弹窗并清理状态
+  showTaskModal.value = false;
+  currentTaskName.value = '';
+  
+  // 5. (可选) 自动保存到后端/本地存储
+  // 如果你希望删除后立即持久化保存，取消下面这行的注释：
+  // await store.saveModelSettings();
+
+  // 6. 提示用户
+  if (typeof toastr !== 'undefined') {
+    toastr.success('任务已删除');
+  }
 };
 </script>
 

@@ -567,37 +567,85 @@ const onMergeWbChange = (key: string) => {
 // --- 正则管理 (应用预设) ---
 
 const getPatternByName = (name: string) => {
-  const config = store.savedRegexConfigs.find(c => c.name === name);
-  return config ? config.pattern : '';
+  try {
+    const config = store.savedRegexConfigs.find(c => c.name === name);
+    // 确保返回正确的正则表达式字符串，防止转义问题
+    // 根据经验教训，保持原始格式，不进行额外的字符串转义处理
+    return config ? config.regex : '';
+  } catch (error) {
+    console.error('获取正则预设失败:', error);
+    return '';
+  }
+};
+
+// 验证正则表达式格式的方法
+const validateRegex = (regexStr: string) => {
+  if (!regexStr) return true; // 空字符串被认为是有效的
+
+  try {
+    // 如果是 /pattern/flags 格式
+    if (regexStr.startsWith('/') && regexStr.length > 1) {
+      const lastSlashIndex = regexStr.lastIndexOf('/');
+      if (lastSlashIndex > 0) {
+        const pattern = regexStr.substring(1, lastSlashIndex);
+        const flags = regexStr.substring(lastSlashIndex + 1);
+
+        // 验证标志是否合法
+        if (flags && /[^gimsuv]/.test(flags)) {
+          console.warn(`Invalid regex flags: ${flags}`);
+          return false;
+        }
+
+        // 尝试创建正则表达式验证模式部分
+        new RegExp(pattern);
+        return true;
+      }
+    } else {
+      // 纯模式字符串，直接验证
+      new RegExp(regexStr);
+      return true;
+    }
+  } catch (e) {
+    console.warn(`Invalid regex pattern: ${regexStr}`, e);
+    return false;
+  }
+
+  return true;
 };
 
 const applyRegexPreset = (key: string, field: 'replace', presetName: string) => {
   if (!presetName) return;
   const pattern = getPatternByName(presetName);
-  if (pattern) {
+  if (pattern && validateRegex(pattern)) {
     const taskData = editingData.value as StagedSetting[string];
-    if (field === 'replace') {
+    if (field === 'replace' && taskData.merge_setting && taskData.merge_setting[key]) {
       taskData.merge_setting[key].replace_regex = pattern;
     }
+  } else {
+    console.error(`Invalid regex pattern for preset: ${presetName}`);
   }
 };
 
 const applyRegexPresetToItem = (key: string, index: number, presetName: string) => {
   if (!presetName) return;
   const pattern = getPatternByName(presetName);
-  if (pattern) {
+  if (pattern && validateRegex(pattern) && editingData.value?.merge_setting?.[key]?.content_regex) {
     const taskData = editingData.value as StagedSetting[string];
     if (taskData.merge_setting[key].content_regex) {
       taskData.merge_setting[key].content_regex[index] = pattern;
     }
+  } else {
+    console.error(`Invalid regex pattern for preset: ${presetName}`);
   }
 };
 
 const applyRegexPresetToLoreRegex = (wbKey: string, presetName: string) => {
   if (!presetName) return;
   const pattern = getPatternByName(presetName);
-  if (pattern) {
+  if (pattern && validateRegex(pattern) && editingData.value?.world_book?.[wbKey]) {
     editingData.value.world_book[wbKey].lore_regex = pattern;
+  } else {
+    console.error(`Invalid regex pattern for preset: ${presetName}`);
   }
 };
 
