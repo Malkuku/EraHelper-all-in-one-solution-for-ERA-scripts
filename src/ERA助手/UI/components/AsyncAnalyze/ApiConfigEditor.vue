@@ -6,6 +6,19 @@
         <button class="btn primary full-width" @click="createNewConfig">
           + 新建配置
         </button>
+
+        <!-- 新增：导入导出组件 -->
+        <div class="import-export-wrapper">
+          <FileImportExport
+            accept=".json"
+            import-text="导入"
+            export-text="导出"
+            confirm-title="覆盖确认"
+            confirm-content="导入操作将合并或覆盖当前的API配置，确定要继续吗？"
+            @export-data="handleExport"
+            @import-confirmed="handleImport"
+          />
+        </div>
       </div>
 
       <div class="config-list">
@@ -35,7 +48,7 @@
 
       <div v-else class="editor-panel">
         <div class="panel-header">
-          <h4>编辑配置: {{ currentConfigName }}</h4>
+          <h4>编辑配置: {{ currentConfigName }}<Tooltip content="配置的名称和任务中使用的是绑定的，这通常需要由作者来创建新预设和解释作用" placement="top" /></h4>
           <div class="header-actions">
             <button class="btn danger small" @click="deleteConfig">删除此配置</button>
             <button class="btn primary small" @click="saveChanges">保存所有更改</button>
@@ -181,7 +194,9 @@ import SearchableSelect from '../Dialog/SearchableSelect.vue';
 import { useUiStore } from '@/ERA助手/stores/UIStore';
 import Tooltip from '../Common/Tooltip.vue';
 
+
 import { Modal } from '@/ERA助手/utils/modal';
+import FileImportExport from '@/ERA助手/UI/components/File/FileImportExport.vue';
 
 const uiStore = useUiStore();
 const store = useAsyncAnalyzeStore();
@@ -216,10 +231,7 @@ const selectConfig = (name: string) => {
 };
 
 // 动作：新建配置
-// [修改] 改为 async 函数以支持 await Modal.prompt
 const createNewConfig = async () => {
-  // [修改] 替换原生 prompt
-  // const name = prompt('请输入新配置的名称');
   const name = await Modal.prompt('新建配置', '请输入新配置的名称');
 
   if (!name) return;
@@ -249,12 +261,9 @@ const createNewConfig = async () => {
 };
 
 // 动作：删除配置
-// [修改] 改为 async 函数以支持 await Modal.confirm
 const deleteConfig = async () => {
   if (!currentConfigName.value) return;
 
-  // [修改] 替换原生 confirm
-  // if (!confirm(`确定要删除配置 "${currentConfigName.value}" 吗？`)) return;
   const isConfirmed = await Modal.confirm('删除确认', `确定要删除配置 "${currentConfigName.value}" 吗？`);
 
   if (!isConfirmed) return;
@@ -269,6 +278,60 @@ const saveChanges = async () => {
   await store.saveModelSettings();
   toastr.success('所有配置已保存到变量');
 };
+
+// ----------------------------------------------------------------
+// 新增：导入导出逻辑
+// ----------------------------------------------------------------
+
+// 处理导出
+const handleExport = () => {
+  try {
+    const dataStr = JSON.stringify(store.apiConfigSettings, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    // 创建下载链接
+    const link = document.createElement('a');
+    link.href = url;
+    const date = new Date().toISOString().slice(0, 10);
+    link.download = `era_api_configs_${date}.json`;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  } catch (e: any) {
+    toastr.error(`导出失败: ${e.message}`);
+  }
+};
+
+// 处理导入
+const handleImport = async (content: string) => {
+  try {
+    const parsed = JSON.parse(content);
+
+    if (typeof parsed !== 'object' || parsed === null) {
+      throw new Error('文件格式不正确，必须是 JSON 对象');
+    }
+
+    // 合并策略：使用 Object.assign 将新配置合并到现有配置中
+    // 如果想要完全覆盖，可以先清空 store.apiConfigSettings
+    Object.assign(store.apiConfigSettings, parsed);
+
+    await store.saveModelSettings();
+    toastr.success('配置导入成功');
+
+    // 如果当前选中的配置被覆盖或更新，强制刷新视图（通常Vue会自动处理）
+    // 如果当前选中的配置在导入后不存在了，重置选择
+    if (currentConfigName.value && !store.apiConfigSettings[currentConfigName.value]) {
+      currentConfigName.value = '';
+    }
+  } catch (e: any) {
+    console.error(e);
+    toastr.error(`导入失败: ${e.message}`);
+  }
+};
+// ----------------------------------------------------------------
 
 // 获取预设列表
 const refreshPresetList = async () => {
@@ -403,6 +466,26 @@ onMounted(() => {
 
 .sidebar-header {
   margin-bottom: 10px;
+}
+
+/* 新增：导入导出容器样式 */
+.import-export-wrapper {
+  margin-top: 8px;
+
+  /* 穿透样式以适配组件内部布局 */
+  :deep(.file-import-export) {
+    width: 100%;
+  }
+
+  :deep(.button-group) {
+    display: flex;
+    gap: 6px;
+  }
+
+  :deep(.btn) {
+    flex: 1;
+    justify-content: center;
+  }
 }
 
 .config-list {
