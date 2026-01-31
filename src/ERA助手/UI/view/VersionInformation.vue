@@ -5,7 +5,7 @@ import { useUiStore } from '@/ERA助手/stores/UIStore';
 const uiStore = useUiStore();
 
 // 当前版本号
-const currentVersion = ref('v1.2.3');
+const currentVersion = ref('v2.0.0');
 
 // 作者信息
 const author = ref({

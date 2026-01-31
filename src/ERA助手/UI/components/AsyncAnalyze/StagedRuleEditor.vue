@@ -53,6 +53,10 @@
               <span class="label">触发:</span>
               <span class="value">执行顺序：{{ task.data.order }}/触发间隔：{{ task.data.trigger_index }}/上下文长度：{{ task.data.chat_history }}</span>
             </div>
+            <div v-if="task.data.event_name" class="info-row">
+              <span class="label">触发事件:</span>
+              <span class="value event-name">{{ task.data.event_name }}</span>
+            </div>
             <div class="info-row">
               <span class="label">备注:</span>
               <span class="value comment">

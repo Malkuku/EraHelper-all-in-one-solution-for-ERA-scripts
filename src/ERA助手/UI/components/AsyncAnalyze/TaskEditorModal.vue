@@ -60,6 +60,13 @@
                 </div>
                 <div class="form-group">
                   <label>
+                    事件名称
+                    <Tooltip content="监听额外的触发事件名称，这代表你可以通过手动发送自定义事件来触发一些任务（在该状态下，即使任务处于关闭状态也会被执行）" placement="top" />
+                  </label>
+                  <input v-model="editingData.event_name" placeholder="输入事件名称..." />
+                </div>
+                <div class="form-group">
+                  <label>
                     API 配置
                     <Tooltip content="使用的api配置名称，此处关联“API配置”部分" placement="top" />
                   </label>
@@ -663,11 +670,11 @@ const applyRegexPresetToLoreRegexItem = (wbKey: string, index: number, presetNam
   if (pattern && validateRegex(pattern)) {
      if (!editingData.value?.world_book?.[wbKey]) return;
      const wbConfig = editingData.value.world_book[wbKey];
-     
+
      if (!Array.isArray(wbConfig.lore_regex)) {
         wbConfig.lore_regex = wbConfig.lore_regex ? [wbConfig.lore_regex] : [];
      }
-     
+
      wbConfig.lore_regex[index] = pattern;
   } else {
     console.error(`Invalid regex pattern for preset: ${presetName}`);
@@ -709,12 +716,12 @@ const ensureArray = (val: any): string[] => {
 const addEmptyLoreRegex = (wbKey: string) => {
   if (!editingData.value?.world_book?.[wbKey]) return;
   const wbConfig = editingData.value.world_book[wbKey];
-  
+
   // 确保是数组
   if (!Array.isArray(wbConfig.lore_regex)) {
     wbConfig.lore_regex = [];
   }
-  
+
   wbConfig.lore_regex.push('');
 };
 
@@ -722,7 +729,7 @@ const addEmptyLoreRegex = (wbKey: string) => {
 const removeLoreRegexItem = (wbKey: string, index: number) => {
   if (!editingData.value?.world_book?.[wbKey]) return;
   const wbConfig = editingData.value.world_book[wbKey];
-  
+
   if (Array.isArray(wbConfig.lore_regex)) {
     wbConfig.lore_regex.splice(index, 1);
   }
@@ -733,12 +740,12 @@ const updateLoreRegexItem = (wbKey: string, index: number, event: Event) => {
   if (!editingData.value?.world_book?.[wbKey]) return;
   const val = (event.target as HTMLInputElement).value;
   const wbConfig = editingData.value.world_book[wbKey];
-  
+
   // 确保是数组
   if (!Array.isArray(wbConfig.lore_regex)) {
     wbConfig.lore_regex = [];
   }
-  
+
   wbConfig.lore_regex[index] = val;
 };
 </script>

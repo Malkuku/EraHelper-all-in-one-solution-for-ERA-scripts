@@ -28,6 +28,9 @@ let filterLockChain = Promise.resolve();
 // [新增] 生成锁，用于解决并行任务中切换预设/宏的竞态问题
 let generationLock = Promise.resolve();
 
+// [新增] 事件监听清理函数列表，用于热切换时取消旧的监听
+let eventListenerCleanups: (() => void)[] = [];
+
 /**
  * 初始化监听器
  */
@@ -36,12 +39,13 @@ const initWatcher = () => {
   const store = getAsyncAnalyzeStore();
   if (!store) return;
 
-  // 监听配置变化，在空闲时预计算黑名单
+  // 监听配置变化，在空闲时预计算黑名单，并更新事件监听
   watch(
     [() => store.activeRuleName, () => store.asyncAnalyzeSetting],
     () => {
       if (!isAnalyzing) {
         updateGlobalBlacklist();
+        updateEventListeners(); // [新增] 配置变化时更新事件监听
       }
     },
     { deep: true }
@@ -49,12 +53,80 @@ const initWatcher = () => {
 
   watcherInitialized = true;
   updateGlobalBlacklist(); // 初始同步
+  updateEventListeners(); // [新增] 初始注册监听
+};
+
+/**
+ * [修改] 更新事件监听器
+ * 修复了清理逻辑：显式保存 handler 引用并通过 eventRemoveListener 移除
+ */
+const updateEventListeners = () => {
+  // 1. 执行清理列表中的所有清理函数
+  if (eventListenerCleanups.length > 0) {
+    eventListenerCleanups.forEach(cleanup => cleanup());
+    eventListenerCleanups = [];
+    // console.log('[AsyncAnalyze] 已清理旧的事件监听器');
+  }
+
+  const store = getAsyncAnalyzeStore();
+  if (!store || !store.activeRuleName) return;
+
+  const rule = store.asyncAnalyzeSetting[store.activeRuleName];
+  if (!rule || !rule.staged_setting) return;
+
+  // 2. 收集所有需要监听的事件名称
+  const eventsToListen = new Set<string>();
+  Object.values(rule.staged_setting).forEach(task => {
+    if (task.event_name && task.event_name.trim() !== '') {
+      eventsToListen.add(task.event_name.trim());
+    }
+  });
+
+  // 3. 注册监听
+  eventsToListen.forEach(eventName => {
+    // [核心修改] 显式定义 handler 函数，以便后续引用
+    const handler = async (...args: any[]) => {
+      eraLogger.info(`捕获到自定义事件触发: ${eventName}`, args);
+
+      const currentMessageId = getLastMessageId();
+      if (currentMessageId === 0) return;
+
+      if (isAnalyzing) {
+        toastr.warning(`事件 ${eventName} 触发，但上一个分析任务尚未完成，已跳过`);
+        return;
+      }
+
+      // 触发分析
+      await handleAsyncAnalyzeTasks(currentMessageId, eventName);
+    };
+
+    try {
+      // 注册监听
+      (window as any).eventOn(eventName, handler);
+
+      // [核心修改] 将“移除该特定 handler”的操作存入清理列表
+      // 这样无论 eventOn 返回什么，我们都能通过 eventRemoveListener 准确移除监听
+      eventListenerCleanups.push(() => {
+        try {
+          (window as any).eventRemoveListener(eventName, handler);
+        } catch (e) {
+          console.warn(`[AsyncAnalyze] 移除监听失败: ${eventName}`, e);
+        }
+      });
+
+    } catch (e) {
+      eraLogger.error(`注册事件监听失败 [${eventName}]:`, e);
+    }
+  });
+
+  if (eventsToListen.size > 0) {
+    console.info(`[AsyncAnalyze] 已注册 ${eventsToListen.size} 个自定义事件监听`);
+  }
 };
 
 /**
  * [核心修复] 预计算黑名单
- * 这个函数负责所有的 IO 操作和正则匹配。
- * 它计算出所有“属于目标世界书”但“不符合保留条件”的条目。
+ * (保持不变)
  */
 const updateGlobalBlacklist = async () => {
   console.info('updateGlobalBlacklist: ', '开始计算黑名单');
@@ -131,6 +203,7 @@ const updateGlobalBlacklist = async () => {
 
 /**
  * [新增] 创建备份快照
+ * (保持不变)
  */
 const createBackup = async (message_id: number, ruleName: string) => {
   const store = getAsyncAnalyzeStore();
@@ -181,6 +254,7 @@ const createBackup = async (message_id: number, ruleName: string) => {
 
 /**
  * [新增] 执行回滚
+ * (保持不变)
  */
 export const performRollback = async (currentMessageId?: number) => {
   const store = getAsyncAnalyzeStore();
@@ -267,7 +341,8 @@ export const handleMessageReceived = async (message_id: number) => {
     toastr.info('开始执行分步分析规则...');
     eraLogger.info(`开始执行分步分析规则: ${store.activeRuleName}`);
 
-    handleAsyncAnalyzeTasks(message_id);
+    // 默认触发，不传 eventName，表示执行常规流程
+    handleAsyncAnalyzeTasks(message_id, '');
 
   } catch (e) {
     eraLogger.error('分步分析主流程异常:', e);
@@ -285,23 +360,52 @@ interface TaskResult {
 
 /**
  * 核心：处理分步分析任务队列
+ * [修改] 增加 triggeringEvent 参数，用于筛选任务
  */
-export const handleAsyncAnalyzeTasks = async (message_id: number) => {
+export const handleAsyncAnalyzeTasks = async (message_id: number, triggeringEvent: string = '') => {
   const store = getAsyncAnalyzeStore();
   const ruleName = store.activeRuleName;
   const currentRule = store.asyncAnalyzeSetting[ruleName];
 
-  if (!currentRule || !currentRule.staged_setting) return;
+  if (!currentRule || !currentRule.staged_setting) {
+    isAnalyzing = false; // 确保异常退出时释放锁
+    return;
+  }
 
+  // 仅在主流程（非事件触发）或明确需要时创建备份
+  // 如果是事件触发的轻量级任务，是否需要备份视需求而定，这里暂时统一备份
   await createBackup(message_id, ruleName);
 
+  // 1. 筛选任务
   const tasks = Object.entries(currentRule.staged_setting).map(([taskName, config]) => ({
     taskName,
     ...config
   }));
-  const enabledTasks = tasks.filter(t => t.enable);
+
+  const enabledTasks = tasks.filter(t => {
+    if (triggeringEvent) {
+      // [核心逻辑修改] 事件触发模式：
+      // 只要 event_name 匹配，无论 enable 是 true 还是 false，都执行。
+      // 这允许通过代码强制触发“隐藏”或“禁用”的任务。
+      return t.event_name === triggeringEvent;
+    } else {
+      // [核心逻辑修改] 默认模式（常规流程）：
+      // 只要 enable 为 true，无论是否有 event_name，都执行。
+      // 这允许一个任务既能在常规流程跑，也能被事件单独触发。
+      return t.enable;
+    }
+  });
+
+  if (enabledTasks.length === 0) {
+    eraLogger.info(`没有找到匹配当前触发条件的任务 (Event: "${triggeringEvent}")`);
+    isAnalyzing = false;
+    return;
+  }
+
+  // 2. 排序 (order)
   const sortedTasks = enabledTasks.sort((a, b) => a.order - b.order);
 
+  // 3. 分组 (并行执行同一 order 的任务)
   const taskGroups = new Map<number, typeof sortedTasks>();
   sortedTasks.forEach(task => {
     if (!taskGroups.has(task.order)) {
@@ -316,8 +420,10 @@ export const handleAsyncAnalyzeTasks = async (message_id: number) => {
   try {
     for (const order of sortedOrders) {
       const groupTasks = taskGroups.get(order)!;
-      eraLogger.log(`正在执行第 ${order} 阶任务组，共 ${groupTasks.length} 个任务`);
-      toastr.info(`正在执行第 ${order} 阶任务组，共 ${groupTasks.length} 个任务`);
+      eraLogger.log(`正在执行第 ${order} 阶任务组，共 ${groupTasks.length} 个任务 (触发源: ${triggeringEvent || 'Default'})`);
+      if (!triggeringEvent) {
+        toastr.info(`正在执行第 ${order} 阶任务组，共 ${groupTasks.length} 个任务`);
+      }
 
       // [核心修复] 并行执行任务，但不立即修改数据，而是收集结果
       const groupResults: TaskResult[] = [];
@@ -326,6 +432,7 @@ export const handleAsyncAnalyzeTasks = async (message_id: number) => {
         const currentFloor = message_id;
         const lastTrigger = task.trigger_history || 0;
 
+        // 检查触发间隔 (仅对默认流程生效，或者事件触发也遵循此规则？通常事件触发是强制的，这里保留逻辑)
         if (task.trigger_index > 1 && (currentFloor - lastTrigger) < task.trigger_index) {
           eraLogger.log(`任务 [${task.taskName}] 跳过: 未达到触发间隔`);
           return;
@@ -370,7 +477,6 @@ export const handleAsyncAnalyzeTasks = async (message_id: number) => {
       await Promise.all(promises);
 
       // [核心修复] 并行任务全部结束后，统一顺序应用修改
-      // 这样可以解决并行修改信息的竞态问题，同时保证下一组任务能获取到更新后的信息
       if (groupResults.length > 0) {
         await applyGroupResults(groupResults, message_id);
       }
@@ -389,7 +495,12 @@ export const handleAsyncAnalyzeTasks = async (message_id: number) => {
         await store.saveModelSettings();
       }
     }
-    toastr.success('所有分步分析任务执行完成');
+
+    if (!triggeringEvent) {
+      toastr.success('所有分步分析任务执行完成');
+    } else {
+      eraLogger.info(`事件 ${triggeringEvent} 触发的任务执行完成`);
+    }
 
   } catch (err) {
     eraLogger.error('分步分析流程发生严重错误，正在回滚...', err);
@@ -400,15 +511,16 @@ export const handleAsyncAnalyzeTasks = async (message_id: number) => {
     // 任务结束后，重新计算一次黑名单，确保最新的世界书变动被捕获
     await updateGlobalBlacklist();
     await eventEmit(ERAEvents.FORCE_SYNC);
-    await eventEmit('kat:handle_era_finished');
+    if (!triggeringEvent) {
+      await eventEmit('kat:handle_era_finished');
+    }
     await setChatMessages([{ message_id: message_id}]);
   }
 };
 
 /**
  * 执行单个任务 - 仅生成和提取，不修改数据
- * [修改] 引入 generationLock 确保生成过程（含预设切换）串行执行
- * [修复] 解决并行任务中 blacklistLores 全局变量被覆盖的竞态问题
+ * (保持不变)
  */
 async function executeSingleTask(task: any, message_id: number): Promise<TaskResult | null> {
   const store = getAsyncAnalyzeStore();
@@ -550,6 +662,7 @@ async function executeSingleTask(task: any, message_id: number): Promise<TaskRes
 
 /**
  * 辅助函数：从文本中提取 <VariableEdit> 并返回 JSON 对象和清理后的文本
+ * (保持不变)
  */
 function extractVariableEdits(content: string): { cleanContent: string, variableEdits: Record<string, any> } {
   const regexInnermost = /<VariableEdit>((?:(?!<VariableEdit>)[\s\S])*?)<\/VariableEdit>/g;
@@ -578,6 +691,7 @@ function extractVariableEdits(content: string): { cleanContent: string, variable
 
 /**
  * [核心修复] 统一应用一组任务的结果
+ * (保持不变)
  */
 async function applyGroupResults(results: TaskResult[], message_id: number) {
   // 1. 合并并应用所有变量修改
@@ -707,13 +821,12 @@ export const reSendEraUpdate = async () => {
   }
 
   toastr.info('开始重算分步分析');
-  await handleAsyncAnalyzeTasks(currentMessageId);
+  // 重算通常意味着手动触发，这里执行默认流程
+  await handleAsyncAnalyzeTasks(currentMessageId, '');
 };
 
 /**
  * [核心修复] 处理世界书过滤
- * 使用 Promise 链 (Mutex) 解决并行过滤的竞态问题
- * 确保同一时间只有一个过滤操作在进行，且按顺序执行
  */
 export const handleLoresFilter = async (lores: any) => {
   // 将本次过滤任务加入 Promise 链
@@ -740,8 +853,6 @@ export const handleLoresFilter = async (lores: any) => {
 
 /**
  * [修复初始化顺序问题]
- * 启动一个轮询检查，等待 AsyncAnalyzeStore 在 window 上挂载完成后再初始化监听器。
- * 避免因脚本加载早于 Store 初始化导致 initWatcher 失败。
  */
 const waitForStoreAndInit = () => {
   const store = getAsyncAnalyzeStore();

@@ -15,6 +15,7 @@ export interface StagedSetting{
   [key: string]:{ //任务配置的名称
     comment: string; //注释文本内容
     enable: boolean; //是否启用
+    event_name: string; //可以被触发的event名称，如果为空则不会通过事件触发
     order: number; //处理顺序,按照从小到大的顺序处理,如果相同则并行。默认为0
     chat_history: number; //读取的最大上下文楼层数，默认为2
     trigger_index: number; //触发的间隔楼层数，默认为1
