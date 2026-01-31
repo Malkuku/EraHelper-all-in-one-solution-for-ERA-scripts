@@ -120,7 +120,7 @@ const updateEventListeners = () => {
   });
 
   if (eventsToListen.size > 0) {
-    console.info(`[AsyncAnalyze] 已注册 ${eventsToListen.size} 个自定义事件监听`);
+    console.info(`[AsyncAnalyze] 已注册 ${eventsToListen.size} 个自定义事件监听`, eventsToListen);
   }
 };
 
@@ -194,6 +194,7 @@ const updateGlobalBlacklist = async () => {
 
     // 更新缓存
     blacklistLores.value = [...new Set(calculatedBlacklist)];
+    eraLogger.info('updateGlobalBlacklist: ', '黑名单计算完成', blacklistLores.value);
 
   } catch (e) {
     eraLogger.error('Failed to update global blacklist:', e);
@@ -797,8 +798,19 @@ async function applyGroupResults(results: TaskResult[], message_id: number) {
             }
           }
         } else if (contentToApply && contentToApply.trim().length > 0) {
-          await WorldInfoUtil.updateOrCreateEntry(world_book, target_lore, contentToApply);
-          eraLogger.info(`任务 [${res.taskName}] 合并 [${mergeKey}]: 世界书条目 [${target_lore}] 已覆盖更新`);
+          // 1. 先尝试获取旧内容
+          const oldContent = await WorldInfoUtil.getWorldBookLoreContent(world_book, target_lore);
+
+          let finalContent = contentToApply;
+
+          // 2. 如果存在旧内容，则换行追加
+          if (oldContent && oldContent.length > 0) {
+            finalContent = oldContent + '\n' + contentToApply;
+          }
+
+          // 3. 更新或创建
+          await WorldInfoUtil.updateOrCreateEntry(world_book, target_lore, finalContent);
+          eraLogger.info(`任务 [${res.taskName}] 合并 [${mergeKey}]: 世界书条目 [${target_lore}] 已追加更新`);
         }
       }
     }

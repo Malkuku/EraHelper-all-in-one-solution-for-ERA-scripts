@@ -46,7 +46,12 @@
                   {{ isGlobalSettings ? '规则组注释' : '任务备注' }}
                   <Tooltip content="注释文本内容" placement="top" />
                 </label>
-                <input v-model="editingData.comment" placeholder="在此输入用途或说明..." />
+                <textarea 
+                  v-model="editingData.comment" 
+                  class="comment-textarea"
+                  placeholder="在此输入用途或说明..."
+                  rows="3"
+                ></textarea>
               </div>
 
               <!-- 仅任务模式显示 -->
@@ -804,6 +809,14 @@ const updateLoreRegexItem = (wbKey: string, index: number, event: Event) => {
         border-color: #4b5563 !important;
         &:focus { border-color: #818cf8 !important; }
       }
+
+      /* 深色模式下注释文本域样式 */
+      .comment-textarea {
+        background: #374151 !important;
+        color: #e2e8f0 !important;
+        border-color: #4b5563 !important;
+        &:focus { border-color: #818cf8 !important; }
+      }
     }
 
     /* 强制深色模式下的标题输入框 */
@@ -1031,6 +1044,14 @@ const updateLoreRegexItem = (wbKey: string, index: number, event: Event) => {
     color: #000000 !important;
 
     &:focus { border-color: #4f46e5; outline: none; }
+  }
+
+  /* 注释文本域特殊样式 */
+  .comment-textarea {
+    min-height: 80px;
+    resize: vertical;
+    font-family: inherit;
+    line-height: 1.5;
   }
 
   &.full-height { flex: 1; display: flex; flex-direction: column; textarea { flex: 1; resize: none; } }
