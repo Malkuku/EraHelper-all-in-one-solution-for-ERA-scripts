@@ -1,19 +1,25 @@
 <template>
-  <div class="modal-mask" :class="{ 'dark-mode': uiStore.darkMode }">
-    <div class="modal-wrapper">
+  <!-- 采用参考文件的遮罩层结构 -->
+  <div class="modal-overlay" @click.self="$emit('close')">
+    <div class="modal-container" :class="{ 'dark-mode': uiStore.darkMode }">
       <div class="regex-tester-layout">
 
-        <!-- 顶部标题栏 -->
-        <div class="modal-header">
-          <h3 class="modal-title">正则调试助手</h3>
-          <button class="close-btn" @click="$emit('close')">×</button>
+        <!-- 标题栏 -->
+        <div class="task-header">
+          <div class="task-title-edit">
+            <span class="label">正则调试助手</span>
+          </div>
+          <div class="task-actions">
+            <button class="btn icon-btn close-btn" @click="$emit('close')">×</button>
+          </div>
         </div>
 
-        <div class="modal-body">
-          <!-- 左侧：列表与管理 -->
-          <div class="sidebar-panel">
-            <div class="sidebar-header">
-              <h4 class="panel-title">已存正则库</h4>
+        <!-- 主体内容：采用 list-editor 左右/上下结构 -->
+        <div class="list-editor">
+
+          <!-- 左侧：正则库列表 (移动端会变到底部) -->
+          <div class="list-sidebar">
+            <div class="sidebar-header-area">
               <FileImportExport
                 accept=".json"
                 import-text="导入"
@@ -26,117 +32,107 @@
               />
             </div>
 
-            <div class="regex-list">
+            <div class="scroll-list custom-scrollbar">
               <div
                 v-for="item in asyncAnalyzeStore.savedRegexConfigs"
                 :key="item.id"
-                class="list-item"
+                class="sub-item"
                 :class="{ active: currentId === item.id }"
                 @click="loadConfig(item)"
               >
-                <div class="item-info">
-                  <div class="item-name">{{ item.name }}</div>
-                  <!-- [修改] 直接显示存储的 regex 字符串 -->
-                  <div class="item-pattern">{{ item.regex }}</div>
-                </div>
-                <button class="delete-btn" @click.stop="deleteConfig(item.id)">×</button>
+                <div class="item-name">{{ item.name }}</div>
+                <div class="item-pattern">{{ item.regex }}</div>
+                <button class="delete-icon" @click.stop="deleteConfig(item.id)">×</button>
               </div>
 
-              <div v-if="asyncAnalyzeStore.savedRegexConfigs.length === 0" class="empty-list">
-                暂无保存的正则配置
+              <div v-if="asyncAnalyzeStore.savedRegexConfigs.length === 0" class="empty-sub">
+                暂无配置
               </div>
             </div>
 
-            <div class="sidebar-footer">
-              <button class="btn full-width" @click="createNew">
-                + 新建配置
-              </button>
+            <div class="sidebar-footer-area">
+              <button class="btn primary full small" @click="createNew">+ 新建配置</button>
             </div>
           </div>
 
-          <!-- 右侧：编辑与测试 -->
-          <div class="main-panel">
-            <!-- 顶部保存栏 -->
-            <div class="config-bar">
-              <div class="input-group flex-1">
-                <label>配置名称:</label>
-                <input v-model="currentName" type="text" class="form-input" placeholder="给这个正则起个名字" />
+          <!-- 右侧：编辑与测试区 -->
+          <div class="list-content custom-scrollbar">
+
+            <!-- 顶部：配置名称与保存 -->
+            <div class="form-grid two-col-mobile">
+              <div class="form-group flex-grow">
+                <label>配置名称</label>
+                <input
+                  v-model="currentName"
+                  type="text"
+                  placeholder="给这个正则起个名字"
+                />
               </div>
-              <button class="btn primary" @click="saveCurrentConfig" :disabled="!currentName">
-                {{ currentId ? '更新保存' : '保存为新配置' }}
-              </button>
+              <div class="form-group no-label-align">
+                <button class="btn primary full" @click="saveCurrentConfig" :disabled="!currentName">
+                  {{ currentId ? '更新保存' : '保存新配置' }}
+                </button>
+              </div>
             </div>
 
-            <!-- 正则输入区 -->
-            <div class="section-card flex-1">
-              <h4 class="section-title">正则调试</h4>
+            <!-- 正则输入 -->
+            <div class="form-group">
+              <label>
+                正则表达式
+                <span class="tip inline-tip">例如: /pattern/flags</span>
+              </label>
+              <input
+                v-model="regexInputString"
+                type="text"
+                class="code-font"
+                :class="{ 'input-error': errorMsg }"
+                placeholder="/(\d+)岁/g"
+              />
+              <div v-if="errorMsg" class="error-msg">{{ errorMsg }}</div>
+            </div>
 
-              <div class="regex-input-area">
-                <div class="input-group flex-1">
-                  <!-- 不需要选择修饰符，用户输入的字符串就是带修饰的正则 -->
-                  <label>正则表达式 (例如: /pattern/flags 或 直接输入 pattern):</label>
-                  <input
-                    v-model="regexInputString"
-                    type="text"
-                    class="form-input code-font"
-                    :class="{ 'input-error': errorMsg }"
-                    placeholder="/(\d+)岁/g"
-                  />
-                </div>
+            <!-- 预览区 (运行时提取) -->
+            <div class="preview-box" v-if="runtimePreview.length > 0">
+              <div class="preview-title">🚀 运行时提取预览 (实际保存内容)</div>
+              <div class="preview-items custom-scrollbar">
+                <div v-for="(text, idx) in runtimePreview" :key="idx" class="p-item">{{ text }}</div>
+              </div>
+            </div>
+
+            <!-- 测试文本与结果 (上下分栏) -->
+            <div class="test-split-area">
+              <!-- 测试文本 -->
+              <div class="form-group full-height">
+                <label>测试文本</label>
+                <textarea
+                  v-model="testText"
+                  class="code-font"
+                  placeholder="在此粘贴需要匹配的文本..."
+                ></textarea>
               </div>
 
-              <div v-if="errorMsg" class="error-banner">⚠️ {{ errorMsg }}</div>
+              <!-- 匹配结果 -->
+              <div class="form-group full-height result-group">
+                <label>
+                  匹配详情
+                  <span v-if="matches.length" class="badge">{{ matches.length }}</span>
+                </label>
 
-              <!-- 测试分栏 -->
-              <div class="split-view">
-                <div class="split-pane">
-                  <label class="pane-label">测试文本</label>
-                  <textarea
-                    v-model="testText"
-                    class="form-textarea code-font"
-                    placeholder="在此粘贴需要匹配的文本..."
-                  ></textarea>
-                </div>
+                <div class="results-box custom-scrollbar">
+                  <div v-if="matches.length === 0" class="empty-state">
+                    {{ testText ? '未找到匹配项' : '等待输入...' }}
+                  </div>
 
-                <div class="split-pane">
-                  <label class="pane-label">
-                    匹配详情 <span v-if="matches.length" class="badge">{{ matches.length }}</span>
-                  </label>
-
-                  <!-- 结果展示区 -->
-                  <div class="results-container">
-
-                    <!-- 新增：运行时提取预览 -->
-                    <div class="preview-section" v-if="runtimePreview.length > 0">
-                      <div class="preview-header">
-                        <span class="preview-title">🚀 运行时提取预览 (实际保存内容)</span>
+                  <div v-else class="match-list">
+                    <div v-for="(match, index) in matches" :key="index" class="match-card">
+                      <div class="match-header">
+                        <span class="m-index">#{{ index + 1 }}</span>
+                        <span class="m-content">{{ match[0] }}</span>
                       </div>
-                      <div class="preview-content">
-                        <div v-for="(text, idx) in runtimePreview" :key="idx" class="preview-item">
-                          {{ text }}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div v-if="matches.length === 0" class="empty-state">
-                      {{ testText ? '未找到匹配项' : '等待输入...' }}
-                    </div>
-
-                    <div v-else class="match-list">
-                      <div class="list-divider">详细匹配信息</div>
-                      <div v-for="(match, index) in matches" :key="index" class="match-item">
-                        <div class="match-header">
-                          <span class="match-index">#{{ index + 1 }}</span>
-                          <div class="match-full">{{ match[0] }}</div>
-                        </div>
-                        <div v-if="match.length > 1" class="capture-groups">
-                          <div v-for="(group, gIndex) in match.slice(1)" :key="gIndex" class="group-item">
-                            <span class="group-label">${{ gIndex + 1 }}:</span>
-                            <div class="group-value">{{ group }}</div>
-                          </div>
-                        </div>
-                        <div v-else class="no-groups-hint">
-                          (无捕获组，运行时将提取完整匹配)
+                      <div v-if="match.length > 1" class="m-groups">
+                        <div v-for="(group, gIndex) in match.slice(1)" :key="gIndex" class="g-row">
+                          <span class="g-label">${{ gIndex + 1 }}:</span>
+                          <span class="g-val">{{ group }}</span>
                         </div>
                       </div>
                     </div>
@@ -144,6 +140,7 @@
                 </div>
               </div>
             </div>
+
           </div>
         </div>
       </div>
@@ -170,7 +167,7 @@ const regexInputString = ref('/.*/g');
 const testText = ref('');
 const errorMsg = ref('');
 
-// [新增] 计算运行时实际会提取的内容
+// 计算运行时实际会提取的内容
 const runtimePreview = computed(() => {
   if (!regexInputString.value || !testText.value) return [];
   return RegexUtils.extractContentByRegex(testText.value, regexInputString.value);
@@ -183,20 +180,10 @@ const matches = computed(() => {
   if (!regexInputString.value || !testText.value) return [];
 
   try {
-    // 使用统一的解析逻辑
     const { pattern, flags } = RegexUtils.parseRegexString(regexInputString.value);
     if (!pattern) return [];
 
-    // 强制使用 'g' 以便 matchAll 能工作并显示所有结果，
-    // 即使 parseRegexString 返回的 flags 没有 g (例如默认 s)，
-    // 在调试器中我们也希望能看到所有潜在匹配。
-    // 但为了准确性，我们应该尽量尊重用户输入。
-    // 如果用户输入 raw string，parseRegexString 返回 's'。
-    // 这里为了展示列表，我们临时添加 'g' 如果它不存在?
-    // 不，为了严谨，我们应该完全遵循 parseRegexString 的结果。
-    // 但是 matchAll 必须要有 'g' 标志吗？在 ES2020 中，String.prototype.matchAll 要求正则必须有 /g 标志。
-    // 所以如果 flags 里没有 g，我们需要加上，仅用于这里的展示。
-
+    // 强制加上 g 标志以便 matchAll 显示所有结果
     let displayFlags = flags;
     if (!displayFlags.includes('g')) {
       displayFlags += 'g';
@@ -223,24 +210,16 @@ const createNew = () => {
 const loadConfig = (config: SavedRegexConfig) => {
   currentId.value = config.id;
   currentName.value = config.name;
-  // [修改] 直接读取完整字符串，不再拼接
   regexInputString.value = config.regex;
 };
 
 const saveCurrentConfig = async () => {
   if (!currentName.value) return;
 
-  // [修改] 不再解析 pattern 和 flags，直接保存用户输入的字符串
-  // 可以在这里加一个简单的校验，确保字符串看起来像正则
-  if (!regexInputString.value.startsWith('/')) {
-     // 可选：如果用户没输 /，可以提示或者自动补全，这里假设用户输入正确
-  }
-
   const newConfig: SavedRegexConfig = {
     id: currentId.value || Date.now().toString(),
     name: currentName.value,
-    regex: regexInputString.value, // 直接保存
-    // pattern, flags 字段已移除
+    regex: regexInputString.value,
   };
 
   if (currentId.value) {
@@ -254,7 +233,6 @@ const saveCurrentConfig = async () => {
   }
 
   await asyncAnalyzeStore.saveModelSettings();
-  // toastr.success('保存成功'); // 假设环境有 toastr
 };
 
 const deleteConfig = async (id: string) => {
@@ -284,19 +262,18 @@ const handleImport = async (content: string) => {
   try {
     const parsed = JSON.parse(content);
     if (!Array.isArray(parsed)) throw new Error('格式错误');
-    
-    // [修改] 兼容性处理：如果导入的是旧版数据(有pattern)，转为新版；如果是新版(有regex)，直接用
+
     const validConfigs = parsed.map((item: any) => {
-        if (item.regex) return item;
-        if (item.pattern) {
-            return {
-                id: item.id || Date.now().toString() + Math.random(),
-                name: item.name,
-                regex: `/${item.pattern}/${item.flags || ''}`,
-                note: item.note
-            };
-        }
-        return null;
+      if (item.regex) return item;
+      if (item.pattern) {
+        return {
+          id: item.id || Date.now().toString() + Math.random(),
+          name: item.name,
+          regex: `/${item.pattern}/${item.flags || ''}`,
+          note: item.note
+        };
+      }
+      return null;
     }).filter(item => item && item.name && item.regex);
 
     if (validConfigs.length === 0) throw new Error('无有效数据');
@@ -314,532 +291,300 @@ const handleMessage = (msg: string, type: string) => console.log(`[${type}] ${ms
 </script>
 
 <style scoped lang="scss">
-/* 保持原有样式，新增 Preview 样式 */
-.modal-mask {
+/* 复用参考文件的基础 Modal 样式 */
+.modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 9999;
+  z-index: 1000;
 }
 
-.modal-wrapper {
-  width: 90vw;
+.modal-container {
+  width: 90%;
+  max-width: 1000px;
   height: 85vh;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-}
+  color: #000000;
 
-.modal-header {
-  padding: 15px 20px;
-  border-bottom: 1px solid #e5e7eb;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #f9fafb;
+  &.dark-mode {
+    background: #1f2937;
+    color: #e2e8f0;
 
-  .modal-title {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 700;
-    color: #111827;
+    .task-header { border-bottom-color: #374151; }
+    .label { color: #e2e8f0 !important; }
+    .close-btn { color: #e2e8f0; &:hover { background: #374151; } }
+
+    .list-editor { border-color: #4b5563; }
+    .list-sidebar { background: #111827; border-right-color: #4b5563; }
+    .list-content { background: #1f2937; }
+
+    .sub-item {
+      color: #9ca3af; border-bottom-color: #4b5563;
+      &:hover { background: #374151; }
+      &.active { background: #1f2937; color: #818cf8; }
+    }
+    .item-name { color: #e2e8f0; }
+    .empty-sub { color: #9ca3af; }
+
+    .form-group {
+      label { color: #e2e8f0 !important; }
+      input, textarea {
+        background: #374151 !important;
+        color: #e2e8f0 !important;
+        border-color: #4b5563 !important;
+        &:focus { border-color: #818cf8 !important; }
+      }
+    }
+
+    .results-box { background: #111827; border-color: #374151; }
+    .match-card { background: #1f2937; border-color: #374151; }
+    .m-content { background: #064e3b; color: #34d399; border-color: #065f46; }
+    .g-val { background: #374151; color: #e2e8f0; }
+
+    .preview-box { background: #064e3b; border-color: #065f46; }
+    .preview-title { background: #065f46; color: #a7f3d0; }
+    .p-item { color: #d1fae5; border-bottom-color: #047857; }
+
+    .btn.primary { background: #4f46e5; color: #fff; }
+    .btn { background: #374151; color: #e2e8f0; border-color: #4b5563; }
   }
-
-  .close-btn {
-    background: none;
-    border: none;
-    font-size: 24px;
-    color: #6b7280;
-    cursor: pointer;
-    line-height: 1;
-    &:hover { color: #111827; }
-  }
-}
-
-.modal-body {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
-  padding: 15px;
-  gap: 15px;
 }
 
 .regex-tester-layout {
   display: flex;
   flex-direction: column;
-  width: 100%;
   height: 100%;
+  padding: 15px;
 }
 
-/* 侧边栏样式 */
-.sidebar-panel {
-  width: 240px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-}
-
-.sidebar-header {
-  padding: 12px;
-  border-bottom: 1px solid #e5e7eb;
-
-  .panel-title {
-    margin: 0 0 10px 0;
-    font-size: 15px;
-    font-weight: 700;
-    color: #111827;
-  }
-}
-
-.regex-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px;
-}
-
-.list-item {
-  padding: 8px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  margin-bottom: 4px;
-  border: 1px solid transparent;
+/* Header */
+.task-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  transition: all 0.2s;
-
-  &:hover {
-    background: #f3f4f6;
-  }
-
-  &.active {
-    background: #e0e7ff;
-    border-color: #c7d2fe;
-    .item-name { color: #312e81; font-weight: 600; }
-  }
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
 }
 
-.item-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.item-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1f2937;
-  margin-bottom: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.item-pattern {
-  font-size: 12px;
-  color: #4b5563;
-  font-family: monospace;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.delete-btn {
-  opacity: 0;
-  background: none;
-  border: none;
-  color: #dc2626;
-  font-size: 18px;
-  cursor: pointer;
-  padding: 0 5px;
-
-  .list-item:hover & { opacity: 1; }
-}
-
-.empty-list {
-  text-align: center;
-  color: #6b7280;
-  font-size: 13px;
-  margin-top: 20px;
-}
-
-.sidebar-footer {
-  padding: 10px;
-  border-top: 1px solid #e5e7eb;
-}
-
-/* 主区域样式 */
-.main-panel {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  min-width: 0;
-}
-
-.config-bar {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 10px 15px;
-  display: flex;
-  gap: 10px;
-  align-items: flex-end;
-}
-
-.section-card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 15px;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.section-title {
-  margin: 0 0 15px 0;
+.task-title-edit .label {
   font-size: 16px;
   font-weight: 700;
   color: #111827;
-  border-left: 4px solid #4f46e5;
-  padding-left: 8px;
 }
 
-/* 通用表单样式 */
-.input-group {
+.close-btn {
+  font-size: 24px;
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 4px; background: transparent; border: none; cursor: pointer; color: #111827;
+  &:hover { background: #f3f4f6; }
+}
+
+/* List Editor Layout */
+.list-editor {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-
-  label {
-    font-size: 13px;
-    font-weight: 600;
-    color: #000000 !important;
-  }
-}
-
-.form-input, .form-textarea {
-  padding: 8px 12px;
+  flex: 1;
   border: 1px solid #d1d5db;
   border-radius: 6px;
-  font-size: 14px;
-  background: #ffffff !important;
-  color: #000000 !important;
-
-  &:focus {
-    outline: none;
-    border-color: #4f46e5;
-    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
-  }
+  overflow: hidden;
 }
 
-.form-textarea {
-  resize: none;
-  height: 100%;
-  min-height: 150px;
+.list-sidebar {
+  width: 220px;
+  border-right: 1px solid #d1d5db;
+  display: flex;
+  flex-direction: column;
+  background: #f9fafb;
+  flex-shrink: 0;
+}
+
+.sidebar-header-area { padding: 8px; border-bottom: 1px solid #e5e7eb; }
+.sidebar-footer-area { padding: 8px; border-top: 1px solid #e5e7eb; }
+
+.scroll-list { flex: 1; overflow-y: auto; }
+
+.sub-item {
+  padding: 8px 10px;
+  cursor: pointer;
+  border-bottom: 1px solid #e5e7eb;
+  position: relative;
+  &:hover { background: #e5e7eb; }
+  &.active { background: #ffffff; border-left: 3px solid #4f46e5; }
+
+  .item-name { font-size: 13px; font-weight: 600; color: #1f2937; margin-bottom: 2px; }
+  .item-pattern { font-size: 11px; color: #6b7280; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .delete-icon {
+    position: absolute; right: 5px; top: 5px;
+    background: none; border: none; color: #ef4444; font-size: 16px; cursor: pointer; opacity: 0;
+  }
+  &:hover .delete-icon { opacity: 1; }
+}
+
+.empty-sub { padding: 20px; text-align: center; color: #6b7280; font-size: 12px; }
+
+/* Main Content */
+.list-content {
+  flex: 1;
+  padding: 12px;
+  overflow-y: auto;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Forms */
+.form-grid {
+  display: flex; gap: 10px;
+  .flex-grow { flex: 1; }
+  .no-label-align { display: flex; align-items: flex-end; padding-bottom: 1px; }
+}
+
+.form-group {
+  margin-bottom: 0;
+  label {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 700; color: #000000; margin-bottom: 4px;
+  }
+  input, textarea {
+    width: 100%; padding: 6px 8px;
+    border: 1px solid #d1d5db; border-radius: 4px;
+    font-size: 13px; background: #ffffff; color: #000000;
+    &:focus { border-color: #4f46e5; outline: none; }
+  }
+  &.full-height { flex: 1; display: flex; flex-direction: column; textarea { flex: 1; resize: none; min-height: 80px; } }
 }
 
 .code-font { font-family: 'Menlo', 'Monaco', 'Consolas', monospace; }
-.flex-1 { flex: 1; }
-.full-width { width: 100%; }
+.tip { font-size: 11px; color: #6b7280; font-weight: 400; }
+.error-msg { color: #dc2626; font-size: 11px; margin-top: 2px; }
+.input-error { border-color: #dc2626 !important; background: #fef2f2 !important; }
 
+/* Preview & Results */
+.preview-box {
+  border: 1px solid #d1fae5; background: #ecfdf5; border-radius: 4px; overflow: hidden; flex-shrink: 0;
+}
+.preview-title { background: #d1fae5; padding: 4px 8px; font-size: 11px; font-weight: 700; color: #065f46; }
+.preview-items { padding: 6px; max-height: 80px; overflow-y: auto; }
+.p-item { font-family: monospace; font-size: 12px; color: #064e3b; border-bottom: 1px dashed #a7f3d0; margin-bottom: 4px; }
+
+.test-split-area {
+  display: flex; flex-direction: column; gap: 10px; flex: 1; min-height: 200px;
+}
+
+.results-box {
+  flex: 1; border: 1px solid #d1d5db; border-radius: 4px; background: #f9fafb; padding: 8px; overflow-y: auto;
+}
+
+.badge { background: #e0e7ff; color: #312e81; padding: 1px 6px; border-radius: 8px; font-size: 10px; }
+.empty-state { text-align: center; color: #9ca3af; font-size: 12px; margin-top: 20px; }
+
+.match-card {
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 4px; padding: 6px; margin-bottom: 6px;
+}
+.match-header { display: flex; gap: 6px; align-items: flex-start; margin-bottom: 4px; }
+.m-index { font-size: 10px; color: #6b7280; font-family: monospace; margin-top: 2px; }
+.m-content {
+  flex: 1; font-family: monospace; font-size: 12px; color: #047857; background: #f0fdf4;
+  padding: 2px 4px; border-radius: 2px; border: 1px solid #d1fae5; word-break: break-all;
+}
+.m-groups { border-top: 1px dashed #e5e7eb; padding-top: 4px; margin-top: 4px; }
+.g-row { display: flex; gap: 4px; font-family: monospace; font-size: 11px; margin-top: 2px; }
+.g-label { color: #6b7280; min-width: 20px; }
+.g-val { color: #1f2937; background: #f3f4f6; padding: 0 4px; border-radius: 2px; flex: 1; word-break: break-all; }
+
+/* Buttons */
 .btn {
-  padding: 8px 16px;
-  border-radius: 6px;
-  border: 1px solid #d1d5db;
-  background: #fff;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  color: #1f2937;
-
-  &:hover:not(:disabled) { background: #f3f4f6; }
+  padding: 6px 12px; border-radius: 4px; border: 1px solid #d1d5db; cursor: pointer; font-size: 12px; font-weight: 500; background: #fff; color: #1f2937;
+  &.primary { background: #4f46e5; color: white; border-color: #4f46e5; &:hover { background: #4338ca; } }
+  &.full { width: 100%; }
+  &.small { padding: 4px 8px; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
-
-  &.primary {
-    background: #4f46e5;
-    color: white;
-    border-color: #4f46e5;
-    &:hover:not(:disabled) { background: #4338ca; }
-  }
 }
 
-.regex-input-area {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 15px;
+/* Custom Scrollbar */
+.custom-scrollbar {
+  &::-webkit-scrollbar { width: 4px; height: 4px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+  &::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
 }
 
-.error-banner {
-  background-color: #fef2f2;
-  color: #b91c1c;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 13px;
-  margin-bottom: 10px;
-  border: 1px solid #fecaca;
-}
-
-/* Split View */
-.split-view {
-  display: flex;
-  gap: 15px;
-  flex: 1;
-  min-height: 0;
-  width: 100%;
-}
-
-.split-pane {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.pane-label {
-  font-size: 13px;
-  font-weight: 700;
-  color: #374151;
-  margin-bottom: 8px;
-  display: flex;
-  justify-content: space-between;
-}
-
-.badge {
-  background: #e0e7ff;
-  color: #312e81;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.results-container {
-  flex: 1;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  background: #f9fafb;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 10px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* Preview Section */
-.preview-section {
-  margin-bottom: 15px;
-  border: 1px solid #d1fae5;
-  background: #ecfdf5;
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.preview-header {
-  background: #d1fae5;
-  padding: 6px 10px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #065f46;
-}
-
-.preview-content {
-  padding: 10px;
-}
-
-.preview-item {
-  font-family: monospace;
-  font-size: 13px;
-  color: #064e3b;
-  white-space: pre-wrap;
-  word-break: break-all;
-  margin-bottom: 8px;
-  border-bottom: 1px dashed #a7f3d0;
-  padding-bottom: 8px;
-  &:last-child { margin-bottom: 0; border-bottom: none; padding-bottom: 0; }
-}
-
-.list-divider {
-  font-size: 11px;
-  color: #9ca3af;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin: 10px 0 5px 0;
-  font-weight: 700;
-}
-
-.empty-state {
-  color: #6b7280;
-  text-align: center;
-  margin-top: 40px;
-  font-size: 13px;
-}
-
-.match-item {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  padding: 10px;
-  margin-bottom: 8px;
-  font-size: 13px;
-  width: 100%;
-  box-sizing: border-box;
-  overflow: hidden;
-}
-
-.match-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin-bottom: 6px;
-  width: 100%;
-  min-width: 0;
-}
-
-.match-index {
-  color: #6b7280;
-  font-size: 11px;
-  font-family: monospace;
-  flex-shrink: 0;
-  margin-top: 4px;
-}
-
-.match-full {
-  color: #047857;
-  font-family: monospace;
-  font-weight: 700;
-  display: block;
-  flex: 1;
-  width: 100%;
-  overflow: auto;
-  white-space: pre-wrap;
-  word-break: break-all;
-  max-height: 300px;
-  background: #f0fdf4;
-  padding: 4px 8px;
-  border-radius: 4px;
-  border: 1px solid #d1fae5;
-}
-
-.capture-groups {
-  margin-top: 6px;
-  padding-top: 6px;
-  border-top: 1px dashed #e5e7eb;
-}
-
-.no-groups-hint {
-  font-size: 11px;
-  color: #9ca3af;
-  font-style: italic;
-  margin-top: 4px;
-}
-
-.group-item {
-  display: flex;
-  gap: 8px;
-  margin-top: 4px;
-  font-family: monospace;
-  align-items: flex-start;
-  width: 100%;
-  min-width: 0;
-}
-
-.group-label {
-  color: #4b5563;
-  font-size: 11px;
-  min-width: 24px;
-  font-weight: 600;
-  flex-shrink: 0;
-  margin-top: 4px;
-}
-
-.group-value {
-  color: #1f2937;
-  display: block;
-  flex: 1;
-  width: 100%;
-  overflow: auto;
-  white-space: pre-wrap;
-  word-break: break-all;
-  max-height: 200px;
-  background: #f3f4f6;
-  padding: 4px 8px;
-  border-radius: 4px;
-}
-
-/* Dark Mode */
-.dark-mode {
-  .modal-wrapper { background: #1f2937; }
-  .modal-header { background: #111827; border-color: #374151; }
-  .modal-title { color: #f3f4f6; }
-  .close-btn { color: #9ca3af; &:hover { color: #fff; } }
-
-  .sidebar-panel, .config-bar, .section-card { background: #1f2937; border-color: #374151; }
-  .sidebar-header, .sidebar-footer { border-color: #374151; }
-  .panel-title, .section-title { color: #f3f4f6; }
-
-  .list-item {
-    &:hover { background: #374151; }
-    &.active { background: #312e81; border-color: #4338ca; .item-name { color: #a5b4fc; } }
-  }
-  .item-name { color: #e5e7eb; }
-  .item-pattern { color: #9ca3af; }
-
-  .input-group label, .pane-label { color: #d1d5db !important; }
-
-  .form-input, .form-textarea {
-    background: #374151 !important;
-    border-color: #4b5563;
-    color: #f3f4f6 !important;
-    &:focus { border-color: #818cf8; background: #1f2937 !important; }
+/* =========================================
+   移动端适配 (Max Width 768px)
+   ========================================= */
+@media (max-width: 768px) {
+  .modal-overlay {
+    align-items: flex-start; /* 顶部对齐，防止键盘顶起时居中计算错误 */
   }
 
-  .results-container { background: #111827; border-color: #374151; }
-  .match-item { background: #1f2937; border-color: #374151; }
-
-  .match-full {
-    color: #34d399;
-    background: #064e3b;
-    border-color: #065f46;
+  .modal-container {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    border-radius: 0;
   }
 
-  .group-value {
-    color: #e5e7eb;
-    background: #374151;
+  .regex-tester-layout {
+    padding: 10px;
   }
 
-  .group-label { color: #9ca3af; }
-
-  .btn {
-    background: #374151; border-color: #4b5563; color: #e5e7eb;
-    &:hover:not(:disabled) { background: #4b5563; }
-    &.primary { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+  .list-editor {
+    flex-direction: column; /* 垂直排列 */
+    border: none; /* 移动端去掉边框以节省空间 */
   }
 
-  .preview-section {
-    border-color: #065f46;
-    background: #064e3b;
+  /* 调整顺序：编辑区在上方(order 1)，列表区在下方(order 2) */
+  .list-content {
+    order: 1;
+    flex: 1; /* 占据主要空间 */
+    border-bottom: 1px solid #e5e7eb;
+    padding: 0 0 10px 0; /* 减少内边距 */
   }
-  .preview-header {
-    background: #065f46;
-    color: #a7f3d0;
+
+  .list-sidebar {
+    order: 2;
+    width: 100%;
+    height: 160px; /* 固定底部高度 */
+    border-right: none;
+    border-top: 1px solid #d1d5db;
   }
-  .preview-item {
-    color: #d1fae5;
-    border-bottom-color: #047857;
+
+  /* 移动端表单调整 */
+  .two-col-mobile {
+    flex-direction: row; /* 保持并排，按钮小一点 */
+    .form-group { margin-bottom: 8px; }
   }
+
+  .test-split-area {
+    min-height: 0; /* 允许收缩 */
+  }
+
+  .result-group {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .results-box {
+    min-height: 100px; /* 保证结果区最小高度 */
+  }
+
+  .delete-icon { opacity: 1; color: #ef4444; font-size: 18px; padding: 5px; }
 }
 </style>
