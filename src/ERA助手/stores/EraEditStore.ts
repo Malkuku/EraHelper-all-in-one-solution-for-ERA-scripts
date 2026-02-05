@@ -114,7 +114,7 @@ export const useEraEditStore = defineStore('KatEraEdit', () => {
     if (Object.keys(toInsert).length > 0) await ERAUtil.InsertByObject(toInsert);
 
     /* 4. 强制同步 */
-    await ERAUtil.ForceSync(ERAEvents.SYNC_MODE.LATEST);
+    await ERAUtil.ForceSync(ERAEvents.SYNC_MODE.AUTO);
   };
 
   return {

@@ -5,7 +5,7 @@ import { useUiStore } from '@/ERA助手/stores/UIStore';
 const uiStore = useUiStore();
 
 // 当前版本号
-const currentVersion = ref('v2.0.0');
+const currentVersion = ref('v2.1.0');
 
 // 作者信息
 const author = ref({
@@ -15,6 +15,16 @@ const author = ref({
 
 // 版本更新历史记录
 const versionHistory = ref([
+  {
+    version: 'v2.1.0',
+    date: '2026-02-5',
+    changes: [
+      '添加一键勾选世界书条目，一键反选的功能',
+      '增加了一个“kat:resend_era_update”事件，可以用于触发变量重算',
+      'fix:正文中输出的ERA可能不会被handle规则处理',
+      'fix:ERA变量编辑后有时候不会正确生效'
+    ],
+  },
   {
     version: 'v2.0.0',
     date: '2026-01-29',

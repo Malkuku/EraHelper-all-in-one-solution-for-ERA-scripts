@@ -360,6 +360,59 @@ interface TaskResult {
 }
 
 /**
+ * 处理正文中的变量修改
+ * 当没有配置任务时，尝试从正文中提取并应用变量
+ */
+async function processMainMessageVariables(message_id: number) {
+  try {
+    const msgContent = MessageUtil.getMessageById(message_id);
+    if (!msgContent) return;
+
+    const { variableEdits } = extractVariableEdits(msgContent);
+
+    if (Object.keys(variableEdits).length === 0) return;
+
+    eraLogger.info('检测到正文中包含 VariableEdit，正在处理...');
+
+    // 应用变量修改
+    let newVariableStateString = '';
+    try {
+      const snapshotData = await getEraEditStore().getStatData();
+      if (snapshotData != null) {
+        const rules = getEraDataStore().eraDataRule;
+        const { data: updatedData } = await EraDataHandler.applyRule(variableEdits, snapshotData, rules);
+        const updatedContent = JSON.stringify(updatedData);
+        newVariableStateString = `<VariableEdit>\n${updatedContent}\n</VariableEdit>`;
+      }
+    } catch (e) {
+      eraLogger.error('变量更新失败：', e);
+      return;
+    }
+
+    // 更新正文内容
+    if (newVariableStateString) {
+      const regexInnermost = /<VariableEdit>((?:(?!<VariableEdit>)[\s\S])*?)<\/VariableEdit>/g;
+      let isFirstMatch = true;
+      const finalResultContent = msgContent.replace(regexInnermost, () => {
+        if (isFirstMatch) {
+          isFirstMatch = false;
+          return newVariableStateString;
+        } else {
+          return '';
+        }
+      });
+
+      if (finalResultContent !== msgContent) {
+        await setChatMessages([{ message_id, message: finalResultContent }]);
+        eraLogger.info('正文变量已更新并回写');
+      }
+    }
+  } catch (e) {
+    eraLogger.error('处理正文变量时出错:', e);
+  }
+}
+
+/**
  * 核心：处理分步分析任务队列
  * [修改] 增加 triggeringEvent 参数，用于筛选任务
  */
@@ -399,8 +452,12 @@ export const handleAsyncAnalyzeTasks = async (message_id: number, triggeringEven
 
   if (enabledTasks.length === 0) {
     eraLogger.info(`没有找到匹配当前触发条件的任务 (Event: "${triggeringEvent}")`);
-    isAnalyzing = false;
-    return;
+    // [核心修改] 即使没有任务，也尝试处理正文中的变量
+    await processMainMessageVariables(message_id);
+
+    // [核心修改] 移除 return，让代码继续执行以触发 finally 块中的清理和同步逻辑
+    // isAnalyzing = false;
+    // return;
   }
 
   // 2. 排序 (order)
@@ -521,7 +578,6 @@ export const handleAsyncAnalyzeTasks = async (message_id: number, triggeringEven
 
 /**
  * 执行单个任务 - 仅生成和提取，不修改数据
- * (保持不变)
  */
 async function executeSingleTask(task: any, message_id: number): Promise<TaskResult | null> {
   const store = getAsyncAnalyzeStore();

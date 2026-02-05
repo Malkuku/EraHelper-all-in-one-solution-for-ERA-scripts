@@ -7,6 +7,7 @@ import {
   //handleEraRulesOnMessageReceived,
   handleLoresFilter,
   handleMessageReceived,
+  reSendEraUpdate,
 } from '../AsyncAnalyze/handleAsyncAnalyzeEvents';
 import { useAsyncAnalyzeStore } from '../stores/AsyncAnalyzeStore';
 import { router } from './router/router';
@@ -104,7 +105,7 @@ $(() => {
   // 监听事件
   eventOn(tavern_events.WORLDINFO_ENTRIES_LOADED, handleLoresFilter);
   eventOn(tavern_events.MESSAGE_RECEIVED, handleMessageReceived);
-  //eventOn(tavern_events.MESSAGE_RECEIVED, handleEraRulesOnMessageReceived);
+  eventOn('kat:resend_era_update', reSendEraUpdate);
 
   // eventOn('kat:handle_era_finished', async ()=>{
   //

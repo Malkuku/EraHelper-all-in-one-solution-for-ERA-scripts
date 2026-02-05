@@ -200,6 +200,26 @@
                     </label>
                     <div class="tip">从下拉框选择条目，或手动输入</div>
 
+                    <div class="selection-controls mb-2">
+                      <button 
+                        class="btn small secondary" 
+                        :disabled="!currentBookLores.length || loadingLores"
+                        @click="selectAllLores(currentWbKey)"
+                      >
+                        ✓ 全选
+                      </button>
+                      <button 
+                        class="btn small secondary" 
+                        :disabled="!currentBookLores.length || loadingLores"
+                        @click="invertSelection(currentWbKey)"
+                      >
+                        ↻ 反选
+                      </button>
+                      <span class="selection-info">
+                        已选 {{ getSelectedCount(currentWbKey) }}/{{ currentBookLores.length }} 项
+                      </span>
+                    </div>
+
                     <SearchableSelect
                       v-model="editingData.world_book[currentWbKey].lores"
                       :options="currentBookLores"
@@ -753,6 +773,34 @@ const updateLoreRegexItem = (wbKey: string, index: number, event: Event) => {
 
   wbConfig.lore_regex[index] = val;
 };
+
+// --- 新增：世界书条目选择控制函数 ---
+
+// 全选当前世界书的所有条目
+const selectAllLores = (wbKey: string) => {
+  if (!editingData.value?.world_book?.[wbKey] || !currentBookLores.value.length) return;
+  
+  editingData.value.world_book[wbKey].lores = [...currentBookLores.value];
+};
+
+// 反选当前世界书的条目选择
+const invertSelection = (wbKey: string) => {
+  if (!editingData.value?.world_book?.[wbKey] || !currentBookLores.value.length) return;
+  
+  const currentSelection = editingData.value.world_book[wbKey].lores || [];
+  const invertedSelection = currentBookLores.value.filter(
+    lore => !currentSelection.includes(lore)
+  );
+  
+  editingData.value.world_book[wbKey].lores = invertedSelection;
+};
+
+// 获取当前世界书已选条目数量
+const getSelectedCount = (wbKey: string) => {
+  if (!editingData.value?.world_book?.[wbKey]) return 0;
+  const selected = editingData.value.world_book[wbKey].lores || [];
+  return Array.isArray(selected) ? selected.length : 0;
+};
 </script>
 
 <style scoped lang="scss">
@@ -876,6 +924,22 @@ const updateLoreRegexItem = (wbKey: string, index: number, event: Event) => {
       background: #7f1d1d;
       color: #fecaca;
       &:hover { background: #991b1b; }
+    }
+    
+    /* 深色模式下的secondary按钮 */
+    .selection-controls .btn.secondary {
+      background: #374151;
+      color: #e2e8f0;
+      border-color: #4b5563;
+    }
+    
+    .selection-controls .btn.secondary:hover:not(:disabled) {
+      background: #4b5563;
+      border-color: #6b7280;
+    }
+    
+    .selection-controls .selection-info {
+      color: #9ca3af;
     }
 
     /* 滚动条适配 */
