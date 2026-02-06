@@ -852,6 +852,12 @@ async function applyGroupResults(results: TaskResult[], message_id: number) {
             } catch (e) {
               eraLogger.error(`任务 [${res.taskName}] 世界书替换执行出错:`, e);
             }
+          } else {//情况2：条目为空或不存在，直接写入新内容
+            // eslint-disable-next-line no-lonely-if
+            if (contentToApply && contentToApply.trim().length > 0) {
+              await WorldInfoUtil.updateOrCreateEntry(world_book, target_lore, contentToApply);
+              eraLogger.info(`任务 [${res.taskName}] 合并 [${mergeKey}]: 世界书条目 [${target_lore}] 为空，已直接创建新内容`);
+            }
           }
         } else if (contentToApply && contentToApply.trim().length > 0) {
           // 1. 先尝试获取旧内容
