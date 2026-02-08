@@ -92,14 +92,62 @@ const mergeDataToSnapshot = (data: any, snap: any): any => {
 };
 
 /**
+ * 辅助函数：深度比较两个值是否相等
+ * 用于替代 JSON.stringify 进行数组内容的比较
+ * 策略：先比数量，然后是字典序（索引顺序）比较实际差异
+ */
+function isDeepEqual(a: any, b: any): boolean {
+  // 1. 引用相等检查
+  if (a === b) return true;
+
+  // 2. NaN 检查
+  if (typeof a === 'number' && typeof b === 'number' && Number.isNaN(a) && Number.isNaN(b)) {
+    return true;
+  }
+
+  // 3. 类型检查
+  if (typeof a !== typeof b) return false;
+
+  // 4. Null 检查 (typeof null 也是 'object')
+  if (a === null || b === null) return a === b;
+
+  // 5. 数组检查：先比数量，再比内容
+  if (Array.isArray(a)) {
+    if (!Array.isArray(b) || a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      // 递归比较每一个元素（字典序/索引序）
+      if (!isDeepEqual(a[i], b[i])) return false;
+    }
+    return true;
+  }
+
+  // 6. 对象检查
+  if (typeof a === 'object') {
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+
+    // 键数量不同，肯定不等
+    if (keysA.length !== keysB.length) return false;
+
+    for (const key of keysA) {
+      // 检查 b 是否有该键，且值是否相等
+      if (!Object.prototype.hasOwnProperty.call(b, key) || !isDeepEqual(a[key], b[key])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * 深度比较两个对象，并返回一个仅包含值差异的对象。
- *
  * **严格结构模式**：
  * 1. 假设 `current` 和 `original` 具有完全相同的键结构。
  * 2. 只比较 `original` 中存在的键。
  * 3. 忽略任何在 `current` 中新增或在 `original` 中不存在的键。
  * 4. 如果值的类型发生变化，也忽略该差异。
- * 5. 数组被视为一个整体进行比较。
  *
  * @param current 新对象
  * @param original 原始对象
@@ -111,38 +159,37 @@ export function diffObjects(current: any, original: any): any {
     return {};
   }
 
-  // 如果 original 不是对象（或为 null），我们无法遍历它的键。
-  // 按照严格结构模式，如果它们不相等，则返回 current 作为值的变化。
+  // ... (保留原有的非对象检查逻辑) ...
   if (typeof original !== 'object' || original === null) {
-    // 但要先检查 current 是否是对象，如果是，说明类型变了，应忽略
     if (typeof current === 'object' && current !== null) {
       eraLogger.warn(`[diffObjects] 已忽略结构变化: 原始值不是对象，但当前值是对象。`);
       return {};
     }
-    // 如果 original 和 current 都不是对象，且不相等，返回 current
     return current;
   }
 
-  // 如果 original 是对象，但 current 不是，这是非法的结构变化，忽略。
   if (typeof current !== 'object' || current === null) {
     eraLogger.warn(`[diffObjects] 已忽略结构变化: 原始值是对象，但当前值不是对象。`);
     return {};
   }
 
+  // --- 修改开始：数组处理逻辑 ---
   // 数组作为特例处理，被视为一个原子值。
   if (Array.isArray(original)) {
-    if (!Array.isArray(current) || JSON.stringify(current) !== JSON.stringify(original)) {
-      // 如果 current 不是数组，或内容不同，则返回整个新数组
+    // 使用 isDeepEqual 替代 JSON.stringify
+    // 策略：先判断是否都是数组，再判断长度，最后按顺序比较元素
+    if (!isDeepEqual(current, original)) {
+      // 如果 current 内容不同，则返回整个新数组
       return current;
     }
     return {};
   }
+  // --- 修改结束 ---
 
   const diff: { [key: string]: any } = {};
 
-  // 只遍历 original 的键，这是我们信任的“结构蓝图”
+  // ... (保留原有的对象遍历逻辑) ...
   for (const key in original) {
-    // 确保 current 中也存在这个 key，否则是结构差异，跳过
     if (!Object.prototype.hasOwnProperty.call(current, key)) {
       eraLogger.warn(`[diffObjects] 已忽略结构变化: 键 '${key}' 在当前对象中已被移除。`);
       continue;
@@ -151,18 +198,30 @@ export function diffObjects(current: any, original: any): any {
     const currentValue = current[key];
     const originalValue = original[key];
 
-    //拒绝 NaN
     if (typeof currentValue === 'number' && Number.isNaN(currentValue)) {
       eraLogger.warn(`[diffObjects] 已忽略键 '${key}' 的 NaN 值。`);
       continue;
     }
 
-    // 如果值相同或都是 NaN，则跳过
-    if (currentValue === originalValue || (Number.isNaN(currentValue) && Number.isNaN(originalValue))) {
+    // --- 核心修复开始 ---
+    
+    // A. 基础值检查 (引用相等或都是 NaN)
+    if (currentValue === originalValue || (typeof currentValue === 'number' && Number.isNaN(currentValue) && Number.isNaN(originalValue))) {
       continue;
     }
 
-    // 检查类型是否一致
+    // B. 数组深度检查 (新增逻辑)
+    // 如果引用不相等，但都是数组，则检查内容是否一致
+    if (Array.isArray(currentValue) && Array.isArray(originalValue)) {
+      if (isDeepEqual(currentValue, originalValue)) {
+        continue; // 内容一致，跳过，不计入差异
+      }
+      // 内容不一致，往下走，会被作为差异记录
+    }
+    
+    // --- 核心修复结束 ---
+
+    // C. 类型检查
     const getType = (value: any) => (value === null ? 'null' : typeof value);
     if (getType(currentValue) !== getType(originalValue)) {
       eraLogger.warn(
@@ -171,14 +230,14 @@ export function diffObjects(current: any, original: any): any {
       continue;
     }
 
-    // 递归比较子对象（确保两者都是对象）
+    // D. 对象递归 (排除数组，因为数组上面已经处理过了)
     if (typeof currentValue === 'object' && currentValue !== null && !Array.isArray(currentValue)) {
       const nestedDiff = diffObjects(currentValue, originalValue);
       if (nestedDiff && Object.keys(nestedDiff).length > 0) {
         diff[key] = nestedDiff;
       }
     }
-    // 处理原始类型和数组的值变化
+    // E. 差异记录 (包括内容不同的数组、原始值变化)
     else {
       diff[key] = currentValue;
     }

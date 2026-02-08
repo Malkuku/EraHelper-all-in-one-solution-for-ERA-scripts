@@ -46,8 +46,8 @@
                   {{ isGlobalSettings ? '规则组注释' : '任务备注' }}
                   <Tooltip content="注释文本内容" placement="top" />
                 </label>
-                <textarea 
-                  v-model="editingData.comment" 
+                <textarea
+                  v-model="editingData.comment"
                   class="comment-textarea"
                   placeholder="在此输入用途或说明..."
                   rows="3"
@@ -200,29 +200,43 @@
                     </label>
                     <div class="tip">从下拉框选择条目，或手动输入</div>
 
-                    <div class="selection-controls mb-2">
-                      <button 
-                        class="btn small secondary" 
-                        :disabled="!currentBookLores.length || loadingLores"
-                        @click="selectAllLores(currentWbKey)"
-                      >
-                        ✓ 全选
-                      </button>
-                      <button 
-                        class="btn small secondary" 
-                        :disabled="!currentBookLores.length || loadingLores"
-                        @click="invertSelection(currentWbKey)"
-                      >
-                        ↻ 反选
-                      </button>
-                      <span class="selection-info">
-                        已选 {{ getSelectedCount(currentWbKey) }}/{{ currentBookLores.length }} 项
-                      </span>
+                    <!-- [修改] 优化后的筛选和全选UI -->
+                    <div class="lore-filter-container mb-2">
+                      <div class="filter-row">
+                        <input
+                          v-model="loreFilterText"
+                          class="lore-filter-input"
+                          placeholder="输入关键词筛选条目..."
+                        />
+                        <div class="filter-actions">
+                          <button
+                            class="btn small secondary"
+                            :disabled="!filteredLores.length || loadingLores"
+                            @click="selectAllLores(currentWbKey)"
+                            title="全选当前筛选结果"
+                          >
+                            ✓ 全选
+                          </button>
+                          <button
+                            class="btn small secondary"
+                            :disabled="!filteredLores.length || loadingLores"
+                            @click="invertSelection(currentWbKey)"
+                            title="反选当前筛选结果"
+                          >
+                            ↻ 反选
+                          </button>
+                        </div>
+                      </div>
+                      <div class="filter-info">
+                        <span class="info-item">共 {{ currentBookLores.length }} 条</span>
+                        <span v-if="loreFilterText" class="info-item highlight">筛选: {{ filteredLores.length }} 条</span>
+                        <span class="info-item selected">已选: {{ getSelectedCount(currentWbKey) }}</span>
+                      </div>
                     </div>
 
                     <SearchableSelect
                       v-model="editingData.world_book[currentWbKey].lores"
-                      :options="currentBookLores"
+                      :options="filteredLores"
                       :multiple="true"
                       :loading="loadingLores"
                       placeholder="点击选择条目..."
@@ -404,6 +418,9 @@ const loadingLores = ref(false);
 const isAddingWb = ref(false);
 const newWbName = ref('');
 
+// --- 新增：世界书条目筛选状态 ---
+const loreFilterText = ref('');
+
 // 计算属性
 const isGlobalSettings = computed(() => props.taskName === GLOBAL_ID);
 
@@ -435,6 +452,11 @@ watch(() => props.taskName, () => {
   activeTab.value = 'basic';
   currentWbKey.value = '';
   currentMergeKey.value = '';
+});
+
+// 监听世界书切换，重置筛选
+watch(() => currentWbKey.value, () => {
+  loreFilterText.value = '';
 });
 
 const closeModal = () => {
@@ -472,6 +494,13 @@ const fetchLoresForBook = async (bookName: string) => {
 const currentBookLores = computed(() => {
   if (!currentWbKey.value) return [];
   return loreCache[currentWbKey.value] || [];
+});
+
+// [新增] 过滤后的条目列表
+const filteredLores = computed(() => {
+  const text = loreFilterText.value.trim().toLowerCase();
+  if (!text) return currentBookLores.value;
+  return currentBookLores.value.filter(lore => lore.toLowerCase().includes(text));
 });
 
 const getCachedLores = (bookName: string) => {
@@ -693,14 +722,14 @@ const applyRegexPresetToLoreRegexItem = (wbKey: string, index: number, presetNam
   if (!presetName) return;
   const pattern = getPatternByName(presetName);
   if (pattern && validateRegex(pattern)) {
-     if (!editingData.value?.world_book?.[wbKey]) return;
-     const wbConfig = editingData.value.world_book[wbKey];
+    if (!editingData.value?.world_book?.[wbKey]) return;
+    const wbConfig = editingData.value.world_book[wbKey];
 
-     if (!Array.isArray(wbConfig.lore_regex)) {
-        wbConfig.lore_regex = wbConfig.lore_regex ? [wbConfig.lore_regex] : [];
-     }
+    if (!Array.isArray(wbConfig.lore_regex)) {
+      wbConfig.lore_regex = wbConfig.lore_regex ? [wbConfig.lore_regex] : [];
+    }
 
-     wbConfig.lore_regex[index] = pattern;
+    wbConfig.lore_regex[index] = pattern;
   } else {
     console.error(`Invalid regex pattern for preset: ${presetName}`);
   }
@@ -776,23 +805,35 @@ const updateLoreRegexItem = (wbKey: string, index: number, event: Event) => {
 
 // --- 新增：世界书条目选择控制函数 ---
 
-// 全选当前世界书的所有条目
+// [修改] 全选当前筛选出的所有条目
 const selectAllLores = (wbKey: string) => {
-  if (!editingData.value?.world_book?.[wbKey] || !currentBookLores.value.length) return;
-  
-  editingData.value.world_book[wbKey].lores = [...currentBookLores.value];
+  if (!editingData.value?.world_book?.[wbKey]) return;
+
+  // 获取当前已选
+  const currentSelected = new Set(editingData.value.world_book[wbKey].lores || []);
+
+  // 将所有筛选出的条目加入选择
+  filteredLores.value.forEach(lore => currentSelected.add(lore));
+
+  editingData.value.world_book[wbKey].lores = Array.from(currentSelected);
 };
 
-// 反选当前世界书的条目选择
+// [修改] 反选当前筛选出的条目
 const invertSelection = (wbKey: string) => {
-  if (!editingData.value?.world_book?.[wbKey] || !currentBookLores.value.length) return;
-  
-  const currentSelection = editingData.value.world_book[wbKey].lores || [];
-  const invertedSelection = currentBookLores.value.filter(
-    lore => !currentSelection.includes(lore)
-  );
-  
-  editingData.value.world_book[wbKey].lores = invertedSelection;
+  if (!editingData.value?.world_book?.[wbKey]) return;
+
+  const currentSelected = new Set(editingData.value.world_book[wbKey].lores || []);
+
+  // 仅对筛选出的条目进行反选操作
+  filteredLores.value.forEach(lore => {
+    if (currentSelected.has(lore)) {
+      currentSelected.delete(lore);
+    } else {
+      currentSelected.add(lore);
+    }
+  });
+
+  editingData.value.world_book[wbKey].lores = Array.from(currentSelected);
 };
 
 // 获取当前世界书已选条目数量
@@ -925,27 +966,47 @@ const getSelectedCount = (wbKey: string) => {
       color: #fecaca;
       &:hover { background: #991b1b; }
     }
-    
-    /* 深色模式下的secondary按钮 */
-    .selection-controls .btn.secondary {
+
+    /* 深色模式下的secondary按钮 - 全选/反选按钮适配 */
+    .btn.secondary {
       background: #374151;
       color: #e2e8f0;
-      border-color: #4b5563;
-    }
-    
-    .selection-controls .btn.secondary:hover:not(:disabled) {
-      background: #4b5563;
-      border-color: #6b7280;
-    }
-    
-    .selection-controls .selection-info {
-      color: #9ca3af;
+      border: 1px solid #4b5563;
+      &:hover:not(:disabled) {
+        background: #4b5563;
+        border-color: #6b7280;
+      }
+      &:disabled {
+        background: #1f2937;
+        color: #6b7280;
+        border-color: #374151;
+        opacity: 0.6;
+      }
     }
 
     /* 滚动条适配 */
     .custom-scrollbar {
       &::-webkit-scrollbar-thumb { background: #4b5563; }
       &::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+    }
+
+    /* 深色模式下筛选容器适配 */
+    .lore-filter-container {
+      background: #1f2937;
+      border-color: #4b5563;
+
+      .lore-filter-input {
+        background: #374151 !important;
+        color: #e2e8f0 !important;
+        border-color: #4b5563 !important;
+        &:focus { border-color: #818cf8 !important; }
+      }
+
+      .filter-info {
+        color: #9ca3af;
+        .info-item.highlight { color: #818cf8; }
+        .info-item.selected { color: #34d399; }
+      }
     }
   }
 }
@@ -1212,6 +1273,21 @@ input[placeholder*="regex"] {
   padding: 6px 12px; border-radius: 4px; border: none; cursor: pointer; font-size: 13px; font-weight: 500;
   &.primary { background: #4f46e5; color: white; &:hover { background: #4338ca; } }
   &.danger { background: #fee2e2; color: #991b1b; &:hover { background: #fecaca; } }
+  &.secondary { 
+    background: #f3f4f6; 
+    color: #374151; 
+    border: 1px solid #d1d5db;
+    &:hover:not(:disabled) { 
+      background: #e5e7eb; 
+      border-color: #9ca3af; 
+    }
+    &:disabled { 
+      background: #f9fafb; 
+      color: #9ca3af; 
+      border-color: #e5e7eb; 
+      opacity: 0.6; 
+    }
+  }
   &.small { padding: 4px 8px; font-size: 12px; }
   &.icon-btn { font-size: 16px; line-height: 1; padding: 0 8px; }
   &.full { width: 100%; border-radius: 0; }
@@ -1224,5 +1300,47 @@ input[placeholder*="regex"] {
   &::-webkit-scrollbar-track { background: transparent; }
   &::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
   &::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+}
+
+/* New Styles for Lore Filter */
+.lore-filter-container {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 8px;
+
+  .filter-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 6px;
+
+    .lore-filter-input {
+      flex: 1;
+      padding: 4px 8px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      font-size: 13px;
+      &:focus { border-color: #4f46e5; outline: none; }
+    }
+
+    .filter-actions {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+  }
+
+  .filter-info {
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    color: #6b7280;
+    align-items: center;
+
+    .info-item {
+      &.highlight { color: #4f46e5; font-weight: 600; }
+      &.selected { color: #059669; font-weight: 600; margin-left: auto; }
+    }
+  }
 }
 </style>
