@@ -5,7 +5,7 @@ import { useUiStore } from '@/ERA助手/stores/UIStore';
 const uiStore = useUiStore();
 
 // 当前版本号
-const currentVersion = ref('v2.1.2');
+const currentVersion = ref('v2.1.3');
 
 // 作者信息
 const author = ref({
@@ -15,6 +15,13 @@ const author = ref({
 
 // 版本更新历史记录
 const versionHistory = ref([
+  {
+    version: 'v2.1.3',
+    date: '2026-02-09',
+    changes: [
+      '任务可以在0层被触发了'
+    ],
+  },
   {
     version: 'v2.1.2',
     date: '2026-02-08',

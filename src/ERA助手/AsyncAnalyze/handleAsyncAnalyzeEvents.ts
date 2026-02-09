@@ -89,7 +89,6 @@ const updateEventListeners = () => {
       eraLogger.info(`捕获到自定义事件触发: ${eventName}`, args);
 
       const currentMessageId = getLastMessageId();
-      if (currentMessageId === 0) return;
 
       if (isAnalyzing) {
         toastr.warning(`事件 ${eventName} 触发，但上一个分析任务尚未完成，已跳过`);
