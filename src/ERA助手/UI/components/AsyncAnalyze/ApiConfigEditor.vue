@@ -40,7 +40,8 @@
     </div>
 
     <!-- 右侧：编辑区域 -->
-    <div class="main-content">
+    <!-- 修改：添加 mobile-visible 类用于控制移动端显示 -->
+    <div class="main-content" :class="{ 'mobile-visible': currentConfig }">
       <!-- 修改处：这里改为判断 currentConfig 是否存在，而不是 currentConfigName -->
       <div v-if="!currentConfig" class="no-selection">
         <p>请从左侧选择一个配置或新建一个</p>
@@ -48,10 +49,14 @@
 
       <div v-else class="editor-panel">
         <div class="panel-header">
-          <h4>编辑配置: {{ currentConfigName }}<Tooltip content="配置的名称和任务中使用的是绑定的，这通常需要由作者来创建新预设和解释作用" placement="top" /></h4>
+          <div class="title-row">
+            <!-- 新增：移动端返回按钮 -->
+            <button class="btn icon-btn mobile-back-btn" @click="clearSelection">←</button>
+            <h4>编辑配置: {{ currentConfigName }}<Tooltip content="配置的名称和任务中使用的是绑定的，这通常需要由作者来创建新预设和解释作用" placement="top" /></h4>
+          </div>
           <div class="header-actions">
-            <button class="btn danger small" @click="deleteConfig">删除此配置</button>
-            <button class="btn primary small" @click="saveChanges">保存所有更改</button>
+            <button class="btn danger small" @click="deleteConfig">删除</button>
+            <button class="btn primary small" @click="saveChanges">保存</button>
           </div>
         </div>
 
@@ -228,6 +233,11 @@ const selectConfig = (name: string) => {
   currentConfigName.value = name;
   if (presetList.value.length === 0) refreshPresetList();
   if (profileList.value.length === 0) refreshProfileList();
+};
+
+// 新增：清除选择（用于移动端返回列表）
+const clearSelection = () => {
+  currentConfigName.value = '';
 };
 
 // 动作：新建配置
@@ -452,6 +462,7 @@ onMounted(() => {
   min-height: 500px;
   gap: 16px;
   overflow: hidden;
+  position: relative; /* 确保移动端绝对定位相对于此容器 */
 }
 
 /* 左侧边栏 */
@@ -542,6 +553,8 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: #fff; /* 确保背景色，防止移动端透明 */
+  transition: transform 0.3s ease-in-out;
 }
 
 .no-selection {
@@ -568,16 +581,31 @@ onMounted(() => {
   border-bottom: 1px solid #e5e7eb;
   margin-bottom: 16px;
 
+  .title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+  }
+
   h4 {
     margin: 0;
     font-size: 16px;
     font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 
 .header-actions {
   display: flex;
   gap: 8px;
+  flex-shrink: 0;
+}
+
+.mobile-back-btn {
+  display: none; /* 默认隐藏 */
 }
 
 .form-scroll-area {
@@ -688,6 +716,10 @@ onMounted(() => {
     padding: 0 10px;
     font-size: 16px;
     line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px; /* 固定高度确保对齐 */
   }
 }
 
@@ -708,6 +740,10 @@ onMounted(() => {
 
   .config-name { color: #e2e8f0; }
   .config-source { color: #9ca3af; }
+
+  .main-content {
+    background: #1f2937; /* 深色模式背景 */
+  }
 
   .no-selection { border-color: #4b5563; color: #6b7280; }
 
@@ -748,6 +784,66 @@ onMounted(() => {
       background: #7f1d1d;
       border-color: #991b1b;
       color: #fecaca;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 移动端适配 (小于 768px) */
+/* ------------------------------------------------------------------ */
+@media (max-width: 768px) {
+  .api-config-container {
+    flex-direction: row; /* 保持 row，通过绝对定位处理 */
+    overflow: hidden;
+  }
+
+  .sidebar {
+    width: 100%; /* 占满宽度 */
+    border-right: none;
+    padding-right: 0;
+  }
+
+  .main-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    transform: translateX(100%); /* 默认移出屏幕右侧 */
+    padding: 10px; /* 增加内边距 */
+  }
+
+  /* 当有选中配置时，滑入屏幕 */
+  .main-content.mobile-visible {
+    transform: translateX(0);
+  }
+
+  /* 隐藏未选中时的占位符，因为移动端默认显示列表 */
+  .no-selection {
+    display: none;
+  }
+
+  /* 显示返回按钮 */
+  .mobile-back-btn {
+    display: flex;
+    margin-right: 8px;
+  }
+
+  /* 调整头部布局 */
+  .panel-header {
+    flex-direction: row;
+    align-items: center;
+
+    h4 {
+      font-size: 14px;
+    }
+  }
+
+  .header-actions {
+    .btn {
+      padding: 4px 8px;
+      font-size: 12px;
     }
   }
 }

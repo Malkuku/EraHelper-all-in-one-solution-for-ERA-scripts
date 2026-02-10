@@ -19,7 +19,8 @@ const versionHistory = ref([
     version: 'v2.1.3',
     date: '2026-02-09',
     changes: [
-      '任务可以在0层被触发了'
+      '任务可以在0层被触发了',
+      "API配置页的移动端适配"
     ],
   },
   {
