@@ -30,6 +30,11 @@ export const router = createRouter({
               name: 'RuleEditor',
               component: () => import('../components/AsyncAnalyze/StagedRuleEditor.vue'),
             },
+            {
+              path: 'Settings',
+              name: 'Settings',
+              component: () => import('../components/AsyncAnalyze/Settings.vue'),
+            }
           ]
         },
         {

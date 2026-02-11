@@ -5,7 +5,7 @@ import { useUiStore } from '@/ERA助手/stores/UIStore';
 const uiStore = useUiStore();
 
 // 当前版本号
-const currentVersion = ref('v2.1.3');
+const currentVersion = ref('v2.2.0');
 
 // 作者信息
 const author = ref({
@@ -16,12 +16,13 @@ const author = ref({
 // 版本更新历史记录
 const versionHistory = ref([
   {
-    version: 'v2.1.3',
+    version: 'v2.2.0',
     date: '2026-02-11',
     changes: [
       '任务可以在0层被触发了',
       "API配置页的移动端适配",
-      "fix:错误回滚后会导致一直错误"
+      "fix:错误回滚后会导致一直错误",
+      "添加一个静默预设切换弹窗的功能"
     ],
   },
   {

@@ -28,6 +28,15 @@
         规则编辑
       </router-link>
 
+      <!-- 新增：额外功能/设置路由 -->
+      <router-link
+        to="/AsyncAnalyze/Settings"
+        class="tab-button"
+        active-class="active"
+      >
+        额外功能
+      </router-link>
+
       <a
         class="tab-button"
         :class="{ active: showRegexTester }"
@@ -51,8 +60,6 @@
       <button class="btn" @click="uiStore.showUI = false">关闭</button>
     </div>
 
-    <!-- 修改点 2: 引入弹窗组件，置于最外层，通过 v-if 控制 -->
-    <!-- 监听 @close 事件将变量设为 false -->
     <RegexTester
       v-if="showRegexTester"
       @close="showRegexTester = false"
@@ -61,7 +68,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'; // 引入 ref
+import { ref, onMounted } from 'vue';
 import { useUiStore } from '@/ERA助手/stores/UIStore';
 import { useAsyncAnalyzeStore } from '@/ERA助手/stores/AsyncAnalyzeStore';
 import RegexTester from '@/ERA助手/UI/components/AsyncAnalyze/RegexTester.vue';
@@ -73,10 +80,13 @@ const showRegexTester = ref(false);
 
 onMounted(async () => {
   await asyncAnalyzeStore.getModelSettings();
+  // 确保加载时也读取 UI 设置（包括 hideToast）
+  await uiStore.getModeSetting();
 });
 </script>
 
 <style scoped lang="scss">
+/* 样式保持不变，或者你可以根据需要微调 */
 .main-container {
   padding: 10px;
   height: 100%;
@@ -96,6 +106,8 @@ onMounted(async () => {
   display: flex;
   margin-bottom: 20px;
   border-bottom: 1px solid #e5e7eb;
+  /* 如果标签太多，允许换行或滚动 */
+  flex-wrap: wrap;
 }
 
 .tab-button {
