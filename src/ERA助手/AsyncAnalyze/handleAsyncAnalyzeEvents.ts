@@ -22,6 +22,9 @@ const blacklistLores = ref<string[]>([]);
 let isAnalyzing = false;
 let watcherInitialized = false;
 
+// [新增] 运行ID，用于在发生错误回滚时作废后续排队的任务
+let currentAnalysisRunId = 0;
+
 // [核心修复] 过滤锁，用于解决并行过滤的竞态问题
 let filterLockChain = Promise.resolve();
 
@@ -425,6 +428,9 @@ export const handleAsyncAnalyzeTasks = async (message_id: number, triggeringEven
     return;
   }
 
+  // [核心修复] 每次开始新任务时，生成一个新的运行ID
+  const thisRunId = ++currentAnalysisRunId;
+
   // 仅在主流程（非事件触发）或明确需要时创建备份
   // 如果是事件触发的轻量级任务，是否需要备份视需求而定，这里暂时统一备份
   await createBackup(message_id, ruleName);
@@ -476,6 +482,9 @@ export const handleAsyncAnalyzeTasks = async (message_id: number, triggeringEven
 
   try {
     for (const order of sortedOrders) {
+      // [核心修复] 如果当前运行ID已过期（说明发生了回滚），则中断循环
+      if (currentAnalysisRunId !== thisRunId) break;
+
       const groupTasks = taskGroups.get(order)!;
       eraLogger.log(`正在执行第 ${order} 阶任务组，共 ${groupTasks.length} 个任务 (触发源: ${triggeringEvent || 'Default'})`);
       if (!triggeringEvent) {
@@ -486,6 +495,9 @@ export const handleAsyncAnalyzeTasks = async (message_id: number, triggeringEven
       const groupResults: TaskResult[] = [];
 
       const promises = groupTasks.map(async (task, index) => {
+        // [核心修复] 如果当前运行ID已过期，直接返回，不执行任何操作
+        if (currentAnalysisRunId !== thisRunId) return;
+
         const currentFloor = message_id;
         const lastTrigger = task.trigger_history || 0;
 
@@ -499,20 +511,26 @@ export const handleAsyncAnalyzeTasks = async (message_id: number, triggeringEven
 
         try {
           // 执行任务并获取结果，不进行副作用修改
-          const result = await executeSingleTask(task, message_id);
+          // [核心修复] 传递 thisRunId，确保任务内部也能感知到回滚
+          const result = await executeSingleTask(task, message_id, thisRunId);
           if (result) {
             groupResults.push(result);
           }
           pendingTriggerUpdates.set(task.taskName, currentFloor);
         } catch (e) {
+          // [核心修复] 如果是因为 ID 不匹配导致的中止，静默处理，不要抛出错误干扰 Promise.all
+          if (currentAnalysisRunId !== thisRunId) return;
+
           eraLogger.error(`任务 [${task.taskName}] 执行失败:`, e);
 
           let retrySuccess = false;
           if (task.reroll_count > 0) {
             for(let i=0; i<task.reroll_count; i++){
+              // 再次检查 ID
+              if (currentAnalysisRunId !== thisRunId) break;
               try {
                 eraLogger.log(`任务 [${task.taskName}] 重试第 ${i+1} 次`);
-                const result = await executeSingleTask(task, message_id);
+                const result = await executeSingleTask(task, message_id, thisRunId);
                 if (result) {
                   groupResults.push(result);
                 }
@@ -534,12 +552,12 @@ export const handleAsyncAnalyzeTasks = async (message_id: number, triggeringEven
       await Promise.all(promises);
 
       // [核心修复] 并行任务全部结束后，统一顺序应用修改
-      if (groupResults.length > 0) {
+      if (groupResults.length > 0 && currentAnalysisRunId === thisRunId) {
         await applyGroupResults(groupResults, message_id);
       }
     }
 
-    if (pendingTriggerUpdates.size > 0) {
+    if (pendingTriggerUpdates.size > 0 && currentAnalysisRunId === thisRunId) {
       let hasUpdates = false;
       pendingTriggerUpdates.forEach((floor, taskName) => {
         if (store.asyncAnalyzeSetting[ruleName]?.staged_setting?.[taskName]) {
@@ -553,13 +571,15 @@ export const handleAsyncAnalyzeTasks = async (message_id: number, triggeringEven
       }
     }
 
-    if (!triggeringEvent) {
+    if (!triggeringEvent && currentAnalysisRunId === thisRunId) {
       toastr.success('所有分步分析任务执行完成');
-    } else {
+    } else if (currentAnalysisRunId === thisRunId) {
       eraLogger.info(`事件 ${triggeringEvent} 触发的任务执行完成`);
     }
 
   } catch (err) {
+    // [核心修复] 发生错误时，立即作废当前运行ID，防止后续排队的任务继续执行
+    currentAnalysisRunId++;
     eraLogger.error('分步分析流程发生严重错误，正在回滚...', err);
     toastr.error('执行出错，正在回滚数据...');
     await performRollback();
@@ -577,8 +597,9 @@ export const handleAsyncAnalyzeTasks = async (message_id: number, triggeringEven
 
 /**
  * 执行单个任务 - 仅生成和提取，不修改数据
+ * [核心修复] 增加 runId 参数，用于检测任务是否已被废弃
  */
-async function executeSingleTask(task: any, message_id: number): Promise<TaskResult | null> {
+async function executeSingleTask(task: any, message_id: number, runId: number): Promise<TaskResult | null> {
   const store = getAsyncAnalyzeStore();
   eraLogger.info(`>>> 开始执行任务: ${task.taskName}`);
   toastr.info(`正在执行分步任务: ${task.taskName}`);
@@ -637,7 +658,13 @@ async function executeSingleTask(task: any, message_id: number): Promise<TaskRes
   let result = '';
 
   // [核心修改] 使用锁串行执行生成过程
-  await (generationLock = generationLock.then(async () => {
+  // 修复：将任务执行Promise与全局锁Promise分离，确保全局锁永远处于Resolved状态
+  const taskExecutionPromise = generationLock.then(async () => {
+    // [核心修复] 在获得锁之后，立即检查当前任务是否已被废弃（例如因为前一个任务失败导致了回滚）
+    if (runId !== currentAnalysisRunId) {
+      throw new Error('任务已被中止');
+    }
+
     // 2. [核心修复] 进入锁之后，才将局部计算的黑名单应用到全局变量
     // 这样保证了在 sendPrompt 执行期间，blacklistLores.value 绝对是当前任务的数据
     blacklistLores.value = localTaskBlacklist;
@@ -700,9 +727,13 @@ async function executeSingleTask(task: any, message_id: number): Promise<TaskRes
       // 可选：任务完成后清空黑名单，防止影响后续非任务操作（虽然下一个任务会覆盖它）
       // blacklistLores.value = [];
     }
-  }).catch(e => {
-    throw e;
-  }));
+  });
+
+  // 更新全局锁：无论当前任务成功还是失败，全局锁都应该重置为 Resolved 状态，以便下一个任务可以执行
+  generationLock = taskExecutionPromise.catch(() => {});
+
+  // 等待当前任务执行，如果有错误这里会抛出，触发外层的重试或回滚逻辑
+  await taskExecutionPromise;
 
   // 提取变量修改数据
   const { cleanContent, variableEdits } = extractVariableEdits(result);
