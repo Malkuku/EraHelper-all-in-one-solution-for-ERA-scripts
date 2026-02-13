@@ -1,15 +1,18 @@
 <template>
   <div :class="{ 'dark-mode': uiStore.darkMode }" class="rule-selector">
     <div class="header-actions">
-      <FileImportExport
-        accept=".json"
-        import-text="导入配置"
-        export-text="导出配置"
-        confirm-title="导入配置确认"
-        confirm-content="导入新配置将合并到当前配置中，重名规则组将被覆盖，确定要继续吗？"
-        @import-confirmed="handleImportConfirmed"
-        @export-data="handleExportData"
-      />
+      <!-- 包裹一下 FileImportExport 以便控制布局 -->
+      <div class="action-left">
+        <FileImportExport
+          accept=".json"
+          import-text="导入配置"
+          export-text="导出配置"
+          confirm-title="导入配置确认"
+          confirm-content="导入新配置将合并到当前配置中，重名规则组将被覆盖，确定要继续吗？"
+          @import-confirmed="handleImportConfirmed"
+          @export-data="handleExportData"
+        />
+      </div>
 
       <div class="input-group">
         <input v-model="newRuleName" placeholder="输入新规则组名称..." @keyup.enter="createNewRule" />
@@ -29,14 +32,16 @@
         <div class="card-header">
           <div class="rule-info">
             <span class="rule-name">{{ key }}</span>
-            <span v-if="store.activeRuleName === key" class="tag success">当前启用</span>
-            <!-- 兼容旧数据，使用 || {} -->
-            <span class="tag info">{{ Object.keys(setting.staged_setting || {}).length }} 个任务</span>
+            <div class="rule-tags">
+              <span v-if="store.activeRuleName === key" class="tag success">当前启用</span>
+              <!-- 兼容旧数据，使用 || {} -->
+              <span class="tag info">{{ Object.keys(setting.staged_setting || {}).length }} 个任务</span>
+            </div>
           </div>
           <div class="card-actions">
             <!-- 新增：移动位置按钮 -->
             <button
-              class="btn small secondary"
+              class="btn small secondary btn-move"
               :disabled="index === 0"
               @click="moveRule(key as string, -1)"
               title="上移"
@@ -44,7 +49,7 @@
               ↑
             </button>
             <button
-              class="btn small secondary"
+              class="btn small secondary btn-move"
               :disabled="index === Object.keys(store.asyncAnalyzeSetting).length - 1"
               @click="moveRule(key as string, 1)"
               title="下移"
@@ -295,12 +300,17 @@ const handleExportData = () => {
 
 .header-actions {
   margin-bottom: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
 
   .input-group {
     display: flex;
     gap: 10px;
+    width: 100%;
     max-width: 400px;
-    margin-top: 6px;
 
     input {
       flex: 1;
@@ -310,11 +320,16 @@ const handleExportData = () => {
       outline: none;
       transition: border-color 0.2s;
       color: #111827;
+      min-width: 0; /* 防止 flex 子项溢出 */
 
       &:focus {
         border-color: #6366f1;
         box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
       }
+    }
+
+    button {
+      white-space: nowrap;
     }
   }
 }
@@ -357,6 +372,26 @@ const handleExportData = () => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
+  gap: 10px;
+}
+
+.rule-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  .rule-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1f2937;
+    word-break: break-all;
+  }
+
+  .rule-tags {
+    display: flex;
+    gap: 6px;
+  }
 }
 
 .rule-comment {
@@ -371,21 +406,10 @@ const handleExportData = () => {
   gap: 6px;
 }
 
-.rule-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-
-  .rule-name {
-    font-size: 16px;
-    font-weight: 600;
-    color: #1f2937;
-  }
-}
-
 .card-actions {
   display: flex;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .card-preview {
@@ -413,6 +437,7 @@ const handleExportData = () => {
   font-size: 12px;
   padding: 2px 8px;
   border-radius: 4px;
+  white-space: nowrap;
 
   &.success {
     background: #d1fae5;
@@ -433,6 +458,9 @@ const handleExportData = () => {
   cursor: pointer;
   font-size: 14px;
   transition: background 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 
   &.small {
     padding: 4px 10px;
@@ -482,6 +510,48 @@ const handleExportData = () => {
       background: inherit;
       border-color: inherit;
       color: inherit;
+    }
+  }
+}
+
+/* Mobile Adaptation */
+@media (max-width: 640px) {
+  .header-actions {
+    flex-direction: column;
+    align-items: stretch;
+
+    .input-group {
+      max-width: 100%;
+    }
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .rule-info {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .card-actions {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    .btn {
+      flex: 1 0 auto; /* 按钮自动填充宽度 */
+      min-width: 48px; /* 保证最小点击区域 */
+      padding: 8px 12px; /* 增加移动端点击区域 */
+    }
+
+    /* 上下移按钮可以稍微窄一点 */
+    .btn-move {
+      flex: 0 0 auto;
+      min-width: 36px;
     }
   }
 }
