@@ -22,6 +22,7 @@ export interface StagedSetting{
     trigger_history: number; //上一次触发的楼层数（由系统处理，无感化）
     reroll_count: number; //失败重试次数，默认为0
     prompt: string; //发送的提示词
+    whiteListModel: boolean; //是否白名单模式：白名单模式会默认过滤没有被加入的世界书，默认为false
     world_book: {
       [key: string]:{ //世界书名称,将由系统获取和指定
         lores: string[]; //收集的世界书条目

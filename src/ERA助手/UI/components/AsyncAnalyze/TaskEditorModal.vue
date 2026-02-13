@@ -102,6 +102,13 @@
                   </label>
                   <input v-model.number="editingData.reroll_count" type="number" min="0" />
                 </div>
+                <div class="form-group checkbox-row">
+                  <label>
+                    <input v-model="editingData.whiteListModel" type="checkbox" />
+                    白名单模式
+                    <Tooltip content="开启后，将只使用在此任务中配置的世界书，自动过滤掉其他来源（如全局设置）的世界书。" placement="top" />
+                  </label>
+                </div>
               </template>
             </div>
 
@@ -1273,19 +1280,19 @@ input[placeholder*="regex"] {
   padding: 6px 12px; border-radius: 4px; border: none; cursor: pointer; font-size: 13px; font-weight: 500;
   &.primary { background: #4f46e5; color: white; &:hover { background: #4338ca; } }
   &.danger { background: #fee2e2; color: #991b1b; &:hover { background: #fecaca; } }
-  &.secondary { 
-    background: #f3f4f6; 
-    color: #374151; 
+  &.secondary {
+    background: #f3f4f6;
+    color: #374151;
     border: 1px solid #d1d5db;
-    &:hover:not(:disabled) { 
-      background: #e5e7eb; 
-      border-color: #9ca3af; 
+    &:hover:not(:disabled) {
+      background: #e5e7eb;
+      border-color: #9ca3af;
     }
-    &:disabled { 
-      background: #f9fafb; 
-      color: #9ca3af; 
-      border-color: #e5e7eb; 
-      opacity: 0.6; 
+    &:disabled {
+      background: #f9fafb;
+      color: #9ca3af;
+      border-color: #e5e7eb;
+      opacity: 0.6;
     }
   }
   &.small { padding: 4px 8px; font-size: 12px; }

@@ -17,6 +17,8 @@ const getEraEditStore = () => (window as any).EraEditStore as ReturnType<typeof 
 
 // [核心修改] 使用 blacklistLores 缓存计算结果，避免在事件中进行 IO 操作
 const blacklistLores = ref<string[]>([]);
+// [新增] 标记当前是否为白名单模式 (true=只保留列表中的条目, false=移除列表中的条目)
+const isWhitelistMode = ref(false);
 
 // Global lock for analysis
 let isAnalyzing = false;
@@ -128,19 +130,21 @@ const updateEventListeners = () => {
 
 /**
  * [核心修复] 预计算黑名单
- * (保持不变)
+ * (保持不变，默认空闲状态下使用黑名单模式)
  */
 const updateGlobalBlacklist = async () => {
   console.info('updateGlobalBlacklist: ', '开始计算黑名单');
   const store = getAsyncAnalyzeStore();
   if (!store || !store.activeRuleName) {
     blacklistLores.value = [];
+    isWhitelistMode.value = false;
     return;
   }
 
   const rule = store.asyncAnalyzeSetting[store.activeRuleName];
   if (!rule || !rule.world_book) {
     blacklistLores.value = [];
+    isWhitelistMode.value = false;
     return;
   }
 
@@ -196,11 +200,13 @@ const updateGlobalBlacklist = async () => {
 
     // 更新缓存
     blacklistLores.value = [...new Set(calculatedBlacklist)];
+    isWhitelistMode.value = false; // 默认空闲状态下保持黑名单逻辑
     eraLogger.info('updateGlobalBlacklist: ', '黑名单计算完成', blacklistLores.value);
 
   } catch (e) {
     eraLogger.error('Failed to update global blacklist:', e);
     blacklistLores.value = [];
+    isWhitelistMode.value = false;
   }
 };
 
@@ -608,38 +614,69 @@ async function executeSingleTask(task: any, message_id: number, runId: number): 
   const apiConfig = store.apiConfigSettings[apiConfigName];
   if (!apiConfig) throw new Error(`找不到 API 配置: ${apiConfigName}`);
 
-  // 1. [修改] 在锁外先计算好当前任务需要的黑名单，暂存到局部变量，不修改全局 ref
-  let localTaskBlacklist: string[] = [];
+  // 1. [修改] 在锁外先计算好当前任务需要的过滤列表
+  let localFilterList: string[] = [];
+  const isWhiteList = task.whiteListModel === true;
 
   if (task.world_book) {
     try {
-      const tempBlacklist: string[] = [];
+      const tempFilterList: string[] = [];
+
       for (const [bookName, wbConfig] of Object.entries(task.world_book)) {
         const config = wbConfig as any;
-        let allEntries: string[] = [];
-        // 这里可能有 IO，放在锁外并行执行效率更高
-        allEntries = await WorldInfoUtil.getWorldBookLoresByName(bookName);
 
-        if(allEntries.length > 0) {
-          const whitelist = new Set<string>();
-          if(config.lores) config.lores.forEach((l:string) => whitelist.add(l));
-          if(config.lore_regex) {
-            const regexList = Array.isArray(config.lore_regex) ? config.lore_regex : [config.lore_regex];
-            for(const rStr of regexList) {
-              const regex = new RegExp(rStr);
-              allEntries.filter(n => regex.test(n)).forEach(l => whitelist.add(l));
+        if (isWhiteList) {
+          // --- 白名单模式 ---
+          // 收集所有“允许”的条目
+
+          // 1. 添加显式指定的 lores
+          if (config.lores && Array.isArray(config.lores)) {
+            tempFilterList.push(...config.lores);
+          }
+
+          // 2. 处理正则匹配 (需要读取世界书内容来匹配)
+          if (config.lore_regex) {
+            // 只有当存在正则配置时才进行 IO 操作
+            const allEntries = await WorldInfoUtil.getWorldBookLoresByName(bookName);
+            if (allEntries.length > 0) {
+              const regexList = Array.isArray(config.lore_regex) ? config.lore_regex : [config.lore_regex];
+              for (const rStr of regexList) {
+                const regex = new RegExp(rStr);
+                // 将匹配到的条目加入白名单
+                allEntries.filter(n => regex.test(n)).forEach(l => tempFilterList.push(l));
+              }
             }
           }
-          tempBlacklist.push(...allEntries.filter(e => !whitelist.has(e)));
+
+        } else {
+          // --- 黑名单模式 (原有逻辑) ---
+          // 收集所有“禁止”的条目 (即：该书中除了允许的以外的所有条目)
+
+          let allEntries: string[] = [];
+          allEntries = await WorldInfoUtil.getWorldBookLoresByName(bookName);
+
+          if (allEntries.length > 0) {
+            const whitelist = new Set<string>();
+            if (config.lores) config.lores.forEach((l: string) => whitelist.add(l));
+            if (config.lore_regex) {
+              const regexList = Array.isArray(config.lore_regex) ? config.lore_regex : [config.lore_regex];
+              for (const rStr of regexList) {
+                const regex = new RegExp(rStr);
+                allEntries.filter(n => regex.test(n)).forEach(l => whitelist.add(l));
+              }
+            }
+            // 将不在白名单中的条目加入黑名单列表
+            tempFilterList.push(...allEntries.filter(e => !whitelist.has(e)));
+          }
         }
       }
-      localTaskBlacklist = [...new Set(tempBlacklist)];
-    } catch(e) {
+      localFilterList = [...new Set(tempFilterList)];
+    } catch (e) {
       eraLogger.error('Task world_book processing failed', e);
-      localTaskBlacklist = [];
+      localFilterList = [];
     }
   } else {
-    localTaskBlacklist = [];
+    localFilterList = [];
   }
 
   const maxHistory = task.chat_history || 2;
@@ -658,17 +695,17 @@ async function executeSingleTask(task: any, message_id: number, runId: number): 
   let result = '';
 
   // [核心修改] 使用锁串行执行生成过程
-  // 修复：将任务执行Promise与全局锁Promise分离，确保全局锁永远处于Resolved状态
   const taskExecutionPromise = generationLock.then(async () => {
-    // [核心修复] 在获得锁之后，立即检查当前任务是否已被废弃（例如因为前一个任务失败导致了回滚）
+    // [核心修复] 在获得锁之后，立即检查当前任务是否已被废弃
     if (runId !== currentAnalysisRunId) {
       throw new Error('任务已被中止');
     }
 
-    // 2. [核心修复] 进入锁之后，才将局部计算的黑名单应用到全局变量
-    // 这样保证了在 sendPrompt 执行期间，blacklistLores.value 绝对是当前任务的数据
-    blacklistLores.value = localTaskBlacklist;
-    console.log(`任务 [${task.taskName}] 已应用黑名单，数量: ${blacklistLores.value.length}`);
+    // 2. [核心修复] 应用过滤列表和模式到全局变量
+    blacklistLores.value = localFilterList;
+    isWhitelistMode.value = isWhiteList; // 设置当前的过滤模式
+
+    console.log(`任务 [${task.taskName}] 过滤配置已应用. 模式: ${isWhiteList ? '白名单' : '黑名单'}, 列表条目数: ${blacklistLores.value.length}`);
 
     // 3. 注册宏
     (window as any).SillyTavern.registerMacro('lastUserMessage', () => {
@@ -698,7 +735,7 @@ async function executeSingleTask(task: any, message_id: number, runId: number): 
         }
       }
 
-      // 5. 发送请求 (此时触发事件，handleLoresFilter 会读取到正确的 blacklistLores)
+      // 5. 发送请求 (此时触发事件，handleLoresFilter 会读取到正确的 blacklistLores 和 isWhitelistMode)
       const is_should_stream = false;
 
       if (apiConfig.model_source === 'sample') {
@@ -724,15 +761,15 @@ async function executeSingleTask(task: any, message_id: number, runId: number): 
       // 7. 注销宏
       (window as any).SillyTavern.unregisterMacro('lastUserMessage');
 
-      // 可选：任务完成后清空黑名单，防止影响后续非任务操作（虽然下一个任务会覆盖它）
-      // blacklistLores.value = [];
+      // 恢复默认状态 (可选，防止影响其他非任务流程，虽然下一个任务会覆盖)
+      // isWhitelistMode.value = false;
     }
   });
 
-  // 更新全局锁：无论当前任务成功还是失败，全局锁都应该重置为 Resolved 状态，以便下一个任务可以执行
+  // 更新全局锁
   generationLock = taskExecutionPromise.catch(() => {});
 
-  // 等待当前任务执行，如果有错误这里会抛出，触发外层的重试或回滚逻辑
+  // 等待当前任务执行
   await taskExecutionPromise;
 
   // 提取变量修改数据
@@ -938,14 +975,18 @@ export const handleLoresFilter = async (lores: any) => {
   await (filterLockChain = filterLockChain.then(async () => {
     console.info('handleLoresFilter: ', '接收到过滤请求，开始执行');
 
-    if (blacklistLores.value.length === 0) {
+    if (blacklistLores.value.length === 0 && !isWhitelistMode.value) {
+      // 如果列表为空且是黑名单模式，说明没有要过滤的东西，直接返回
+      // 如果是白名单模式且列表为空，说明要过滤所有东西，不能返回
       return;
     }
 
     try {
-      // 直接使用预计算的黑名单进行移除
-      // isReversed = false: 移除数组中存在的条目
-      await WorldInfoUtil.removeLoresByArray(lores, blacklistLores.value, false);
+      // 直接使用预计算的列表进行移除
+      // isReversed = isWhitelistMode.value
+      // true (白名单模式): 移除 不在 列表中的条目
+      // false (黑名单模式): 移除 在 列表中的条目
+      await WorldInfoUtil.removeLoresByArray(lores, blacklistLores.value, isWhitelistMode.value);
       // eraLogger.log('Scoped WorldInfo Filter Applied. Removed entries:', blacklistLores.value.length);
     } catch (e) {
       eraLogger.error('Error during handleLoresFilter:', e);
