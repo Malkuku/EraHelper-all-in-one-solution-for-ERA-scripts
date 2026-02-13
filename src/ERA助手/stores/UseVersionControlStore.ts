@@ -176,7 +176,12 @@ export const UseVersionControlStore = defineStore('EraVersionControl', () => {
   };
 
   const applyEdit = (target: any, rule: any) => {
-    _.merge(target, rule);
+    _.mergeWith(target, rule, (objValue, srcValue) => {
+      // 如果新的值(srcValue)是数组，直接返回新数组，实现覆盖而非合并
+      if (_.isArray(srcValue)) {
+        return srcValue;
+      }
+    });
   };
 
   /**
