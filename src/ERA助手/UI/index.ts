@@ -14,6 +14,7 @@ import { router } from './router/router';
 import { useEraDataStore } from '../stores/EraDataStore';
 import { useEraEditStore } from '../stores/EraEditStore';
 import { eraLogger } from '../utils/EraHelperLogger';
+import { UseVersionControlStore } from '@/ERA助手/stores/UseVersionControlStore';
 
 let vueApp: VueApp | null = null;
 let mountPoint: JQuery<HTMLDivElement> | null = null;
@@ -61,7 +62,7 @@ function unloadUI() {
 }
 
 // 在加载时执行
-$(() => {
+$(async () => {
   eraLogger.log('initialize', 'UI 脚本开始初始化');
   // 创建挂载点
   mountPoint = createMountPoint();
@@ -86,6 +87,14 @@ $(() => {
   (window as any).EraDataStore = useEraDataStore(pinia);
   useEraDataStore().getEraDataRules();
   (window as any).EraEditStore = useEraEditStore(pinia);
+  await UseVersionControlStore().loadSettings();
+  const currentBookName = getCharWorldbookNames('current').primary;
+  if(UseVersionControlStore().settings.enable
+    && UseVersionControlStore().settings.lore_name
+    && currentBookName){
+    await UseVersionControlStore().fetchCurrentVersion();
+    await UseVersionControlStore().checkAndNotify(currentBookName);
+  }
 
   // 传送样式，也只执行一次
   teleportStyle();

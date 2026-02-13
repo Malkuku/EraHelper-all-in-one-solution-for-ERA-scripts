@@ -5,7 +5,7 @@ import { useUiStore } from '@/ERA助手/stores/UIStore';
 const uiStore = useUiStore();
 
 // 当前版本号
-const currentVersion = ref('v2.2.1');
+const currentVersion = ref('v2.3.0');
 
 // 作者信息
 const author = ref({
@@ -16,10 +16,12 @@ const author = ref({
 // 版本更新历史记录
 const versionHistory = ref([
   {
-    version: 'v2.2.1',
-    date: '2026-02-12',
+    version: 'v2.3.0',
+    date: '2026-02-13',
     changes: [
-      '可以选择是否过滤没有被加入过滤的世界书'
+      '可以选择是否过滤没有被加入过滤的世界书',
+      '增加了版本控制的新功能',
+      '优化手机端的布局'
     ],
   },
   {

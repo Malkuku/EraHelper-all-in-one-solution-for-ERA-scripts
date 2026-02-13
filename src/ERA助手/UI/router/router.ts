@@ -52,6 +52,11 @@ export const router = createRouter({
           name: 'Version',
           component: () => import('../view/VersionInformation.vue'),
         },
+        {
+          path: '/VersionUpdater',
+          name: 'VersionUpdater',
+          component: () => import('../view/VersionUpdater.vue'),
+        }
       ],
     },
   ],
