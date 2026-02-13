@@ -218,17 +218,21 @@ const handleSettingChange = async () => {
 const goToPreview = async () => {
   if (!canCheck.value) return;
 
-  // 1. 计算更新
-  await versionStore.parseUpdateRules(currentBookName.value, versionStore.settings.lore_name);
-  await versionStore.calculateUpdate();
+  try {
+    // 1. 计算更新
+    await versionStore.parseUpdateRules(currentBookName.value, versionStore.settings.lore_name);
+    await versionStore.calculateUpdate();
 
-  // 2. 如果有结果，进入第二页
-  if (versionStore.previewDiff) {
-    step.value = 2;
-    reviewStage.value = 0;
+    // 2. 如果有结果，进入第二页
+    if (versionStore.previewDiff) {
+      step.value = 2;
+      reviewStage.value = 0;
+    }
+  } catch (e: any) {
+    console.error('解析更新数据失败:', e);
+    toastr.error(`读取数据失败: ${e.message || 'JSON格式错误'}`);
   }
 };
-
 const advanceReview = async () => {
   if (reviewStage.value < 4) {
     reviewStage.value++;
