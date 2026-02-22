@@ -892,7 +892,11 @@ async function applyGroupResults(results: TaskResult[], message_id: number) {
           try {
             // 重新获取最新的消息内容（可能被同组前一个任务修改过）
             const currentMessageContent = MessageUtil.getMessageById(message_id);
-            const regex = new RegExp(replace_regex, 'g');
+
+            // [修正] 使用统一的解析逻辑，完全遵从输入的正则和修饰符
+            const { pattern, flags } = RegexUtils.parseRegexString(replace_regex);
+            const regex = new RegExp(pattern, flags);
+
             if (regex.test(currentMessageContent)) {
               const newMessageContent = currentMessageContent.replace(regex, contentToApply);
               await setChatMessages([{ message_id, message: newMessageContent }]);
@@ -910,7 +914,10 @@ async function applyGroupResults(results: TaskResult[], message_id: number) {
           const oldContent = await WorldInfoUtil.getWorldBookLoreContent(world_book, target_lore);
           if (oldContent) {
             try {
-              const regex = new RegExp(replace_regex, 'g');
+              // [修正] 使用统一的解析逻辑，完全遵从输入的正则和修饰符
+              const { pattern, flags } = RegexUtils.parseRegexString(replace_regex);
+              const regex = new RegExp(pattern, flags);
+
               if (regex.test(oldContent)) {
                 const newContent = oldContent.replace(regex, contentToApply);
                 await WorldInfoUtil.updateOrCreateEntry(world_book, target_lore, newContent);
