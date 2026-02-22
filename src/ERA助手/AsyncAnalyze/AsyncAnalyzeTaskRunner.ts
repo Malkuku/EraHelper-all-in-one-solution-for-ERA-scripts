@@ -1,15 +1,18 @@
 import { PromptUtil } from '@/Utils/PromptUtil';
 import { WorldInfoUtil } from '@/Utils/WorldInfoUtil';
 import { eraLogger } from '../utils/EraHelperLogger';
+import { EraDataProcessor } from '@/ERA助手/EraDataHandler/EraMetaHandler';
+import { EraMetaRule } from '@/ERA助手/UI/view/EraDataHandle.vue';
 import {
   getAsyncAnalyzeStore,
+  getEraDataStore,
   blacklistLores,
   isWhitelistMode,
   generationLock,
   updateGenerationLock,
-  getCurrentRunId
+  getCurrentRunId,
 } from './AsyncAnalyzeState';
-import { extractVariableEdits } from './AsyncAnalyzeResultHandler';
+import { extractAndFilterVariableEdits } from './AsyncAnalyzeResultHandler';
 import { TaskResult } from './AsyncAnalyzeTypes';
 
 /**
@@ -149,7 +152,10 @@ export async function executeSingleTask(task: any, message_id: number, runId: nu
   updateGenerationLock(taskExecutionPromise.catch(() => {}));
   await taskExecutionPromise;
 
-  const { cleanContent, variableEdits } = extractVariableEdits(result);
+  const metaRules = getEraDataStore().eraMetaRule as EraMetaRule;
+  const processor = metaRules ? new EraDataProcessor(metaRules) : null;
+
+  const { cleanContent, variableEdits } = extractAndFilterVariableEdits(result, processor);
 
   return {
     taskName: task.taskName,

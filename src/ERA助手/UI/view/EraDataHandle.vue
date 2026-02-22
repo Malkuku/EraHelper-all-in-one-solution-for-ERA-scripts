@@ -11,7 +11,7 @@
 
     <!-- 路径收集框 -->
     <PathCollection
-      v-if="activeTab === 'rule'"
+      v-if="activeTab === 'rule' || activeTab === 'meta'"
       :is-expanded="isPathCollectionExpanded"
       @update:is-expanded="isPathCollectionExpanded = $event"
     />
@@ -185,9 +185,9 @@
             <div class="dsl-builder">
               <div class="dsl-header">
                 <label
-                  >规则执行条件 (if):
+                >规则执行条件 (if):
                   <span style="font-size: 0.85em; color: #666; font-weight: normal"
-                    >(控制所有Handle规则的执行)</span
+                  >(控制所有Handle规则的执行)</span
                   ></label
                 >
                 <div class="dsl-actions">
@@ -271,7 +271,82 @@
         </div>
       </section>
 
-      <!-- 4. 测试模拟 -->
+      <!-- 4. 元规则 (Meta Rules) -->
+      <section v-show="activeTab === 'meta'">
+        <h2>元规则配置</h2>
+
+        <!-- 子页签：切换规则类型 -->
+        <div class="meta-tabs">
+          <button
+            v-for="cat in metaCategories"
+            :key="cat.key"
+            :class="{ active: activeMetaCategory === cat.key }"
+            @click="switchMetaCategory(cat.key)"
+          >
+            {{ cat.label }}
+          </button>
+        </div>
+
+        <!-- 编辑区域 -->
+        <div class="meta-editor-panel">
+          <h3>{{ editingMetaKey ? '编辑规则' : '添加规则' }} - {{ getMetaCategoryLabel(activeMetaCategory) }}</h3>
+          <div class="field">
+            <label>规则Key:</label>
+            <input v-model="metaDraft.key" placeholder="唯一标识，如: protect_hp" :disabled="!!editingMetaKey" />
+          </div>
+          <div class="field">
+            <label>路径:</label>
+            <input v-model="metaDraft.path" placeholder="要处理的路径，支持.*匹配" />
+          </div>
+          <div class="field">
+            <label>启用:</label>
+            <div class="toggle-switch">
+              <input id="metaEnableToggle" v-model="metaDraft.enable" type="checkbox" :true-value="true" :false-value="false" />
+              <label for="metaEnableToggle" class="toggle-label"></label>
+            </div>
+          </div>
+          <div class="field">
+            <label>递归检查:</label>
+            <div class="toggle-switch">
+              <input id="metaRecursiveToggle" v-model="metaDraft.isRecursive" type="checkbox" :true-value="true" :false-value="false" />
+              <label for="metaRecursiveToggle" class="toggle-label"></label>
+            </div>
+          </div>
+          <div class="button-group">
+            <button class="btn primary" @click="saveMetaRule">保存元规则</button>
+            <button class="btn" @click="resetMetaDraft">重置</button>
+          </div>
+        </div>
+
+        <!-- 列表区域 -->
+        <div class="meta-list">
+          <h3>规则列表</h3>
+          <div v-if="!currentMetaList || Object.keys(currentMetaList).length === 0" class="empty-state">
+            <p>该分类下暂无规则</p>
+          </div>
+          <div v-else class="rule-card" v-for="(rule, key) in currentMetaList" :key="key">
+            <div class="rule-header meta-rule-header">
+              <div class="rule-name-container">
+                <span class="rule-name">{{ key }}</span>
+                <span class="rule-status">
+                  <span class="status-indicator" :class="{ enabled: rule.enable }"></span>
+                  {{ rule.enable ? '启用' : '禁用' }}
+                </span>
+                <span class="meta-tag" v-if="rule.isRecursive">递归</span>
+              </div>
+              <div class="rule-actions">
+                <button class="btn small" @click="editMetaRule(key)">编辑</button>
+                <button class="btn small danger" @click="deleteMetaRule(key)">删除</button>
+              </div>
+            </div>
+            <div class="rule-body meta-rule-body">
+              <div><strong>路径:</strong> {{ rule.path }}</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. 测试模拟 -->
       <section v-show="activeTab === 'test'">
         <!-- 添加 ref 引用 -->
         <SimulationTest
@@ -347,6 +422,31 @@ import { EraDataRule, EraDataRuleHandle } from '../../EraDataHandler/types/EraDa
 import { DSLHandler } from '../../EraDataHandler/DSLHandler/DSLHandler';
 import PathSearch from '../components/Search/PathSearch.vue';
 
+// 定义 EraMetaRule 接口
+export interface EraMetaRule {
+  EditRefuse: {
+    [key: string]: {
+      path: string;
+      enable: boolean;
+      isRecursive: boolean;
+    };
+  };
+  DeleteRefuse: {
+    [key: string]: {
+      path: string;
+      enable: boolean;
+      isRecursive: boolean;
+    };
+  };
+  InsertRefuse: {
+    [key: string]: {
+      path: string;
+      enable: boolean;
+      isRecursive: boolean;
+    };
+  };
+}
+
 /* ---------- 数据 ---------- */
 const statData = ref<any>({});
 const rules = ref<Record<string, any>>({});
@@ -366,6 +466,27 @@ const draft = ref<any>({
 });
 const handleNames = ref<Record<string, string>>({});
 
+// Meta Rule 相关状态
+const metaRules = ref<EraMetaRule>({
+  EditRefuse: {},
+  DeleteRefuse: {},
+  InsertRefuse: {}
+});
+const activeMetaCategory = ref<'EditRefuse' | 'DeleteRefuse' | 'InsertRefuse'>('EditRefuse');
+const editingMetaKey = ref<string>(''); // 正在编辑的 meta rule key，为空表示新增
+const metaDraft = ref({
+  key: '',
+  path: '',
+  enable: true,
+  isRecursive: false
+});
+
+const metaCategories = [
+  { key: 'EditRefuse', label: '禁止编辑' },
+  { key: 'DeleteRefuse', label: '禁止删除' },
+  { key: 'InsertRefuse', label: '禁止插入' }
+] as const;
+
 // 路径收集相关
 const uiStore = useUiStore();
 const isPathCollectionExpanded = ref(false);
@@ -375,7 +496,7 @@ const draftRangeMax = ref<number | null | string>(null);
 const draftLimitNeg = ref<number | null | string>(null);
 const draftLimitPos = ref<number | null | string>(null);
 
-const activeTab = ref<'data' | 'rule' | 'test' | 'list'>('data');
+const activeTab = ref<'data' | 'rule' | 'test' | 'list' | 'meta'>('data');
 const showDeleteConfirm = ref(false);
 const deletingKey = ref<string>('');
 const showDuplicateRuleConfirm = ref(false);
@@ -395,6 +516,7 @@ const tabs = [
   { key: 'data', label: '查看数据' },
   { key: 'list', label: '查看规则' },
   { key: 'rule', label: '编辑规则' },
+  { key: 'meta', label: '元规则' },
   { key: 'test', label: '测试模拟' },
 ] as const;
 
@@ -405,6 +527,7 @@ onMounted(async () => {
   const { stat_data } = getVariables({ type: 'chat' });
   statData.value = stat_data || {};
   await loadRules();
+  await loadMetaRules(); // 加载元规则
   Object.keys(rules.value).forEach(k => (folded.value[k] = true));
 });
 
@@ -416,6 +539,27 @@ async function loadRules() {
     showMessage('规则加载成功', 'success');
   } catch (error) {
     showMessage('规则加载失败: ' + error, 'error');
+  }
+}
+
+// 加载元规则
+async function loadMetaRules() {
+  try {
+    // 假设 store 中有 getEraMetaRules 方法
+    if (eraStore.getEraMetaRules) {
+      await eraStore.getEraMetaRules();
+      // 假设 store 中有 eraMetaRule 状态
+      if (eraStore.eraMetaRule) {
+        // 确保结构完整
+        metaRules.value = {
+          EditRefuse: eraStore.eraMetaRule.EditRefuse || {},
+          DeleteRefuse: eraStore.eraMetaRule.DeleteRefuse || {},
+          InsertRefuse: eraStore.eraMetaRule.InsertRefuse || {}
+        };
+      }
+    }
+  } catch (error) {
+    console.warn('元规则加载失败或不支持:', error);
   }
 }
 
@@ -637,6 +781,93 @@ function collectPath(path: string) {
     toastr.success('路径已复制到收集箱', '');
   } else {
     toastr.warning('路径已在收集箱中', '');
+  }
+}
+
+/* ---------- Meta Rules Logic ---------- */
+const currentMetaList = computed(() => {
+  return metaRules.value[activeMetaCategory.value];
+});
+
+function switchMetaCategory(category: 'EditRefuse' | 'DeleteRefuse' | 'InsertRefuse') {
+  activeMetaCategory.value = category;
+  resetMetaDraft();
+}
+
+function getMetaCategoryLabel(key: string) {
+  return metaCategories.find(c => c.key === key)?.label || key;
+}
+
+function resetMetaDraft() {
+  metaDraft.value = {
+    key: '',
+    path: '',
+    enable: true,
+    isRecursive: false
+  };
+  editingMetaKey.value = '';
+}
+
+function editMetaRule(key: string) {
+  const rule = metaRules.value[activeMetaCategory.value][key];
+  if (rule) {
+    metaDraft.value = {
+      key: key,
+      path: rule.path,
+      enable: rule.enable,
+      isRecursive: rule.isRecursive
+    };
+    editingMetaKey.value = key;
+  }
+}
+
+function deleteMetaRule(key: string) {
+  if (confirm(`确定要删除 ${getMetaCategoryLabel(activeMetaCategory.value)} 中的规则 "${key}" 吗？`)) {
+    delete metaRules.value[activeMetaCategory.value][key];
+    saveMetaRulesToStore();
+  }
+}
+
+function saveMetaRule() {
+  if (!metaDraft.value.key) {
+    showMessage('请输入规则Key', 'error');
+    return;
+  }
+  if (!metaDraft.value.path) {
+    showMessage('请输入路径', 'error');
+    return;
+  }
+
+  const category = activeMetaCategory.value;
+
+  // 如果是修改且改了key，先删除旧的
+  if (editingMetaKey.value && editingMetaKey.value !== metaDraft.value.key) {
+    delete metaRules.value[category][editingMetaKey.value];
+  }
+
+  // 保存/更新
+  metaRules.value[category][metaDraft.value.key] = {
+    path: metaDraft.value.path,
+    enable: metaDraft.value.enable,
+    isRecursive: metaDraft.value.isRecursive
+  };
+
+  saveMetaRulesToStore();
+  resetMetaDraft();
+  showMessage('元规则保存成功', 'success');
+}
+
+async function saveMetaRulesToStore() {
+  try {
+    // 假设 store 中有 saveEraMetaRules 方法
+    if (eraStore.saveEraMetaRules) {
+      eraStore.eraMetaRule = metaRules.value;
+      await eraStore.saveEraMetaRules();
+    } else {
+      console.warn('Store 不支持保存元规则');
+    }
+  } catch (error) {
+    showMessage('元规则保存失败: ' + error, 'error');
   }
 }
 
@@ -1069,6 +1300,13 @@ h2 {
   color: #111827;
 }
 
+h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
 /* 5. JSON 展示区 */
 .json-tree-box {
   flex: 1;
@@ -1144,6 +1382,12 @@ h2 {
   box-shadow:
     0 0 0 3px rgba(99, 102, 241, 0.15),
     inset 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.field input:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
 }
 
 /* 8. handle 区 */
@@ -1564,6 +1808,66 @@ input:checked + .toggle-label:before {
   color: #111827;
 }
 
+/* Meta Rule Styles */
+.meta-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 8px;
+}
+
+.meta-tabs button {
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #6b7280;
+  transition: all 0.2s;
+}
+
+.meta-tabs button:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.meta-tabs button.active {
+  background: #e0e7ff;
+  color: #4f46e5;
+  border-color: #c7d2fe;
+  font-weight: 600;
+}
+
+.meta-editor-panel {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.meta-rule-header {
+  cursor: default;
+}
+
+.meta-rule-body {
+  border-top: none;
+  padding-top: 0;
+}
+
+.meta-tag {
+  display: inline-block;
+  padding: 2px 6px;
+  background: #e0f2fe;
+  color: #0369a1;
+  border-radius: 4px;
+  font-size: 10px;
+  margin-left: 8px;
+}
+
 /* 响应式调整 */
 @media (max-width: 768px) {
   .sticky-tabs {
@@ -1735,6 +2039,10 @@ input:checked + .toggle-label:before {
     color: #e5e7eb;
   }
 
+  h3 {
+    color: #d1d5db;
+  }
+
   .field label {
     color: #cbd5e1;
   }
@@ -1754,6 +2062,11 @@ input:checked + .toggle-label:before {
     }
 
     &::placeholder {
+      color: #6b7280;
+    }
+
+    &:disabled {
+      background: #374151;
       color: #6b7280;
     }
   }
@@ -1855,6 +2168,36 @@ input:checked + .toggle-label:before {
       color: #fde68a;
       border-color: #92400e;
     }
+  }
+
+  /* Meta Rule Dark Mode */
+  .meta-tabs {
+    border-bottom-color: #374151;
+
+    button {
+      color: #9ca3af;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.05);
+        color: #e5e7eb;
+      }
+
+      &.active {
+        background: rgba(79, 70, 229, 0.2);
+        color: #818cf8;
+        border-color: #4f46e5;
+      }
+    }
+  }
+
+  .meta-editor-panel {
+    background: #1f2937;
+    border-color: #374151;
+  }
+
+  .meta-tag {
+    background: rgba(3, 105, 161, 0.3);
+    color: #7dd3fc;
   }
 }
 

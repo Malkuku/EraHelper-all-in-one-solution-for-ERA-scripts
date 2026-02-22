@@ -5,7 +5,7 @@ import { useUiStore } from '@/ERA助手/stores/UIStore';
 const uiStore = useUiStore();
 
 // 当前版本号
-const currentVersion = ref('v2.3.0');
+const currentVersion = ref('v3.0.0');
 
 // 作者信息
 const author = ref({
@@ -15,6 +15,14 @@ const author = ref({
 
 // 版本更新历史记录
 const versionHistory = ref([
+  {
+    version: 'v3.0.0',
+    date: '2026-02-22',
+    changes: [
+      '解耦合了分步分析的代码',
+      '增加了全新的Meta规则检查'
+    ],
+  },
   {
     version: 'v2.3.0',
     date: '2026-02-13',
