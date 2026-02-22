@@ -3,18 +3,15 @@ import { App as VueApp, createApp } from 'vue';
 import App from './App.vue';
 import { useUiStore } from '../stores/UIStore';
 import { createMountPoint, destroyMountPoint, deteleportStyle, teleportStyle } from '../utils/dom';
-import {
-  //handleEraRulesOnMessageReceived,
-  handleLoresFilter,
-  handleMessageReceived,
-  reSendEraUpdate,
-} from '../AsyncAnalyze/handleAsyncAnalyzeEvents';
+
 import { useAsyncAnalyzeStore } from '../stores/AsyncAnalyzeStore';
 import { router } from './router/router';
 import { useEraDataStore } from '../stores/EraDataStore';
 import { useEraEditStore } from '../stores/EraEditStore';
 import { eraLogger } from '../utils/EraHelperLogger';
 import { UseVersionControlStore } from '@/ERA助手/stores/UseVersionControlStore';
+import { handleLoresFilter } from '@/ERA助手/AsyncAnalyze/AsyncAnalyzeFilter';
+import { handleMessageReceived, reSendEraUpdate } from '@/ERA助手/AsyncAnalyze/AsyncAnalyzeService';
 
 let vueApp: VueApp | null = null;
 let mountPoint: JQuery<HTMLDivElement> | null = null;
