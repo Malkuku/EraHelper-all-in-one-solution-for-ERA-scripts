@@ -15,6 +15,27 @@ import {
 import { extractAndFilterVariableEdits } from './AsyncAnalyzeResultHandler';
 import { TaskResult } from './AsyncAnalyzeTypes';
 
+// 记录初始预设，用于流程结束后还原
+let originalGlobalPreset: string | null = null;
+
+/**
+ * 还原到最初的预设 (在 Service 流程结束时调用)
+ */
+export const restoreGlobalPreset = async () => {
+  const taskExecutionPromise = generationLock.then(async () => {
+    if (originalGlobalPreset) {
+      const current = (window as any).getLoadedPresetName();
+      if (current !== originalGlobalPreset) {
+        eraLogger.info(`[AsyncAnalyze] 流程结束，恢复初始预设: ${originalGlobalPreset}`);
+        (window as any).loadPreset(originalGlobalPreset);
+      }
+      originalGlobalPreset = null;
+    }
+  });
+  updateGenerationLock(taskExecutionPromise.catch(() => {}));
+  await taskExecutionPromise;
+};
+
 /**
  * 执行单个任务 - 仅生成和提取，不修改数据
  */
@@ -103,28 +124,35 @@ export async function executeSingleTask(task: any, message_id: number, runId: nu
 
     console.log(`任务 [${task.taskName}] 过滤配置已应用. 模式: ${isWhiteList ? '白名单' : '黑名单'}, 列表条目数: ${blacklistLores.value.length}`);
 
-    (window as any).SillyTavern.registerMacro('lastUserMessage', () => user_input);
+    //(window as any).SillyTavern.registerMacro('lastUserMessage', () => user_input);
 
-    const originalPresetName = (window as any).getLoadedPresetName();
-    let tempPresetLoaded = false;
     let tempProfileSetting = null;
 
     try {
+      // 如果是第一次执行，记录当前的全局预设
+      const currentLoadedPreset = (window as any).getLoadedPresetName();
+      if (originalGlobalPreset === null) {
+        originalGlobalPreset = currentLoadedPreset;
+      }
+
+      // 处理 Profile (Profile 比较特殊，通常包含预设，暂时保持局部还原逻辑以防副作用，或者根据需求也可优化)
       if (apiConfig.model_source === 'profile' && apiConfig.profileSetting) {
         tempProfileSetting = ((await (window as any).SillyTavern.executeSlashCommands('/profile')) as any).pipe;
         await (window as any).SillyTavern.executeSlashCommands(`/profile ${apiConfig.profileSetting}`);
       }
 
+      // 处理预设切换 (优化逻辑：覆盖更新，不立即还原)
+      let targetPreset = null;
       if (apiConfig.model_source === 'sample' && apiConfig.simple_preset_name && apiConfig.simple_preset_name !== 'in_use') {
-        if (originalPresetName !== apiConfig.simple_preset_name) {
-          (window as any).loadPreset(apiConfig.simple_preset_name);
-          tempPresetLoaded = true;
-        }
+        targetPreset = apiConfig.simple_preset_name;
       } else if (apiConfig.model_source === 'external' && apiConfig.custom_model_settings?.presetName && apiConfig.custom_model_settings.presetName !== 'in_use') {
-        if (originalPresetName !== apiConfig.custom_model_settings.presetName) {
-          (window as any).loadPreset(apiConfig.custom_model_settings.presetName);
-          tempPresetLoaded = true;
-        }
+        targetPreset = apiConfig.custom_model_settings.presetName;
+      }
+
+      // 只有当目标预设存在且与当前不同时才切换
+      if (targetPreset && targetPreset !== (window as any).getLoadedPresetName()) {
+        console.log(`[AsyncAnalyze] 切换预设: ${(window as any).getLoadedPresetName()} -> ${targetPreset}`);
+        (window as any).loadPreset(targetPreset);
       }
 
       const is_should_stream = false;
@@ -142,10 +170,8 @@ export async function executeSingleTask(task: any, message_id: number, runId: nu
       if (tempProfileSetting) {
         await (window as any).SillyTavern.executeSlashCommands(`/profile ${tempProfileSetting}`);
       }
-      if (tempPresetLoaded) {
-        (window as any).loadPreset(originalPresetName);
-      }
-      (window as any).SillyTavern.unregisterMacro('lastUserMessage');
+      // 注意：此处不再还原预设，预设还原移至 Service 的 finally 块中统一处理
+     // (window as any).SillyTavern.unregisterMacro('lastUserMessage');
     }
   });
 

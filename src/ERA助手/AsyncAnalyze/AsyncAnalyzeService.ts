@@ -10,7 +10,7 @@ import {
 import { updateGlobalBlacklist } from './AsyncAnalyzeFilter';
 import { createBackup, performRollback } from './AsyncAnalyzeBackup';
 import { processMainMessageVariables, applyGroupResults } from './AsyncAnalyzeResultHandler';
-import { executeSingleTask } from './AsyncAnalyzeTaskRunner';
+import { executeSingleTask, restoreGlobalPreset } from './AsyncAnalyzeTaskRunner';
 import { initWatcher } from './AsyncAnalyzeEvents';
 import { TaskResult } from './AsyncAnalyzeTypes';
 
@@ -150,6 +150,7 @@ export const handleAsyncAnalyzeTasks = async (message_id: number, triggeringEven
     await performRollback();
   } finally {
     setIsAnalyzing(false);
+    await restoreGlobalPreset(); // 任务全部完成后，统一还原预设
     await updateGlobalBlacklist();
     await (window as any).eventEmit(ERAEvents.FORCE_SYNC);
     if (!triggeringEvent) {
