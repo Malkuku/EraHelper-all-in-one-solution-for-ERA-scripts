@@ -171,6 +171,11 @@ export const handleMessageReceived = async (message_id: number) => {
       return;
     }
 
+    if(getChatMessages(-1)[0].message.length < 300){
+      toastr.error('空回了喵~已阻止变量更新');
+      return;
+    }
+
     const store = getAsyncAnalyzeStore();
     if (!store.activeRuleName || !store.asyncAnalyzeSetting[store.activeRuleName]) {
       return;
