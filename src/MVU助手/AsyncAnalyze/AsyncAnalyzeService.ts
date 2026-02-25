@@ -11,6 +11,7 @@ import { updateGlobalBlacklist } from './AsyncAnalyzeFilter';
 import { createBackup, performRollback } from './AsyncAnalyzeBackup';
 import { processMainMessageVariables, applyGroupResults } from './AsyncAnalyzeResultHandler';
 import { executeSingleTask, restoreGlobalPreset } from './AsyncAnalyzeTaskRunner';
+// eslint-disable-next-line import-x/no-cycle
 import { initWatcher } from './AsyncAnalyzeEvents';
 import { TaskResult } from './AsyncAnalyzeTypes';
 
@@ -47,7 +48,6 @@ export const handleAsyncAnalyzeTasks = async (message_id: number, triggeringEven
   if (enabledTasks.length === 0) {
     eraLogger.info(`没有找到匹配当前触发条件的任务 (Event: "${triggeringEvent}")`);
     await processMainMessageVariables(message_id);
-    // 注意：这里不 return，继续执行 finally 清理
   }
 
   const sortedTasks = enabledTasks.sort((a, b) => a.order - b.order);
