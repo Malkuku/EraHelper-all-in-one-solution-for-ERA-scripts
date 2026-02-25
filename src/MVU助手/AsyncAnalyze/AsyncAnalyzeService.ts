@@ -13,6 +13,7 @@ import { executeSingleTask, restoreGlobalPreset } from './AsyncAnalyzeTaskRunner
 // eslint-disable-next-line import-x/no-cycle
 import { initWatcher } from './AsyncAnalyzeEvents';
 import { TaskResult } from './AsyncAnalyzeTypes';
+import { KatEvents } from '@/Constants/KatEvent';
 
 /**
  * 核心：处理分步分析任务队列
@@ -152,9 +153,9 @@ export const handleAsyncAnalyzeTasks = async (message_id: number, triggeringEven
     await restoreGlobalPreset(); // 任务全部完成后，统一还原预设
     await updateGlobalBlacklist();
     if (!triggeringEvent) {
-      await (window as any).eventEmit('kat:handle_era_finished');
+      await eventEmit(KatEvents.kat_handle_mvu_finished);
     }
-    await (window as any).setChatMessages([{ message_id: message_id}]);
+    await setChatMessages([{ message_id: message_id}]);
   }
 };
 
@@ -165,7 +166,7 @@ export const handleMessageReceived = async (message_id: number) => {
   try {
     initWatcher();
 
-    if ((window as any).getLastMessageId() == 0 || message_id == 0) {
+    if (getLastMessageId() == 0 || message_id == 0) {
       return;
     }
 

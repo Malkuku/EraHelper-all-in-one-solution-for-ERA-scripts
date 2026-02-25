@@ -19,8 +19,10 @@ export const useEraEditStore = defineStore('KatEraEdit', () => {
     if (!object || typeof object !== 'object') return;
     try {
       const mvuData = Mvu.getMvuData({ type: 'message', message_id: -1 });
-      mvuData.stat_data = object;
-      await Mvu.replaceMvuData(mvuData, { type: 'message', message_id: getLastMessageId() });
+      const newData = mvuData;
+      newData.stat_data = object;
+      await Mvu.replaceMvuData(newData, { type: 'message', message_id: getLastMessageId() });
+      await eventEmit(Mvu.events.VARIABLE_UPDATE_ENDED,newData,mvuData);
       eraLogger.log('saveEraEdit: 数据覆盖成功');
     } catch (error) {
       eraLogger.error('saveEraEdit: 数据覆盖失败', error);

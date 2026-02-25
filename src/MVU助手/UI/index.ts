@@ -11,6 +11,7 @@ import { eraLogger } from '../utils/MvuHelperLogger';
 import { UseVersionControlStore } from '@/MVU助手/stores/UseVersionControlStore';
 import { handleLoresFilter, updateGlobalBlacklist } from '@/MVU助手/AsyncAnalyze/AsyncAnalyzeFilter';
 import { handleMessageReceived, reSendEraUpdate } from '@/MVU助手/AsyncAnalyze/AsyncAnalyzeService';
+import { KatEvents } from '@/Constants/KatEvent';
 
 let vueApp: VueApp | null = null;
 let mountPoint: JQuery<HTMLDivElement> | null = null;
@@ -109,7 +110,7 @@ $(async () => {
   // 监听事件
   eventOn(tavern_events.WORLDINFO_ENTRIES_LOADED, handleLoresFilter);
   eventOn(tavern_events.MESSAGE_RECEIVED, handleMessageReceived);
-  eventOn('kat:resend_era_update', reSendEraUpdate);
+  eventOn(KatEvents.kat_resend_mvu_update, reSendEraUpdate);
 
   // eventOn('kat:handle_era_finished', async ()=>{
   //
