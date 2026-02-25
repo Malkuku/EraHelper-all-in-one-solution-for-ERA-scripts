@@ -1,4 +1,4 @@
-import { eraLogger } from '@/ERA助手/utils/EraHelperLogger';
+import { eraLogger } from '@/MVU助手/utils/EraHelperLogger';
 
 /**
  * 根据世界书名称获取世界书的条目列表

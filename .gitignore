@@ -12,6 +12,6 @@ pnpm-debug.log*
 dist
 
 *.bkp
-src/ERA助手/doc/介绍说明.md
+src/MVU助手/doc/介绍说明.md
 
 myIdea

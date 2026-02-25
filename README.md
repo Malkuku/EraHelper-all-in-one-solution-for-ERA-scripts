@@ -29,7 +29,7 @@
 
 ---
 
-**[常见问题及解决方法](./src/ERA助手/doc/常见问题及其解决办法.md)**
+**[常见问题及解决方法](src/MVU助手/doc/常见问题及其解决办法.md)**
 
 ---
 
@@ -45,7 +45,7 @@
 
 <span id="绑定世界书"></span>
 ### 1）绑定世界书：
-![世界书列表.png](./src/ERA助手/doc/img/世界书列表.png)
+![世界书列表.png](src/MVU助手/doc/img/世界书列表.png)
 
 世界书的绑定分为三个部分：
 1.  **AnalyzeList**：只在分步模式中发送，用来告诉ai要变量分析任务，你可以参考下面的实现：
@@ -65,12 +65,12 @@
 4.  没有绑定的世界书在**任何模式**下都不会被过滤
 
 下面的工作流水图可以帮你了解这个机制：
-![分步分析工作流图.png](./src/ERA助手/doc/img/分步分析工作流图.png)
+![分步分析工作流图.png](src/MVU助手/doc/img/分步分析工作流图.png)
 
 <span id="绑定正则"></span>
 
 ### 2）绑定正则
-![正则列表.png](./src/ERA助手/doc/img/正则列表.png)
+![正则列表.png](src/MVU助手/doc/img/正则列表.png)
 
 这将会决定在分步分析阶段有哪些内容最终会被提取合并到正文中。
 
@@ -135,7 +135,7 @@
 - 支持导入导出rule配置，这代表你可以方便地让ai帮助你。
 - 提供交互式的rule编辑器前端，强大的可视化，语法检查，一键测试，日志追踪功能。
 
-![编辑规则.png](./src/ERA助手/doc/img/编辑规则.png)![dsl编辑器.png](./src/ERA助手/doc/img/dsl编辑器.png)
+![编辑规则.png](src/MVU助手/doc/img/编辑规则.png)![dsl编辑器.png](src/MVU助手/doc/img/dsl编辑器.png)
 
 ### v1.2.0更新后
 在消息处理完毕后，会发送一个`kat:handle_era_finished`事件作为完成标记，其对标的是酒馆的`message_received`事件
@@ -147,11 +147,11 @@ eraLogger.log('监听到kat:handle_era_finished');
 ```
 
 #### 通过AI生成rule规则提供的文档和类型定义，你需要把它们喂给ai：
-[写给AI的EraDataRule规则.md](./src/ERA助手/doc/给AI用/写给AI的EraDataRule规则.md)
+[写给AI的EraDataRule规则.md](src/MVU助手/doc/给AI用/写给AI的EraDataRule规则.md)
 
-[示例-一份完整的era-rule.json](./src/ERA助手/doc/给AI用/示例-一份完整的era-rule.json)
+[示例-一份完整的era-rule.json](src/MVU助手/doc/给AI用/示例-一份完整的era-rule.json)
 
-[EraDataRule类型定义.ts](./src/ERA助手/EraDataHandler/types/EraDataRule.d.ts)
+[EraDataRule类型定义.ts](src/MVU助手/EraDataHandler/types/EraDataRule.d.ts)
 
 > 下面讲述如何配置rule规则，前端提供了交互式的规则生成器。
 这个部分可能会比较复杂，但是我建议你了解一下，这可以帮助你更好地理解这个机制。
@@ -243,7 +243,7 @@ for(rule in rules){
 *   **临时变量**: `@[{s}变量名](局部变量)` `@[{g}变量名](全局变量)`
 *   **示例**: `<<op> $[角色.*.好感度] #[=] $[角色.*.好感度] #[+] &[{num}10] >`
 
-完整的dsl语句定义请参阅[DSL语法定义](./src/ERA助手/EraDataHandler/types/EraDataRule.d.ts)
+完整的dsl语句定义请参阅[DSL语法定义](src/MVU助手/EraDataHandler/types/EraDataRule.d.ts)
 
 **重要细节**： 赋值语句`#[=]`不会检查数据类型，但是合并保护机制会检查数据类型是否一致。因此你在测试中可能会看到赋值成功执行了，但是没有产生任何结果。
 
@@ -322,76 +322,76 @@ for(rule in rules){
 
 >首先，我们提前收集好需要的路径。
 
-![收集路径1.png](./src/ERA助手/doc/img/实操EraDataRule/收集路径1.png)
+![收集路径1.png](src/MVU助手/doc/img/实操EraDataRule/收集路径1.png)
 
-![收集路径2.png](./src/ERA助手/doc/img/实操EraDataRule/收集路径2.png)
+![收集路径2.png](src/MVU助手/doc/img/实操EraDataRule/收集路径2.png)
 
 >接下来，开始编写规则。
 把名称，路径，排序等通通都填写好。
 
-![编辑规则1.png](./src/ERA助手/doc/img/实操EraDataRule/编辑规则1.png)
+![编辑规则1.png](src/MVU助手/doc/img/实操EraDataRule/编辑规则1.png)
 
 >点击保存，第一条规则就写好了。
 
-![编辑规则2.png](./src/ERA助手/doc/img/实操EraDataRule/编辑规则2.png)
+![编辑规则2.png](src/MVU助手/doc/img/实操EraDataRule/编辑规则2.png)
 
 >是不是非常简单？
 
-![编辑规则3.png](./src/ERA助手/doc/img/实操EraDataRule/编辑规则3.png)
+![编辑规则3.png](src/MVU助手/doc/img/实操EraDataRule/编辑规则3.png)
 
 >来编写第二条规则。
 
-![编辑规则4.png](./src/ERA助手/doc/img/实操EraDataRule/编辑规则4.png)
+![编辑规则4.png](src/MVU助手/doc/img/实操EraDataRule/编辑规则4.png)
 
 >注意handle和rule也不可以重名哦。
 打开handle表达式。
 
-![编辑规则5.png](./src/ERA助手/doc/img/实操EraDataRule/编辑规则5.png)
+![编辑规则5.png](src/MVU助手/doc/img/实操EraDataRule/编辑规则5.png)
 
 >可能一眼看上去会有一点点复杂，但是只要一边写一边盯着绿框框看，就能保证自己不会写错了。
 
-![构建DSL1.png](./src/ERA助手/doc/img/实操EraDataRule/构建DSL1.png)
+![构建DSL1.png](src/MVU助手/doc/img/实操EraDataRule/构建DSL1.png)
 
 >快速编写好两条规则。
 
-![构建DSL2.png](./src/ERA助手/doc/img/实操EraDataRule/构建DSL2.png)![构建DSL3.png](./src/ERA助手/doc/img/实操EraDataRule/构建DSL3.png)
+![构建DSL2.png](src/MVU助手/doc/img/实操EraDataRule/构建DSL2.png)![构建DSL3.png](src/MVU助手/doc/img/实操EraDataRule/构建DSL3.png)
 
 >保存规则。
 
-![构建DSL4.png](./src/ERA助手/doc/img/实操EraDataRule/构建DSL4.png)
+![构建DSL4.png](src/MVU助手/doc/img/实操EraDataRule/构建DSL4.png)
 
 >现在我们已经把规则写好了，但是千万不要忘记进行测试哦。
 
 >在开始测试之前，我们先来构建一下测试数据。
 
-![编辑变量1.png](./src/ERA助手/doc/img/实操EraDataRule/编辑变量1.png)
+![编辑变量1.png](src/MVU助手/doc/img/实操EraDataRule/编辑变量1.png)
 
 >我还是比较喜欢原始Json模式，信息量比较大。
 
-![编辑变量2.png](./src/ERA助手/doc/img/实操EraDataRule/编辑变量2.png)
+![编辑变量2.png](src/MVU助手/doc/img/实操EraDataRule/编辑变量2.png)
 
 >这里随便构造好了数据，注意留意红圈圈的地方哦。
 
-![编辑变量3.png](./src/ERA助手/doc/img/实操EraDataRule/编辑变量3.png)
+![编辑变量3.png](src/MVU助手/doc/img/实操EraDataRule/编辑变量3.png)
 
 >导出一下刚刚编辑的草稿。
 
-![编辑变量4.png](./src/ERA助手/doc/img/实操EraDataRule/编辑变量4.png)
+![编辑变量4.png](src/MVU助手/doc/img/实操EraDataRule/编辑变量4.png)
 
 >有了测试数据，我们就可以开始测试啦！耶！
 
-![模拟测试1.png](./src/ERA助手/doc/img/实操EraDataRule/模拟测试1.png)
+![模拟测试1.png](src/MVU助手/doc/img/实操EraDataRule/模拟测试1.png)
 
 >导入测试数据，点击运行结果。
 
-![模拟测试2.png](./src/ERA助手/doc/img/实操EraDataRule/模拟测试2.png)
+![模拟测试2.png](src/MVU助手/doc/img/实操EraDataRule/模拟测试2.png)
 
 >有人可能想问了，对照的数据是什么呢？答案是当前的stat_data。
 > >所以如果想要测试一些特殊情况，应该要在刚刚编辑的地方导入一份stat_data哦。
 
 >真是太好了！测试结果完全符合我们的预期。
 
-![模拟测试3.png](./src/ERA助手/doc/img/实操EraDataRule/模拟测试3.png)
+![模拟测试3.png](src/MVU助手/doc/img/实操EraDataRule/模拟测试3.png)
 
 > 不恭喜你们，恭喜我自己！终于完成了一份规则的编写。
 
