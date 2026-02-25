@@ -6,22 +6,59 @@ import { eraLogger } from '../utils/MvuHelperLogger';
 import { MvuUtil } from '@/Utils/MvuUtil';
 
 /**
- * 将嵌套的 JSON 对象展平为 JSONPatch 数组
- * 例如: {"人物信息": {"987": {"体力": 60}}}
- * 转换为: [{op: "replace", path: "/人物信息/987/体力", value: 60}]
+ * 辅助函数：检查 JSONPatch 路径在当前状态中是否存在
  */
-function flattenObjectToJSONPatch(obj: any, currentPath: string = '', op: string = 'replace'): any[] {
+function checkPathExists(state: any, path: string): boolean {
+  if (!state) return false;
+  if (path === '' || path === '/') return true;
+
+  const parts = path.split('/').filter(p => p !== '');
+  let current = state;
+
+  for (const part of parts) {
+    // 还原 JSONPatch 的转义字符
+    const unescapedPart = part.replace(/~1/g, '/').replace(/~0/g, '~');
+    if (current === null || typeof current !== 'object' || !(unescapedPart in current)) {
+      return false; // 路径中断，说明不存在
+    }
+    current = current[unescapedPart];
+  }
+  return true;
+}
+
+/**
+ * 将嵌套的 JSON 对象展平为 JSONPatch 数组
+ * 智能处理：如果发现父路径在 statData 中不存在，则停止展平，直接插入整个对象
+ */
+function flattenObjectToJSONPatch(
+  obj: any,
+  currentPath: string = '',
+  op: string = 'replace',
+  statData: any = null
+): any[] {
   let patches: any[] = [];
   for (const key in obj) {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
+
+      // 【核心修复2】底层引擎会将路径中的 "." 解析为对象嵌套，导致 "SQ.2" 被解析为 SQ -> 2 报错。
+      // 因此需要将键名中的 "."、"["、"]" 替换为下划线 "_"，防止引擎解析崩溃。
+      const sanitizedKey = key.replace(/[.[\]]/g, '_');
+
       // JSONPatch 标准：转义路径中的 / 和 ~
-      const escapedKey = key.replace(/~/g, '~0').replace(/\//g, '~1');
+      const escapedKey = sanitizedKey.replace(/~/g, '~0').replace(/\//g, '~1');
       const newPath = `${currentPath}/${escapedKey}`;
       const value = obj[key];
 
-      // 如果是普通对象（非数组，非 null），继续递归深入
+      // 如果是普通对象（非数组，非 null），继续递归深入或直接插入
       if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-        patches = patches.concat(flattenObjectToJSONPatch(value, newPath, op));
+        // 检查该路径在当前变量中是否存在 (如果是删除操作则不适用此逻辑)
+        if (statData && !checkPathExists(statData, newPath) && op !== 'remove') {
+          // 如果路径不存在，说明是全新的父节点，停止递归，直接插入整个对象
+          patches.push({ op: 'insert', path: newPath, value: value });
+        } else {
+          // 如果路径存在（或没有传入 statData），继续递归深入
+          patches = patches.concat(flattenObjectToJSONPatch(value, newPath, op, statData));
+        }
       } else {
         // 到达叶子节点，生成 patch 对象
         const patch: any = { op, path: newPath };
@@ -37,8 +74,9 @@ function flattenObjectToJSONPatch(obj: any, currentPath: string = '', op: string
 
 /**
  * 将旧版的 <VariableInsert/Edit/Delete> (内部为纯JSON) 转换为标准的 <UpdateVariable><JSONPatch> 格式
+ * 新增 statData 参数用于智能判断路径
  */
-export function convertLegacyTagsToJSONPatch(text: string): string {
+export function convertLegacyTagsToJSONPatch(text: string, statData: any = null): string {
   if (!text) return text;
 
   const patches: any[] = [];
@@ -55,32 +93,29 @@ export function convertLegacyTagsToJSONPatch(text: string): string {
     cleanedText = cleanedText.replace(tagRegex, (fullMatch, type, innerContent) => {
       const opType = type.toLowerCase();
       let op = 'replace';
-      if (opType === 'insert') op = 'insert'; // 注意：标准 JSONPatch 是 'add'，这里保持与原逻辑一致
+      if (opType === 'insert') op = 'insert';
       else if (opType === 'delete') op = 'remove';
 
       try {
-        // 核心修复：直接解析内部的纯 JSON
         const parsedJson = JSON.parse(innerContent.trim());
 
-        // 将嵌套的 JSON 展平为 JSONPatch 数组
-        const generatedPatches = flattenObjectToJSONPatch(parsedJson, '', op);
+        // 将嵌套的 JSON 展平为 JSONPatch 数组，传入 statData 进行智能判断
+        const generatedPatches = flattenObjectToJSONPatch(parsedJson, '', op, statData);
         patches.push(...generatedPatches);
 
         hasLegacyTags = true;
-        return ''; // 解析成功，从正文中移除该标签块
+        return '';
       } catch (e) {
         eraLogger.warn(`[AsyncAnalyze] 无法解析 <Variable${type}> 标签内的 JSON 内容，跳过转换:\n${innerContent}`, e);
-        return fullMatch; // 解析失败，保留原文本，防止内容莫名消失
+        return fullMatch;
       }
     });
-  } while (cleanedText !== previousText); // 如果还有嵌套的标签，继续处理
+  } while (cleanedText !== previousText);
 
-  // 清理可能残留的孤立闭合/开始标签（容错处理）
   if (hasLegacyTags) {
     cleanedText = cleanedText.replace(/<\/?Variable(Insert|Edit|Delete)>/gi, '');
   }
 
-  // 追加新的标准 JSONPatch 格式到文本末尾
   if (hasLegacyTags && patches.length > 0) {
     const patchJsonStr = JSON.stringify(patches, null, 2);
     const newBlock = `\n<UpdateVariable>\n    <JSONPatch>\n${patchJsonStr}\n    </JSONPatch>\n</UpdateVariable>`;
@@ -100,7 +135,11 @@ export async function processMainMessageVariables(message_id: number) {
     const msgText = MessageUtil.getMessageById(message_id);
     if (!msgText) return;
 
-    const convertedText = convertLegacyTagsToJSONPatch(msgText);
+    // 获取当前变量快照
+    const statData = (window as any).getVariables?.({type:'message', message_id: -1})?.stat_data || null;
+
+    // 传入 statData 进行智能转换
+    const convertedText = convertLegacyTagsToJSONPatch(msgText, statData);
 
     if (convertedText !== msgText) {
       await (window as any).setChatMessages([{
@@ -119,15 +158,17 @@ export async function processMainMessageVariables(message_id: number) {
  */
 export async function applyGroupResults(results: TaskResult[], message_id: number) {
   try {
-    // 获取当前消息内容作为基准
     let currentMsgText = MessageUtil.getMessageById(message_id) || '';
     let isMsgModified = false;
+
+    // 在处理任务前，获取一次当前变量快照
+    const statData = (window as any).getVariables?.({type:'message', message_id: -1})?.stat_data || null;
 
     for (const result of results) {
       if (!result.extractedContent) continue;
 
-      // 1. 转换变量格式
-      const convertedFullText = convertLegacyTagsToJSONPatch(result.extractedContent);
+      // 1. 转换变量格式，传入 statData 进行智能转换
+      const convertedFullText = convertLegacyTagsToJSONPatch(result.extractedContent, statData);
 
       // 3. 如果没有合并设置，直接追加全部内容
       if (!result.mergeSettings || Object.keys(result.mergeSettings).length === 0) {
@@ -146,7 +187,6 @@ export async function applyGroupResults(results: TaskResult[], message_id: numbe
         if (content_regex && Array.isArray(content_regex) && content_regex.length > 0) {
           const extractedParts: string[] = [];
           for (const regexStr of content_regex) {
-            // 使用 RegexUtils 从 narrativeContent 中提取
             const parts = RegexUtils.extractContentByRegex(convertedFullText, regexStr);
             if (parts.length > 0) {
               extractedParts.push(...parts);
@@ -159,7 +199,6 @@ export async function applyGroupResults(results: TaskResult[], message_id: numbe
             continue;
           }
         } else {
-          // 如果没有定义提取正则，默认使用全部叙述内容
           contentToApply = convertedFullText;
         }
 
@@ -183,7 +222,6 @@ export async function applyGroupResults(results: TaskResult[], message_id: numbe
               eraLogger.error(`任务 [${result.taskName}] 正文替换执行出错:`, e);
             }
           } else {
-            // 直接追加
             currentMsgText += '\n' + contentToApply;
             isMsgModified = true;
             eraLogger.info(`任务 [${result.taskName}] 合并 [${mergeKey}]: 内容已追加到正文，内容: ${contentToApply}`);
@@ -208,7 +246,6 @@ export async function applyGroupResults(results: TaskResult[], message_id: numbe
                 eraLogger.error(`任务 [${result.taskName}] 世界书替换执行出错:`, e);
               }
             } else {
-              // 如果目标条目不存在，且有内容，则创建
               // eslint-disable-next-line no-lonely-if
               if (contentToApply && contentToApply.trim().length > 0) {
                 await WorldInfoUtil.updateOrCreateEntry(world_book, target_lore, contentToApply);
@@ -216,7 +253,6 @@ export async function applyGroupResults(results: TaskResult[], message_id: numbe
               }
             }
           } else if (contentToApply && contentToApply.trim().length > 0) {
-            // 追加模式
             const oldContent = await WorldInfoUtil.getWorldBookLoreContent(world_book, target_lore);
             let finalContent = contentToApply;
             if (oldContent && oldContent.length > 0) {
@@ -235,7 +271,7 @@ export async function applyGroupResults(results: TaskResult[], message_id: numbe
         message_id: message_id,
         message: currentMsgText
       }]);
-      await  MvuUtil.updateMvuDataFromContent();
+      await MvuUtil.updateMvuDataFromContent();
       eraLogger.info(`[AsyncAnalyze] 任务结果处理完成，已更新消息内容`);
     }
 
