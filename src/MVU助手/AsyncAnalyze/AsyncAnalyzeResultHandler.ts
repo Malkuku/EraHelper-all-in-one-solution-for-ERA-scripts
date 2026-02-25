@@ -107,6 +107,7 @@ export async function processMainMessageVariables(message_id: number) {
         message_id: message_id,
         message: convertedText
       }]);
+      await MvuUtil.updateMvuDataFromContent();
     }
   } catch (e) {
     eraLogger.error('[AsyncAnalyze] 处理正文变量标签时出错:', e);
