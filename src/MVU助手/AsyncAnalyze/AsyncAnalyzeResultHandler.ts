@@ -1,216 +1,240 @@
-import _ from 'lodash';
+import { TaskResult } from './AsyncAnalyzeTypes';
 import { MessageUtil } from '@/Utils/MessageUtil';
 import { WorldInfoUtil } from '@/Utils/WorldInfoUtil';
 import { RegexUtils } from '@/Utils/RegexUtils';
 import { eraLogger } from '../utils/MvuHelperLogger';
-import { TaskResult } from './AsyncAnalyzeTypes';
+
+/**
+ * 将嵌套的 JSON 对象展平为 JSONPatch 数组
+ * 例如: {"人物信息": {"987": {"体力": 60}}}
+ * 转换为: [{op: "replace", path: "/人物信息/987/体力", value: 60}]
+ */
+function flattenObjectToJSONPatch(obj: any, currentPath: string = '', op: string = 'replace'): any[] {
+  let patches: any[] = [];
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      // JSONPatch 标准：转义路径中的 / 和 ~
+      const escapedKey = key.replace(/~/g, '~0').replace(/\//g, '~1');
+      const newPath = `${currentPath}/${escapedKey}`;
+      const value = obj[key];
+
+      // 如果是普通对象（非数组，非 null），继续递归深入
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        patches = patches.concat(flattenObjectToJSONPatch(value, newPath, op));
+      } else {
+        // 到达叶子节点，生成 patch 对象
+        const patch: any = { op, path: newPath };
+        if (op !== 'remove') {
+          patch.value = value;
+        }
+        patches.push(patch);
+      }
+    }
+  }
+  return patches;
+}
+
+/**
+ * 将旧版的 <VariableInsert/Edit/Delete> (内部为纯JSON) 转换为标准的 <UpdateVariable><JSONPatch> 格式
+ */
+export function convertLegacyTagsToJSONPatch(text: string): string {
+  if (!text) return text;
+
+  const patches: any[] = [];
+  let hasLegacyTags = false;
+  let cleanedText = text;
+
+  // 匹配最内层的完整闭合标签
+  const tagRegex = /<Variable(Insert|Edit|Delete)>((?:(?!<Variable(?:Insert|Edit|Delete)>)[\s\S])*?)<\/Variable\1>/gi;
+
+  let previousText;
+  // 使用 do-while 循环配合 replace，由内向外安全地替换所有标签
+  do {
+    previousText = cleanedText;
+    cleanedText = cleanedText.replace(tagRegex, (fullMatch, type, innerContent) => {
+      const opType = type.toLowerCase();
+      let op = 'replace';
+      if (opType === 'insert') op = 'insert'; // 注意：标准 JSONPatch 是 'add'，这里保持与原逻辑一致
+      else if (opType === 'delete') op = 'remove';
+
+      try {
+        // 核心修复：直接解析内部的纯 JSON
+        const parsedJson = JSON.parse(innerContent.trim());
+
+        // 将嵌套的 JSON 展平为 JSONPatch 数组
+        const generatedPatches = flattenObjectToJSONPatch(parsedJson, '', op);
+        patches.push(...generatedPatches);
+
+        hasLegacyTags = true;
+        return ''; // 解析成功，从正文中移除该标签块
+      } catch (e) {
+        eraLogger.warn(`[AsyncAnalyze] 无法解析 <Variable${type}> 标签内的 JSON 内容，跳过转换:\n${innerContent}`, e);
+        return fullMatch; // 解析失败，保留原文本，防止内容莫名消失
+      }
+    });
+  } while (cleanedText !== previousText); // 如果还有嵌套的标签，继续处理
+
+  // 清理可能残留的孤立闭合/开始标签（容错处理）
+  if (hasLegacyTags) {
+    cleanedText = cleanedText.replace(/<\/?Variable(Insert|Edit|Delete)>/gi, '');
+  }
+
+  // 追加新的标准 JSONPatch 格式到文本末尾
+  if (hasLegacyTags && patches.length > 0) {
+    const patchJsonStr = JSON.stringify(patches, null, 2);
+    const newBlock = `\n<UpdateVariable>\n    <JSONPatch>\n${patchJsonStr}\n    </JSONPatch>\n</UpdateVariable>`;
+    cleanedText = cleanedText.trimEnd() + newBlock;
+  }
+
+  return cleanedText;
+}
 
 /**
  * 处理正文中的变量修改
  */
 export async function processMainMessageVariables(message_id: number) {
-  let result = MessageUtil.getMessageById(message_id)[0];
-  result = transformLegacyTagsToJSONPatch(result);
-  await setChatMessages([{message_id: message_id,message:result}]);
-}
+  try {
+    const msgText = MessageUtil.getMessageById(message_id);
+    if (!msgText) return;
 
-/**
- * 将旧版的 <VariableEdit/Insert/Delete> 转换为 <UpdateVariable><JSONPatch>...
- *
- * 转换规则:
- * VariableEdit -> op: replace
- * VariableInsert -> op: insert
- * VariableDelete -> op: remove
- */
-function transformLegacyTagsToJSONPatch(content: string): string {
-  const patches: any[] = [];
-  let newContent = content;
-  let hasLegacyTags = false;
+    const convertedText = convertLegacyTagsToJSONPatch(msgText);
 
-  // 辅助处理函数
-  const processTag = (tagName: string, op: string) => {
-    // 匹配标签及其内容
-    const regex = new RegExp(`<${tagName}>([\\s\\S]*?)<\\/${tagName}>`, 'gi');
-
-    newContent = newContent.replace(regex, (match, jsonStr) => {
-      hasLegacyTags = true;
-      if (!jsonStr || !jsonStr.trim()) return '';
-
-      try {
-        const data = JSON.parse(jsonStr);
-
-        // 处理数组形式 (通常用于 Delete)
-        if (Array.isArray(data)) {
-          data.forEach(path => {
-            // 确保路径以 / 开头
-            const finalPath = path.startsWith('/') ? path : `/${path}`;
-            patches.push({ op, path: finalPath });
-          });
-        }
-        // 处理对象形式 (通常用于 Edit/Insert，key为路径，value为值)
-        else if (typeof data === 'object' && data !== null) {
-          Object.entries(data).forEach(([key, value]) => {
-            const path = key.startsWith('/') ? key : `/${key}`;
-
-            if (op === 'remove') {
-              // remove 操作不需要 value
-              patches.push({ op, path });
-            } else {
-              patches.push({ op, path, value });
-            }
-          });
-        }
-      } catch (e) {
-        eraLogger.error(`[AsyncAnalyze] Failed to parse legacy tag ${tagName}`, e);
-        // 解析失败保留原样或移除？这里选择移除以避免污染，但记录错误
-        return match;
-      }
-      return ''; // 从原文中移除旧标签
-    });
-  };
-
-  processTag('VariableEdit', 'replace');
-  processTag('VariableInsert', 'insert');
-  processTag('VariableDelete', 'remove');
-
-  // 如果发现了旧标签并成功转换，追加新的 JSONPatch 块
-  if (hasLegacyTags && patches.length > 0) {
-    const patchBlock = `<UpdateVariable>\n<JSONPatch>\n${JSON.stringify(patches, null, 2)}\n</JSONPatch>\n</UpdateVariable>`;
-    return newContent.trim() + '\n' + patchBlock;
+    if (convertedText !== msgText) {
+      await (window as any).setChatMessages([{
+        message_id: message_id,
+        message: convertedText
+      }]);
+    }
+  } catch (e) {
+    eraLogger.error('[AsyncAnalyze] 处理正文变量标签时出错:', e);
   }
-
-  return content;
 }
 
 /**
  * 统一应用一组任务的结果
- * 处理 merge_setting 中的正则提取和替换逻辑
  */
 export async function applyGroupResults(results: TaskResult[], message_id: number) {
-  for (const result of results) {
-    // 0. 预处理：将旧版变量标签转换为 JSONPatch 格式
-    // 这会修改 extractedContent，后续的正则提取将基于转换后的文本进行
-    result.extractedContent = transformLegacyTagsToJSONPatch(result.extractedContent);
+  try {
+    // 获取当前消息内容作为基准
+    let currentMsgText = MessageUtil.getMessageById(message_id) || '';
+    let isMsgModified = false;
 
-    const { extractedContent, mergeSettings, taskName } = result;
-    if (!mergeSettings) continue;
+    for (const result of results) {
+      if (!result.extractedContent) continue;
 
-    for (const [settingName, setting] of Object.entries(mergeSettings)) {
-      const config = setting as any;
+      // 1. 转换变量格式
+      const convertedFullText = convertLegacyTagsToJSONPatch(result.extractedContent);
 
-      // -------------------------------------------------------
-      // 1. 执行内容提取 (Content Extraction)
-      // -------------------------------------------------------
-      let extractedText: string | null = null;
-
-      // 必须配置 content_regex 才能提取内容
-      if (config.content_regex && Array.isArray(config.content_regex) && config.content_regex.length > 0) {
-        for (const regexStr of config.content_regex) {
-          if (!regexStr) continue;
-          try {
-            // 使用 RegexUtils 解析正则，确保修饰符一致
-            const { pattern, flags } = RegexUtils.parseRegexString(regexStr);
-            const regex = new RegExp(pattern, flags);
-            const match = extractedContent.match(regex);
-
-            if (match) {
-              // 优先使用第一个捕获组，如果没有捕获组则使用整个匹配结果
-              extractedText = match[1] !== undefined ? match[1] : match[0];
-              if (extractedText) break; // 找到匹配即停止尝试后续正则
-            }
-          } catch (e) {
-            eraLogger.error(`[AsyncAnalyze] 正则提取错误 Task:${taskName} Setting:${settingName} Regex:${regexStr}`, e);
-          }
-        }
-      }
-
-      // 如果没有提取到内容，跳过此设置的应用
-      if (!extractedText) {
+      // 3. 如果没有合并设置，直接追加全部内容
+      if (!result.mergeSettings || Object.keys(result.mergeSettings).length === 0) {
+        currentMsgText += '\n' + convertedFullText;
+        isMsgModified = true;
         continue;
       }
 
-      // -------------------------------------------------------
-      // 2. 应用到世界书 (World Book Update)
-      // -------------------------------------------------------
-      if (config.world_book && config.target_lore && !config.is_inject) {
-        try {
-          // 获取原始内容（如果不存在则为空字符串）
-          let originalContent = await WorldInfoUtil.getWorldBookLoreContent(config.world_book, config.target_lore) || '';
-          let newContent = originalContent;
-          let shouldUpdate = false;
+      // 4. 处理合并设置 (Merge Settings)
+      for (const [mergeKey, setting] of Object.entries(result.mergeSettings)) {
+        const { is_inject, world_book, target_lore, content_regex, replace_regex } = setting as any;
 
-          if (config.replace_regex) {
-            // 有替换正则：执行正则替换
+        let contentToApply = '';
+
+        // --- 步骤 A: 提取内容 ---
+        if (content_regex && Array.isArray(content_regex) && content_regex.length > 0) {
+          const extractedParts: string[] = [];
+          for (const regexStr of content_regex) {
+            // 使用 RegexUtils 从 narrativeContent 中提取
+            const parts = RegexUtils.extractContentByRegex(convertedFullText, regexStr);
+            if (parts.length > 0) {
+              extractedParts.push(...parts);
+            }
+          }
+          if (extractedParts.length > 0) {
+            contentToApply = extractedParts.join('\n');
+          } else {
+            eraLogger.warn(`任务 [${result.taskName}] 合并 [${mergeKey}]: 未能通过正则提取到内容`);
+            continue;
+          }
+        } else {
+          // 如果没有定义提取正则，默认使用全部叙述内容
+          contentToApply = convertedFullText;
+        }
+
+        if (!contentToApply && !replace_regex) continue;
+
+        // --- 步骤 B: 注入到正文 (Chat) ---
+        if (is_inject) {
+          if (replace_regex) {
             try {
-              const { pattern, flags } = RegexUtils.parseRegexString(config.replace_regex);
-              const replaceRegex = new RegExp(pattern, flags);
+              const { pattern, flags } = RegexUtils.parseRegexString(replace_regex);
+              const regex = new RegExp(pattern, flags);
 
-              // 直接替换并对比结果
-              const replaced = originalContent.replace(replaceRegex, extractedText);
-
-              if (replaced !== originalContent) {
-                newContent = replaced;
-                shouldUpdate = true;
+              if (regex.test(currentMsgText)) {
+                currentMsgText = currentMsgText.replace(regex, contentToApply);
+                isMsgModified = true;
+                eraLogger.info(`任务 [${result.taskName}] 合并 [${mergeKey}]: 正文内容已根据正则替换，内容: ${contentToApply}`);
               } else {
-                eraLogger.warn(`[AsyncAnalyze] 替换正则未匹配到目标内容，跳过更新。WB:${config.world_book} Lore:${config.target_lore}`);
+                eraLogger.warn(`任务 [${result.taskName}] 合并 [${mergeKey}]: 正文替换失败，未匹配到目标正则`);
               }
             } catch (e) {
-              eraLogger.error(`[AsyncAnalyze] 世界书替换正则错误`, e);
+              eraLogger.error(`任务 [${result.taskName}] 正文替换执行出错:`, e);
             }
           } else {
-            // 没有替换正则 -> 直接写入 (覆盖模式)
-            newContent = extractedText;
-            shouldUpdate = true;
+            // 直接追加
+            currentMsgText += '\n' + contentToApply;
+            isMsgModified = true;
+            eraLogger.info(`任务 [${result.taskName}] 合并 [${mergeKey}]: 内容已追加到正文，内容: ${contentToApply}`);
           }
-
-          if (shouldUpdate) {
-            await WorldInfoUtil.updateOrCreateEntry(config.world_book, config.target_lore, newContent);
-            eraLogger.info(`[AsyncAnalyze] 已更新世界书: ${config.world_book}:${config.target_lore}`);
-          }
-        } catch (e) {
-          eraLogger.error(`[AsyncAnalyze] 世界书更新失败 [${settingName}]`, e);
         }
-      }
 
-      // -------------------------------------------------------
-      // 3. 应用到正文注入 (Message Injection)
-      // -------------------------------------------------------
-      if (config.is_inject) {
-        try {
-          const msgContent = MessageUtil.getMessageById(message_id);
-          if (msgContent !== null) {
-            let newMsgContent = msgContent;
-            let shouldUpdate = false;
-
-            if (config.replace_regex) {
-              // 有替换正则：执行正则替换
+        // --- 步骤 C: 注入到世界书 (World Info) ---
+        else if (world_book && target_lore) {
+          if (replace_regex) {
+            const oldContent = await WorldInfoUtil.getWorldBookLoreContent(world_book, target_lore);
+            if (oldContent) {
               try {
-                const { pattern, flags } = RegexUtils.parseRegexString(config.replace_regex);
-                const replaceRegex = new RegExp(pattern, flags);
+                const { pattern, flags } = RegexUtils.parseRegexString(replace_regex);
+                const regex = new RegExp(pattern, flags);
 
-                const replacedMsg = newMsgContent.replace(replaceRegex, extractedText);
-                if (replacedMsg !== newMsgContent) {
-                  newMsgContent = replacedMsg;
-                  shouldUpdate = true;
+                if (regex.test(oldContent)) {
+                  const newContent = oldContent.replace(regex, contentToApply);
+                  await WorldInfoUtil.updateOrCreateEntry(world_book, target_lore, newContent);
+                  eraLogger.info(`任务 [${result.taskName}] 合并 [${mergeKey}]: 世界书条目 [${target_lore}] 内容已替换更新，内容: ${contentToApply}`);
                 }
               } catch (e) {
-                eraLogger.error(`[AsyncAnalyze] 消息替换正则错误`, e);
+                eraLogger.error(`任务 [${result.taskName}] 世界书替换执行出错:`, e);
               }
             } else {
-              // 没有替换正则 -> 直接写入 (追加模式)
-              newMsgContent = newMsgContent + '\n' + extractedText;
-              shouldUpdate = true;
+              // 如果目标条目不存在，且有内容，则创建
+              // eslint-disable-next-line no-lonely-if
+              if (contentToApply && contentToApply.trim().length > 0) {
+                await WorldInfoUtil.updateOrCreateEntry(world_book, target_lore, contentToApply);
+                eraLogger.info(`任务 [${result.taskName}] 合并 [${mergeKey}]: 世界书条目 [${target_lore}] 不存在，已创建新条目，内容: ${contentToApply}`);
+              }
             }
-
-            if (shouldUpdate) {
-              await (window as any).setChatMessages([{ message_id: message_id, message: newMsgContent }]);
-              eraLogger.info(`[AsyncAnalyze] 已更新消息内容: ${message_id}`);
+          } else if (contentToApply && contentToApply.trim().length > 0) {
+            // 追加模式
+            const oldContent = await WorldInfoUtil.getWorldBookLoreContent(world_book, target_lore);
+            let finalContent = contentToApply;
+            if (oldContent && oldContent.length > 0) {
+              finalContent = oldContent + '\n' + contentToApply;
             }
+            await WorldInfoUtil.updateOrCreateEntry(world_book, target_lore, finalContent);
+            eraLogger.info(`任务 [${result.taskName}] 合并 [${mergeKey}]: 世界书条目 [${target_lore}] 已追加更新，内容: ${contentToApply}`);
           }
-        } catch (e) {
-          eraLogger.error(`[AsyncAnalyze] 消息注入失败`, e);
         }
       }
     }
+
+    // 6. 统一保存修改后的消息
+    if (isMsgModified) {
+      await (window as any).setChatMessages([{
+        message_id: message_id,
+        message: currentMsgText
+      }]);
+      eraLogger.info(`[AsyncAnalyze] 任务结果处理完成，已更新消息内容`);
+    }
+
+  } catch (e) {
+    eraLogger.error('[AsyncAnalyze] 应用任务结果时出错:', e);
   }
 }
