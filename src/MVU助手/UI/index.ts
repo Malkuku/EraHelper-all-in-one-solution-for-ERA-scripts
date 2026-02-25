@@ -6,9 +6,8 @@ import { createMountPoint, destroyMountPoint, deteleportStyle, teleportStyle } f
 
 import { useAsyncAnalyzeStore } from '../stores/AsyncAnalyzeStore';
 import { router } from './router/router';
-import { useEraDataStore } from '../stores/EraDataStore';
 import { useEraEditStore } from '../stores/EraEditStore';
-import { eraLogger } from '../utils/EraHelperLogger';
+import { eraLogger } from '../utils/MvuHelperLogger';
 import { UseVersionControlStore } from '@/MVU助手/stores/UseVersionControlStore';
 import { handleLoresFilter } from '@/MVU助手/AsyncAnalyze/AsyncAnalyzeFilter';
 import { handleMessageReceived, reSendEraUpdate } from '@/MVU助手/AsyncAnalyze/AsyncAnalyzeService';
@@ -81,8 +80,6 @@ $(async () => {
   (window as any).UiStore = useUiStore(pinia);
   (window as any).AsyncAnalyzeStore = useAsyncAnalyzeStore(pinia);
   useAsyncAnalyzeStore().getModelSettings();
-  (window as any).EraDataStore = useEraDataStore(pinia);
-  useEraDataStore().getEraDataRules();
   (window as any).EraEditStore = useEraEditStore(pinia);
   await UseVersionControlStore().loadSettings();
   const currentBookName = getCharWorldbookNames('current').primary;

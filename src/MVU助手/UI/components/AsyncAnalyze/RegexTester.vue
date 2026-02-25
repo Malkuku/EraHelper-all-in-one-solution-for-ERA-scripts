@@ -151,7 +151,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useAsyncAnalyzeStore, SavedRegexConfig } from '@/MVU助手/stores/AsyncAnalyzeStore';
-import { eraLogger } from '@/MVU助手/utils/EraHelperLogger';
+import { eraLogger } from '@/MVU助手/utils/MvuHelperLogger';
 import FileImportExport from '@/MVU助手/UI/components/File/FileImportExport.vue';
 import { useUiStore } from '@/MVU助手/stores/UIStore';
 import { RegexUtils } from '@/Utils/RegexUtils';

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { useEraEditStore } from './EraEditStore';
-import { eraLogger } from '../utils/EraHelperLogger';
+import { eraLogger } from '../utils/MvuHelperLogger';
 import _ from 'lodash';
 import { WorldInfoUtil } from '@/Utils/WorldInfoUtil';
 import { ERAUtil } from '@/Utils/ERAUtil';

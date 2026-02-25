@@ -1,5 +1,5 @@
 import { watch } from 'vue';
-import { eraLogger } from '../utils/EraHelperLogger';
+import { eraLogger } from '../utils/MvuHelperLogger';
 import { getAsyncAnalyzeStore, isAnalyzing } from './AsyncAnalyzeState';
 import { updateGlobalBlacklist } from './AsyncAnalyzeFilter';
 import { handleAsyncAnalyzeTasks } from './AsyncAnalyzeService'; // 循环依赖注意：Service 导出函数

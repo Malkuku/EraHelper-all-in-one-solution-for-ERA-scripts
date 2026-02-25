@@ -1,18 +1,14 @@
 import { PromptUtil } from '@/Utils/PromptUtil';
 import { WorldInfoUtil } from '@/Utils/WorldInfoUtil';
-import { eraLogger } from '../utils/EraHelperLogger';
-import { EraDataProcessor } from '@/MVU助手/EraDataHandler/EraMetaHandler';
-import { EraMetaRule } from '@/MVU助手/UI/view/EraDataHandle.vue';
+import { eraLogger } from '../utils/MvuHelperLogger';
 import {
   getAsyncAnalyzeStore,
-  getEraDataStore,
   blacklistLores,
   isWhitelistMode,
   generationLock,
   updateGenerationLock,
   getCurrentRunId,
 } from './AsyncAnalyzeState';
-import { extractAndFilterVariableEdits } from './AsyncAnalyzeResultHandler';
 import { TaskResult } from './AsyncAnalyzeTypes';
 
 // 记录初始预设，用于流程结束后还原
@@ -171,22 +167,16 @@ export async function executeSingleTask(task: any, message_id: number, runId: nu
         await (window as any).SillyTavern.executeSlashCommands(`/profile ${tempProfileSetting}`);
       }
       // 注意：此处不再还原预设，预设还原移至 Service 的 finally 块中统一处理
-     // (window as any).SillyTavern.unregisterMacro('lastUserMessage');
+      // (window as any).SillyTavern.unregisterMacro('lastUserMessage');
     }
   });
 
   updateGenerationLock(taskExecutionPromise.catch(() => {}));
   await taskExecutionPromise;
 
-  const metaRules = getEraDataStore().eraMetaRule as EraMetaRule;
-  const processor = metaRules ? new EraDataProcessor(metaRules) : null;
-
-  const { cleanContent, variableEdits } = extractAndFilterVariableEdits(result, processor);
-
   return {
     taskName: task.taskName,
-    extractedContent: cleanContent,
-    mergeSettings: task.merge_setting,
-    variableEdits: variableEdits
+    extractedContent: result,
+    mergeSettings: task.merge_setting
   };
 }

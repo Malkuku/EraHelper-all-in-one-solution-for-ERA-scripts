@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ERAUtil } from '../../Utils/ERAUtil';
 import { ERAEvents } from '../../Constants/ERAEvent';
-import { eraLogger } from '../utils/EraHelperLogger';
+import { eraLogger } from '../utils/MvuHelperLogger';
 
 export const useEraEditStore = defineStore('KatEraEdit', () => {
   /**

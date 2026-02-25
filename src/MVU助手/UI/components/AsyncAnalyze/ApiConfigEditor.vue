@@ -194,7 +194,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useAsyncAnalyzeStore } from '@/MVU助手/stores/AsyncAnalyzeStore';
-import { eraLogger } from '@/MVU助手/utils/EraHelperLogger';
+import { eraLogger } from '@/MVU助手/utils/MvuHelperLogger';
 import SearchableSelect from '../Dialog/SearchableSelect.vue';
 import { useUiStore } from '@/MVU助手/stores/UIStore';
 import Tooltip from '../Common/Tooltip.vue';

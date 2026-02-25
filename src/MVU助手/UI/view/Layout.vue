@@ -9,9 +9,6 @@
         <button class="btn" :class="{ active: currentRoute === '/VersionUpdater' }" @click="goToRoute('/VersionUpdater')">
           <span class="btn-text">💫更新版本</span>
         </button>
-        <button class="btn" :class="{ active: currentRoute === '/EraDataHandle' }" @click="goToRoute('/EraDataHandle')">
-          <span class="btn-text">⚙️Era规则</span>
-        </button>
         <button class="btn" :class="{ active: currentRoute === '/EraDataEdit' }" @click="goToRoute('/EraDataEdit')">
           <span class="btn-text">📝变量编辑</span>
         </button>

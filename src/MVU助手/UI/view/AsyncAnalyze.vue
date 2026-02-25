@@ -1,7 +1,5 @@
 <template>
   <div :class="{ 'dark-mode': uiStore.darkMode }" class="main-container">
-    <h3 class="title">ERA 分步分析助手</h3>
-
     <!-- 顶部导航栏 -->
     <div class="page-tabs">
       <router-link

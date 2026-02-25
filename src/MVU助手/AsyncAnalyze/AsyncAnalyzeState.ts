@@ -1,13 +1,8 @@
 import { ref } from 'vue';
 import { useAsyncAnalyzeStore } from '../stores/AsyncAnalyzeStore';
-import { useEraDataStore } from '../stores/EraDataStore';
-import { useEraEditStore } from '../stores/EraEditStore';
 
 // Store Helpers
 export const getAsyncAnalyzeStore = () => (window as any).AsyncAnalyzeStore as ReturnType<typeof useAsyncAnalyzeStore>;
-export const getEraDataStore = () => (window as any).EraDataStore as ReturnType<typeof useEraDataStore>;
-export const getEraEditStore = () => (window as any).EraEditStore as ReturnType<typeof useEraEditStore>;
-
 // Global State
 export const blacklistLores = ref<string[]>([]);
 export const isWhitelistMode = ref(false);

@@ -5,7 +5,7 @@ import { useUiStore } from '@/MVU助手/stores/UIStore';
 const uiStore = useUiStore();
 
 // 当前版本号
-const currentVersion = ref('v3.0.0');
+const currentVersion = ref('v1.0.0');
 
 // 作者信息
 const author = ref({
@@ -16,115 +16,12 @@ const author = ref({
 // 版本更新历史记录
 const versionHistory = ref([
   {
-    version: 'v3.0.0',
-    date: '2026-02-22',
-    changes: [
-      '解耦合了分步分析的代码',
-      '增加了全新的Meta规则检查'
-    ],
-  },
-  {
-    version: 'v2.3.0',
-    date: '2026-02-13',
-    changes: [
-      '可以选择是否过滤没有被加入过滤的世界书',
-      '增加了版本控制的新功能',
-      '优化手机端的布局',
-      'fix：替换正则效果与实际不一致'
-    ],
-  },
-  {
-    version: 'v2.2.0',
-    date: '2026-02-11',
-    changes: [
-      '任务可以在0层被触发了',
-      "API配置页的移动端适配",
-      "fix:错误回滚后会导致一直错误",
-      "添加一个静默预设切换弹窗的功能"
-    ],
-  },
-  {
-    version: 'v2.1.2',
-    date: '2026-02-08',
-    changes: [
-      '勾选全部世界书将从已筛选中勾选',
-      '现在handle处理的差异化策略会对数组进行检查'
-    ],
-  },
-  {
-    version: 'v2.1.1',
-    date: '2026-02-06',
-    changes: [
-      '世界书条目为空或不存在时，会直接写入新内容'
-    ],
-  },
-  {
-    version: 'v2.1.0',
-    date: '2026-02-05',
-    changes: [
-      '添加一键勾选世界书条目，一键反选的功能',
-      '增加了一个“kat:resend_era_update”事件，可以用于触发变量重算',
-      'fix:正文中输出的ERA可能不会被handle规则处理',
-      'fix:ERA变量编辑后有时候不会正确生效'
-    ],
-  },
-  {
-    version: 'v2.0.0',
-    date: '2026-01-29',
-    changes: [
-      '大幅度地重构了分步分析设置相关的内容了，现在支持多任务处理',
-    ],
-  },
-  {
-    version: 'v1.2.3',
-    date: '2026-01-21',
-    changes: [
-      '现在会尝试合并所有的edit标签，再一起运用handle处理',
-      'fix:世界书和正则配置黑夜模式没有完全生效'
-    ],
-  },
-  {
-    version: 'v1.2.2',
-    date: '2026-01-19',
-    changes: [
-      'fix：分步模式的era差异同步问题',
-      '添加黑夜模式主题'
-    ],
-  },
-  {
-    version: 'v1.2.1',
-    date: '2026-01-18',
-    changes: [
-      '分步模式有时候会导致预设正则失效',
-      '分步模式发送【kat:handle_era_finished】事件的时机不对'
-    ],
-  },
-  {
-    version: 'v1.2.0',
-    date: '2026-01-15',
-    changes: [
-      '增加了随机数`#[{random}]`规则',
-      '现在在era助手处理完成后，会发送一个事件标记完成（具体请看文档中的更新）',
-      '现在正文不需要等待变量分析就可以直接显示',
-      '调整了era规则编辑中的JsonTree的美化样式',
-      '流式模式已经可用，请更新提示词模板的版本',
-    ],
-  },
-  {
-    version: 'v1.1.0',
-    date: '2025-12-21',
-    changes: ['移除了top_k相关的设置以兼容gemini直连', '现在默认模型和额外模型模式也可以选择预设了'],
-  },
-  {
-    version: 'v1.0.1',
-    date: '2025-12-15',
-    changes: ['修复 limit 和 range 可能保存为包含空字符串的问题', '调整优化了rule的导出顺序'],
-  },
-  {
     version: 'v1.0.0',
-    date: '2025-12-13',
-    changes: ['发布首个版本。'],
-  },
+    date: '2026-02-25',
+    changes: [
+      '正式改名为MVU助手'
+    ],
+  }
 ]);
 </script>
 

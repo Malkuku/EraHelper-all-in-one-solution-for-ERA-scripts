@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import { eraLogger } from '../utils/EraHelperLogger';
+import { eraLogger } from '../utils/MvuHelperLogger';
 import { AsyncAnalyzeSetting, ApiConfigSetting } from '@/MVU助手/AsyncAnalyze/types/AsyncAnalyzeSetting';
 
 // 定义正则配置的类型接口

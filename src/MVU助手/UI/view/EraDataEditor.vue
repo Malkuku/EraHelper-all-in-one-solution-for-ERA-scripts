@@ -260,7 +260,7 @@ import { cloneDeep, set } from 'lodash';
 import EraConfirmModal from '../components/Dialog/EraConfirmModal.vue';
 import FileImportExport from '../components/File/FileImportExport.vue';
 import PathSearch from '../components/Search/PathSearch.vue';
-import { eraLogger } from '../../utils/EraHelperLogger';
+import { eraLogger } from '../../utils/MvuHelperLogger';
 import JsonTreeEdit from '../components/JsonNode/JsonTreeEdit.vue';
 import { useUiStore } from '@/MVU助手/stores/UIStore';
 

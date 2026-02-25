@@ -1,5 +1,5 @@
 import { ERAEvents } from '@/Constants/ERAEvent';
-import { eraLogger } from '../utils/EraHelperLogger';
+import { eraLogger } from '../utils/MvuHelperLogger';
 import {
   getAsyncAnalyzeStore,
   isAnalyzing,
