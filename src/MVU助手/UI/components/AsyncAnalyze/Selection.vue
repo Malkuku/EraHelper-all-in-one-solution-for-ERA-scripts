@@ -93,6 +93,7 @@ import { AsyncAnalyzeSetting } from '@/MVU助手/AsyncAnalyze/types/AsyncAnalyze
 import FileImportExport from '@/MVU助手/UI/components/File/FileImportExport.vue';
 import { Modal } from '@/MVU助手/utils/modal';
 import { useUiStore } from '@/MVU助手/stores/UIStore';
+import { updateGlobalBlacklist } from '@/MVU助手/AsyncAnalyze/AsyncAnalyzeFilter';
 
 const store = useAsyncAnalyzeStore();
 const router = useRouter();
@@ -123,6 +124,7 @@ const createNewRule = async () => {
   // 如果是第一个，自动激活
   if (!store.activeRuleName) {
     store.activeRuleName = name;
+    await updateGlobalBlacklist();
   }
 
   await store.saveModelSettings();
@@ -197,6 +199,7 @@ const moveRule = async (key: string, direction: number) => {
 const activateRule = async (key: string) => {
   store.activeRuleName = key;
   await store.saveModelSettings();
+  await updateGlobalBlacklist();
   toastr.success(`已启用规则组: ${key}`);
 };
 
@@ -215,6 +218,7 @@ const deleteRule = async (key: string) => {
   // 如果删除的是当前激活的，重置激活状态
   if (store.activeRuleName === key) {
     store.activeRuleName = '';
+    await updateGlobalBlacklist();
   }
 
   await store.saveModelSettings();
