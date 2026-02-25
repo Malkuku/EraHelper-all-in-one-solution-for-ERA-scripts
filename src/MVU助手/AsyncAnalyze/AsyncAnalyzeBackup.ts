@@ -1,9 +1,9 @@
 import { MessageUtil } from '@/Utils/MessageUtil';
 import { WorldInfoUtil } from '@/Utils/WorldInfoUtil';
-import { ERAEvents } from '@/Constants/ERAEvent';
 import { AnalyzeBackupState } from '../stores/AsyncAnalyzeStore';
 import { eraLogger } from '../utils/MvuHelperLogger';
 import { getAsyncAnalyzeStore } from './AsyncAnalyzeState';
+import { MvuUtil } from '@/Utils/MvuUtil';
 
 /**
  * 创建备份快照
@@ -105,13 +105,13 @@ export const performRollback = async (currentMessageId?: number) => {
       });
     }
     if (messagesToUpdate.length > 0) {
-      await (window as any).setChatMessages(messagesToUpdate);
+      await setChatMessages(messagesToUpdate);
     }
 
     await store.saveModelSettings();
     toastr.success('回滚完成');
     eraLogger.info('分步分析数据回滚完成');
-    await (window as any).eventEmit(ERAEvents.FORCE_SYNC);
+    await MvuUtil.backUpMvuData();
 
   } catch (e) {
     eraLogger.error('回滚失败:', e);

@@ -3,6 +3,7 @@ import { MessageUtil } from '@/Utils/MessageUtil';
 import { WorldInfoUtil } from '@/Utils/WorldInfoUtil';
 import { RegexUtils } from '@/Utils/RegexUtils';
 import { eraLogger } from '../utils/MvuHelperLogger';
+import { MvuUtil } from '@/Utils/MvuUtil';
 
 /**
  * 将嵌套的 JSON 对象展平为 JSONPatch 数组
@@ -84,6 +85,8 @@ export function convertLegacyTagsToJSONPatch(text: string): string {
     const patchJsonStr = JSON.stringify(patches, null, 2);
     const newBlock = `\n<UpdateVariable>\n    <JSONPatch>\n${patchJsonStr}\n    </JSONPatch>\n</UpdateVariable>`;
     cleanedText = cleanedText.trimEnd() + newBlock;
+
+    eraLogger.info(`[AsyncAnalyze] 成功将旧版变量标签转换为 JSONPatch 格式:\n${newBlock}`);
   }
 
   return cleanedText;
@@ -231,6 +234,7 @@ export async function applyGroupResults(results: TaskResult[], message_id: numbe
         message_id: message_id,
         message: currentMsgText
       }]);
+      await  MvuUtil.updateMvuDataFromContent();
       eraLogger.info(`[AsyncAnalyze] 任务结果处理完成，已更新消息内容`);
     }
 

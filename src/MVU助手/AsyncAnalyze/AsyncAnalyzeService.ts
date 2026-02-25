@@ -1,4 +1,3 @@
-import { ERAEvents } from '@/Constants/ERAEvent';
 import { eraLogger } from '../utils/MvuHelperLogger';
 import {
   getAsyncAnalyzeStore,
@@ -152,7 +151,6 @@ export const handleAsyncAnalyzeTasks = async (message_id: number, triggeringEven
     setIsAnalyzing(false);
     await restoreGlobalPreset(); // 任务全部完成后，统一还原预设
     await updateGlobalBlacklist();
-    await (window as any).eventEmit(ERAEvents.FORCE_SYNC);
     if (!triggeringEvent) {
       await (window as any).eventEmit('kat:handle_era_finished');
     }
