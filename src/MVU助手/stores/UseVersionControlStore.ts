@@ -4,7 +4,7 @@ import { useEraEditStore } from './EraEditStore';
 import { eraLogger } from '../utils/MvuHelperLogger';
 import _ from 'lodash';
 import { WorldInfoUtil } from '@/Utils/WorldInfoUtil';
-import { ERAUtil } from '@/Utils/ERAUtil';
+import { MvuUtil } from '@/Utils/MvuUtil';
 
 // 类型定义
 interface UpdateBlock {
@@ -30,6 +30,7 @@ interface VersionSettings {
   lore_name: string;
 }
 
+// eslint-disable-next-line pinia/prefer-use-store-naming-convention
 export const UseVersionControlStore = defineStore('EraVersionControl', () => {
   const eraEditStore = useEraEditStore();
 
@@ -274,34 +275,14 @@ export const UseVersionControlStore = defineStore('EraVersionControl', () => {
   const executeFullUpdate = async () => {
     if (!previewDiff.value) return;
 
-    const { added, deleted, updated } = previewDiff.value;
-    eraLogger.log('开始执行差分更新...');
+    // 直接提取计算好的完整最终数据
+    const { finalData } = previewDiff.value;
+    eraLogger.log('开始执行全量覆盖更新...');
 
     try {
-      // 1. 处理删除 (Delete)
-      if (!_.isEmpty(deleted)) {
-        eraLogger.log('执行删除操作:', deleted);
-        await ERAUtil.DeleteByObject(deleted);
-      }
-
-      // 2. 处理新增 (Insert)
-      if (!_.isEmpty(added)) {
-        eraLogger.log('执行新增操作:', added);
-        await ERAUtil.InsertByObject(added);
-      }
-
-      // 3. 处理修改 (Update)
-      if (!_.isEmpty(updated)) {
-        eraLogger.log('执行更新操作:', updated);
-        await ERAUtil.UpdateByObject(updated);
-      }
-
-      // 4. 强制同步
-      await ERAUtil.ForceSync('auto');
-
+      await MvuUtil.updateMvuDataByObj(finalData);
       currentVersion.value = targetVersion.value;
       previewDiff.value = null;
-      eraLogger.log('差分更新完成');
       toastr.success(`已成功更新至版本 v${targetVersion.value}`);
 
     } catch (e) {
