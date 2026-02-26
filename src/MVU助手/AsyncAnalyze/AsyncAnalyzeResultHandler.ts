@@ -40,27 +40,27 @@ function flattenObjectToJSONPatch(
   for (const key in obj) {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
 
-      // 【核心修复2】底层引擎会将路径中的 "." 解析为对象嵌套，导致 "SQ.2" 被解析为 SQ -> 2 报错。
-      // 因此需要将键名中的 "."、"["、"]" 替换为下划线 "_"，防止引擎解析崩溃。
       const sanitizedKey = key.replace(/[.[\]]/g, '_');
-
-      // JSONPatch 标准：转义路径中的 / 和 ~
       const escapedKey = sanitizedKey.replace(/~/g, '~0').replace(/\//g, '~1');
       const newPath = `${currentPath}/${escapedKey}`;
       const value = obj[key];
 
-      // 如果是普通对象（非数组，非 null），继续递归深入或直接插入
-      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-        // 检查该路径在当前变量中是否存在 (如果是删除操作则不适用此逻辑)
+      // 判断是否为空对象
+      const isEmptyObject = typeof value === 'object' && value !== null && !Array.isArray(value) && Object.keys(value).length === 0;
+
+      // 修改判定逻辑：
+      // 如果是对象，且不是数组，且不是 null
+      // AND (排除情况：如果是删除操作 且 是空对象，则不进入递归，直接视为删除该节点)
+      if (typeof value === 'object' && value !== null && !Array.isArray(value) && !(op === 'remove' && isEmptyObject)) {
+
         if (statData && !checkPathExists(statData, newPath) && op !== 'remove') {
-          // 如果路径不存在，说明是全新的父节点，停止递归，直接插入整个对象
           patches.push({ op: 'insert', path: newPath, value: value });
         } else {
-          // 如果路径存在（或没有传入 statData），继续递归深入
           patches = patches.concat(flattenObjectToJSONPatch(value, newPath, op, statData));
         }
+
       } else {
-        // 到达叶子节点，生成 patch 对象
+        // 到达叶子节点（或删除操作的空对象节点），生成 patch 对象
         const patch: any = { op, path: newPath };
         if (op !== 'remove') {
           patch.value = value;
