@@ -46,6 +46,7 @@ const backUpMvuData = async ()=>{
  * 通过变量对象覆盖更新Mvu变量
  */
 const updateMvuDataByObj = async(obj: object) => {
+  await waitGlobalInitialized('Mvu');
   const mvuData = Mvu.getMvuData({ type: 'message', message_id: -1 });
   const newData = mvuData;
   newData.stat_data = obj;
