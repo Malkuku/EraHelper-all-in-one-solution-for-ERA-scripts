@@ -9,7 +9,7 @@ const updateMvuDataFromContent = async ()=>{
   const new_data = await Mvu.parseMessage(content, mvu_data);
   if(new_data){
     await Mvu.replaceMvuData(new_data, { type: 'message', message_id: getLastMessageId() });
-    await eventEmit(Mvu.events.VARIABLE_UPDATE_ENDED,new_data,mvu_data);
+    await eventEmit("mag_variable_update_ended",new_data,mvu_data);
   }
 }
 
@@ -24,7 +24,7 @@ const updateMvuData = async (content : string) =>{
   const new_data = await Mvu.parseMessage(content, mvu_data);
   if(new_data){
     await Mvu.replaceMvuData(new_data, { type: 'message', message_id: getLastMessageId() });
-    await eventEmit(Mvu.events.VARIABLE_UPDATE_ENDED,new_data,mvu_data);
+    await eventEmit("mag_variable_update_ended",new_data,mvu_data);
   }
 
 }
@@ -38,7 +38,7 @@ const backUpMvuData = async ()=>{
   const mvu_data = Mvu.getMvuData({ type: 'message', message_id: Math.max(0,getLastMessageId()-1) });
   if(mvu_data){
     await Mvu.replaceMvuData(mvu_data, { type: 'message', message_id: getLastMessageId() });
-    await eventEmit(Mvu.events.VARIABLE_UPDATE_ENDED,mvu_data,old_data);
+    await eventEmit("mag_variable_update_ended",mvu_data,old_data);
   }
 }
 
@@ -52,7 +52,7 @@ const updateMvuDataByObj = async(obj: object) => {
   newData.stat_data = obj;
   if(newData){
     await Mvu.replaceMvuData(newData, { type: 'message', message_id: getLastMessageId() });
-    await eventEmit(Mvu.events.VARIABLE_UPDATE_ENDED,newData,mvuData);
+    await eventEmit("mag_variable_update_ended",newData,mvuData);
   }
 }
 
