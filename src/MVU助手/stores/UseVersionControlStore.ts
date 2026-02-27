@@ -70,7 +70,7 @@ export const UseVersionControlStore = defineStore('EraVersionControl', () => {
   const saveSettings = async () => {
     try {
       const saveContent = JSON.parse(JSON.stringify(settings.value));
-      await updateVariablesWith(
+      updateVariablesWith(
         vars => {
           const existing = vars.era_data_rule || {};
           return {

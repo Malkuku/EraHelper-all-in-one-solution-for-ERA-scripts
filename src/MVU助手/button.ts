@@ -6,16 +6,16 @@ import { reSendEraUpdate } from '@/MVU助手/AsyncAnalyze/AsyncAnalyzeService';
 
 $(() => {
   replaceScriptButtons([
-    { name: '🐱ERA助手', visible: true },
-    { name: '🍬重新分析变量', visible: true },
+    { name: '🐱MVU助手', visible: true },
+    { name: '🍬重算分步任务', visible: true },
   ]);
 
-  eventOn(getButtonEvent('🐱ERA助手'), () => {
+  eventOn(getButtonEvent('🐱MVU助手'), () => {
     useUiStore().showUI = !useUiStore().showUI;
     useUiStore().getModeSetting();
   });
 
-  eventOn(getButtonEvent('🍬重新分析变量'), async () => {
+  eventOn(getButtonEvent('🍬重算分步任务'), async () => {
     await reSendEraUpdate();
   });
 });
