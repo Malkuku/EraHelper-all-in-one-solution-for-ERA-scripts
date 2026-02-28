@@ -31,6 +31,11 @@ export const router = createRouter({
               component: () => import('../components/AsyncAnalyze/StagedRuleEditor.vue'),
             },
             {
+              path: 'TaskPool',
+              name: 'TaskPool',
+              component: () => import('../components/AsyncAnalyze/TaskPoolManager.vue'),
+            },
+            {
               path: 'Settings',
               name: 'Settings',
               component: () => import('../components/AsyncAnalyze/Settings.vue'),

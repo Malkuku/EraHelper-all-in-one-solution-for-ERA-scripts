@@ -26,6 +26,15 @@
         规则编辑
       </router-link>
 
+
+      <router-link
+        to="/AsyncAnalyze/TaskPool"
+        class="tab-button"
+        active-class="active"
+      >
+        规则编辑
+      </router-link>
+
       <!-- 新增：额外功能/设置路由 -->
       <router-link
         to="/AsyncAnalyze/Settings"

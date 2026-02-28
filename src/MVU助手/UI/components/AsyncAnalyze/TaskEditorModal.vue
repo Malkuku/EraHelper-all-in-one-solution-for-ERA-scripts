@@ -5,9 +5,9 @@
         <!-- 标题栏 -->
         <div class="task-header">
           <div class="task-title-edit">
-            <span class="label">{{ isGlobalSettings ? '规则组名称:' : '任务名称:' }}</span>
+            <span class="label">{{ isGlobalSettings ? '规则组名称:' : '全局任务名称:' }}</span>
             <span v-if="isGlobalSettings" class="name-static">{{ ruleName }}</span>
-            <input v-else :value="taskName" class="name-input" @change="renameTask($event)" />
+            <input v-else :value="taskName" class="name-input" @change="renameTask($event)" title="修改名称将同步更新所有引用了此任务的规则组" />
           </div>
           <div class="task-actions">
             <template v-if="!isGlobalSettings">
@@ -17,7 +17,8 @@
                 <span class="text">{{ editingData.enable ? '已启用' : '已禁用' }}</span>
               </label>
               <button class="btn primary small" title="复制当前任务配置" @click="handleCopyTask">复制任务</button>
-              <button class="btn danger small" @click="handleDeleteTask">删除任务</button>
+              <button class="btn warning small" title="仅从当前规则组中解除关联，不删除全局配置" @click="handleRemoveRef">移除关联</button>
+              <button class="btn danger small" title="从全局彻底删除此任务，并清理所有引用" @click="handleDeleteGlobalTask">删除全局任务</button>
             </template>
             <button class="btn icon-btn close-btn" @click="closeModal">×</button>
           </div>
@@ -171,7 +172,6 @@
                     </label>
                     <div class="tip">每行一条正则，可手动输入或选择预设</div>
 
-                    <!-- [修改] 改为列表形式 -->
                     <div class="regex-list-container">
                       <div
                         v-for="(regex, index) in (ensureArray(editingData.world_book[currentWbKey].lore_regex))"
@@ -207,7 +207,6 @@
                     </label>
                     <div class="tip">从下拉框选择条目，或手动输入</div>
 
-                    <!-- [修改] 优化后的筛选和全选UI -->
                     <div class="lore-filter-container mb-2">
                       <div class="filter-row">
                         <input
@@ -392,7 +391,7 @@ import { useUiStore } from '@/MVU助手/stores/UIStore';
 import { Modal } from '@/MVU助手/utils/modal';
 import { WorldInfoUtil } from '@/Utils/WorldInfoUtil';
 import SearchableSelect from '@/MVU助手/UI/components/Dialog/SearchableSelect.vue';
-import type { StagedSetting } from '@/MVU助手/AsyncAnalyze/types/AsyncAnalyzeSetting';
+import type { TaskConfigSetting } from '@/MVU助手/AsyncAnalyze/types/AsyncAnalyzeSetting';
 import Tooltip from '../Common/Tooltip.vue';
 
 const props = defineProps<{
@@ -436,12 +435,13 @@ const currentRule = computed(() => {
   return store.asyncAnalyzeSetting[props.ruleName];
 });
 
+// [修改] 数据源指向全局任务池
 const editingData = computed((): any => {
-  if (!currentRule.value) return null;
   if (isGlobalSettings.value) {
+    if (!currentRule.value) return null;
     return currentRule.value;
   }
-  return currentRule.value.staged_setting?.[props.taskName];
+  return store.taskConfigSettings[props.taskName];
 });
 
 // 获取正则预设的名称列表
@@ -470,7 +470,7 @@ const closeModal = () => {
   emit('close');
 };
 
-// --- 逻辑方法 (从原文件迁移) ---
+// --- 逻辑方法 ---
 
 const fetchWorldBooks = async () => {
   try {
@@ -503,7 +503,6 @@ const currentBookLores = computed(() => {
   return loreCache[currentWbKey.value] || [];
 });
 
-// [新增] 过滤后的条目列表
 const filteredLores = computed(() => {
   const text = loreFilterText.value.trim().toLowerCase();
   if (!text) return currentBookLores.value;
@@ -527,53 +526,92 @@ const availableNewBooks = computed(() => {
 
 // --- 任务操作 ---
 
+// [修改] 重命名全局任务，并同步更新所有规则组的引用
 const renameTask = (event: Event) => {
-  if (!currentRule.value || !props.taskName || isGlobalSettings.value) return;
+  if (!props.taskName || isGlobalSettings.value) return;
   const newName = (event.target as HTMLInputElement).value.trim();
   if (!newName || newName === props.taskName) return;
 
-  const tasks = currentRule.value.staged_setting;
-  if (tasks[newName]) {
-    toastr.error('该名称已存在');
+  if (store.taskConfigSettings[newName]) {
+    toastr.error('该任务名称已存在于全局池中');
     (event.target as HTMLInputElement).value = props.taskName;
     return;
   }
-  // 重命名逻辑：复制数据到新Key，删除旧Key
-  tasks[newName] = tasks[props.taskName];
-  delete tasks[props.taskName];
+
+  // 1. 在全局池中重命名
+  store.taskConfigSettings[newName] = store.taskConfigSettings[props.taskName];
+  delete store.taskConfigSettings[props.taskName];
+
+  // 2. 更新所有引用了该任务的规则组
+  for (const ruleKey in store.asyncAnalyzeSetting) {
+    const rule = store.asyncAnalyzeSetting[ruleKey];
+    if (rule.task_refs) {
+      const index = rule.task_refs.indexOf(props.taskName);
+      if (index !== -1) {
+        rule.task_refs[index] = newName;
+      }
+    }
+  }
 
   // 通知父组件更新选中的任务名
   emit('update:taskName', newName);
+  toastr.success(`任务已重命名为: ${newName}`);
 };
 
-// 复制任务
+// [修改] 复制任务到全局池，并自动关联到当前规则组
 const handleCopyTask = () => {
-  if (!currentRule.value || !props.taskName || isGlobalSettings.value) return;
+  if (!props.taskName || isGlobalSettings.value) return;
 
-  const tasks = currentRule.value.staged_setting;
   const baseName = props.taskName + '_copy';
   let newName = baseName;
   let counter = 1;
 
   // 确保名称唯一
-  while (tasks[newName]) {
+  while (store.taskConfigSettings[newName]) {
     newName = `${baseName}${counter}`;
     counter++;
   }
 
-  // 深拷贝数据
-  tasks[newName] = JSON.parse(JSON.stringify(editingData.value));
+  // 深拷贝数据到全局池
+  store.taskConfigSettings[newName] = JSON.parse(JSON.stringify(editingData.value));
+
+  // 自动关联到当前规则组
+  if (currentRule.value) {
+    if (!currentRule.value.task_refs) currentRule.value.task_refs = [];
+    currentRule.value.task_refs.push(newName);
+  }
+
   emit('update:taskName', newName); // 切换到新任务
-  toastr.success(`已复制为: ${newName}`);
+  toastr.success(`已复制并关联新任务: ${newName}`);
 };
 
-const handleDeleteTask = async () => {
-  if (!currentRule.value || !props.taskName || isGlobalSettings.value) return;
-  const confirmed = await Modal.confirm('删除任务', `确定要删除任务 "${props.taskName}" 吗？`);
+// [新增] 仅移除关联
+const handleRemoveRef = () => {
+  emit('delete-task'); // 父组件会处理移除引用的逻辑
+};
+
+// [修改] 彻底删除全局任务
+const handleDeleteGlobalTask = async () => {
+  if (!props.taskName || isGlobalSettings.value) return;
+  const confirmed = await Modal.confirm(
+    '删除全局任务',
+    `确定要彻底删除全局任务 "${props.taskName}" 吗？\n警告：这会将其从所有使用该任务的规则组中移除，此操作不可恢复！`
+  );
   if (!confirmed) return;
 
-  delete currentRule.value.staged_setting[props.taskName];
-  emit('delete-task'); // 通知父组件关闭弹窗并刷新列表
+  // 1. 从全局池中删除
+  delete store.taskConfigSettings[props.taskName];
+
+  // 2. 从所有规则组的引用中移除
+  for (const ruleKey in store.asyncAnalyzeSetting) {
+    const rule = store.asyncAnalyzeSetting[ruleKey];
+    if (rule.task_refs) {
+      rule.task_refs = rule.task_refs.filter(ref => ref !== props.taskName);
+    }
+  }
+
+  toastr.success('全局任务已彻底删除');
+  emit('close'); // 关闭弹窗
 };
 
 // --- World Book 管理 ---
@@ -594,7 +632,7 @@ const confirmAddWb = () => {
 
   editingData.value.world_book[newWbName.value] = {
     lores: [],
-    lore_regex: [], // [修改] 初始化为数组
+    lore_regex: [],
   };
 
   selectWbKey(newWbName.value);
@@ -620,7 +658,8 @@ const addMergeItem = async () => {
   const name = await Modal.prompt('添加处理规则', '请输入处理规则名称');
   if (!name) return;
 
-  const taskData = editingData.value as StagedSetting[string];
+  // [修改] 类型断言
+  const taskData = editingData.value as TaskConfigSetting[string];
   if (!taskData.merge_setting) taskData.merge_setting = {};
 
   taskData.merge_setting[name] = {
@@ -635,13 +674,13 @@ const addMergeItem = async () => {
 
 const deleteMergeItem = (key: string) => {
   if (!editingData.value?.merge_setting) return;
-  const taskData = editingData.value as StagedSetting[string];
+  const taskData = editingData.value as TaskConfigSetting[string];
   delete taskData.merge_setting[key];
   if (currentMergeKey.value === key) currentMergeKey.value = '';
 };
 
 const onMergeWbChange = (key: string) => {
-  const taskData = editingData.value as StagedSetting[string];
+  const taskData = editingData.value as TaskConfigSetting[string];
   const setting = taskData?.merge_setting[key];
   if (setting && setting.world_book) {
     setting.target_lore = '';
@@ -654,8 +693,6 @@ const onMergeWbChange = (key: string) => {
 const getPatternByName = (name: string) => {
   try {
     const config = store.savedRegexConfigs.find(c => c.name === name);
-    // 确保返回正确的正则表达式字符串，防止转义问题
-    // 根据经验教训，保持原始格式，不进行额外的字符串转义处理
     return config ? config.regex : '';
   } catch (error) {
     console.error('获取正则预设失败:', error);
@@ -663,30 +700,25 @@ const getPatternByName = (name: string) => {
   }
 };
 
-// 验证正则表达式格式的方法
 const validateRegex = (regexStr: string) => {
-  if (!regexStr) return true; // 空字符串被认为是有效的
+  if (!regexStr) return true;
 
   try {
-    // 如果是 /pattern/flags 格式
     if (regexStr.startsWith('/') && regexStr.length > 1) {
       const lastSlashIndex = regexStr.lastIndexOf('/');
       if (lastSlashIndex > 0) {
         const pattern = regexStr.substring(1, lastSlashIndex);
         const flags = regexStr.substring(lastSlashIndex + 1);
 
-        // 验证标志是否合法
         if (flags && /[^gimsuv]/.test(flags)) {
           console.warn(`Invalid regex flags: ${flags}`);
           return false;
         }
 
-        // 尝试创建正则表达式验证模式部分
         new RegExp(pattern);
         return true;
       }
     } else {
-      // 纯模式字符串，直接验证
       new RegExp(regexStr);
       return true;
     }
@@ -702,7 +734,7 @@ const applyRegexPreset = (key: string, field: 'replace', presetName: string) => 
   if (!presetName) return;
   const pattern = getPatternByName(presetName);
   if (pattern && validateRegex(pattern)) {
-    const taskData = editingData.value as StagedSetting[string];
+    const taskData = editingData.value as TaskConfigSetting[string];
     if (field === 'replace' && taskData.merge_setting && taskData.merge_setting[key]) {
       taskData.merge_setting[key].replace_regex = pattern;
     }
@@ -715,7 +747,7 @@ const applyRegexPresetToItem = (key: string, index: number, presetName: string) 
   if (!presetName) return;
   const pattern = getPatternByName(presetName);
   if (pattern && validateRegex(pattern) && editingData.value?.merge_setting?.[key]?.content_regex) {
-    const taskData = editingData.value as StagedSetting[string];
+    const taskData = editingData.value as TaskConfigSetting[string];
     if (taskData.merge_setting[key].content_regex) {
       taskData.merge_setting[key].content_regex[index] = pattern;
     }
@@ -724,7 +756,6 @@ const applyRegexPresetToItem = (key: string, index: number, presetName: string) 
   }
 };
 
-// [修改] 应用预设到 lore regex 的某一行 (替换原有的 applyRegexPresetToLoreRegex)
 const applyRegexPresetToLoreRegexItem = (wbKey: string, index: number, presetName: string) => {
   if (!presetName) return;
   const pattern = getPatternByName(presetName);
@@ -743,7 +774,7 @@ const applyRegexPresetToLoreRegexItem = (wbKey: string, index: number, presetNam
 };
 
 const addEmptyRegex = (key: string) => {
-  const taskData = editingData.value as StagedSetting[string];
+  const taskData = editingData.value as TaskConfigSetting[string];
   if (!taskData.merge_setting[key].content_regex) {
     taskData.merge_setting[key].content_regex = [];
   }
@@ -751,7 +782,7 @@ const addEmptyRegex = (key: string) => {
 };
 
 const removeRegexItem = (key: string, index: number) => {
-  const taskData = editingData.value as StagedSetting[string];
+  const taskData = editingData.value as TaskConfigSetting[string];
   if (taskData.merge_setting[key].content_regex) {
     taskData.merge_setting[key].content_regex.splice(index, 1);
   }
@@ -759,26 +790,21 @@ const removeRegexItem = (key: string, index: number) => {
 
 const updateRegexItem = (key: string, index: number, event: Event) => {
   const val = (event.target as HTMLInputElement).value;
-  const taskData = editingData.value as StagedSetting[string];
+  const taskData = editingData.value as TaskConfigSetting[string];
   if (taskData.merge_setting[key].content_regex) {
     taskData.merge_setting[key].content_regex[index] = val;
   }
 };
 
-// --- 新增：用于处理 lore_regex 数组的相关函数 ---
-
-// [新增] 确保数据是数组
 const ensureArray = (val: any): string[] => {
   if (Array.isArray(val)) return val;
   return [];
 };
 
-// [新增] 添加一行空的 lore regex
 const addEmptyLoreRegex = (wbKey: string) => {
   if (!editingData.value?.world_book?.[wbKey]) return;
   const wbConfig = editingData.value.world_book[wbKey];
 
-  // 确保是数组
   if (!Array.isArray(wbConfig.lore_regex)) {
     wbConfig.lore_regex = [];
   }
@@ -786,7 +812,6 @@ const addEmptyLoreRegex = (wbKey: string) => {
   wbConfig.lore_regex.push('');
 };
 
-// [新增] 删除一行 lore regex
 const removeLoreRegexItem = (wbKey: string, index: number) => {
   if (!editingData.value?.world_book?.[wbKey]) return;
   const wbConfig = editingData.value.world_book[wbKey];
@@ -796,13 +821,11 @@ const removeLoreRegexItem = (wbKey: string, index: number) => {
   }
 };
 
-// [新增] 更新 lore regex 输入
 const updateLoreRegexItem = (wbKey: string, index: number, event: Event) => {
   if (!editingData.value?.world_book?.[wbKey]) return;
   const val = (event.target as HTMLInputElement).value;
   const wbConfig = editingData.value.world_book[wbKey];
 
-  // 确保是数组
   if (!Array.isArray(wbConfig.lore_regex)) {
     wbConfig.lore_regex = [];
   }
@@ -810,28 +833,18 @@ const updateLoreRegexItem = (wbKey: string, index: number, event: Event) => {
   wbConfig.lore_regex[index] = val;
 };
 
-// --- 新增：世界书条目选择控制函数 ---
-
-// [修改] 全选当前筛选出的所有条目
 const selectAllLores = (wbKey: string) => {
   if (!editingData.value?.world_book?.[wbKey]) return;
 
-  // 获取当前已选
   const currentSelected = new Set(editingData.value.world_book[wbKey].lores || []);
-
-  // 将所有筛选出的条目加入选择
   filteredLores.value.forEach(lore => currentSelected.add(lore));
-
   editingData.value.world_book[wbKey].lores = Array.from(currentSelected);
 };
 
-// [修改] 反选当前筛选出的条目
 const invertSelection = (wbKey: string) => {
   if (!editingData.value?.world_book?.[wbKey]) return;
 
   const currentSelected = new Set(editingData.value.world_book[wbKey].lores || []);
-
-  // 仅对筛选出的条目进行反选操作
   filteredLores.value.forEach(lore => {
     if (currentSelected.has(lore)) {
       currentSelected.delete(lore);
@@ -843,7 +856,6 @@ const invertSelection = (wbKey: string) => {
   editingData.value.world_book[wbKey].lores = Array.from(currentSelected);
 };
 
-// 获取当前世界书已选条目数量
 const getSelectedCount = (wbKey: string) => {
   if (!editingData.value?.world_book?.[wbKey]) return 0;
   const selected = editingData.value.world_book[wbKey].lores || [];
@@ -891,9 +903,7 @@ const getSelectedCount = (wbKey: string) => {
       &.active { color: #818cf8; border-bottom-color: #818cf8; }
     }
 
-    /* 强制深色模式下的输入框颜色 - 必须使用 !important 覆盖浅色模式 */
     .form-group {
-      /* 覆盖 label 的黑色 !important */
       label { color: #e2e8f0 !important; }
       .tip { color: #9ca3af; }
 
@@ -906,7 +916,6 @@ const getSelectedCount = (wbKey: string) => {
         &:focus { border-color: #818cf8 !important; }
       }
 
-      /* 深色模式下注释文本域样式 */
       .comment-textarea {
         background: #374151 !important;
         color: #e2e8f0 !important;
@@ -915,7 +924,6 @@ const getSelectedCount = (wbKey: string) => {
       }
     }
 
-    /* 强制深色模式下的标题输入框 */
     .name-input {
       color: #e2e8f0 !important;
       background: #374151 !important;
@@ -932,7 +940,6 @@ const getSelectedCount = (wbKey: string) => {
     .list-sidebar { background: #111827; border-right-color: #4b5563; }
     .list-editor { border-color: #4b5563; }
 
-    /* 列表项适配 */
     .sub-item {
       color: #9ca3af;
       border-bottom-color: #4b5563;
@@ -940,13 +947,11 @@ const getSelectedCount = (wbKey: string) => {
       &:hover { background: #374151; }
     }
 
-    /* 添加面板适配 */
     .add-panel {
       background: #1f2937;
       border-bottom-color: #4b5563;
     }
 
-    /* 列表内容区适配 */
     .list-content {
       background: #1f2937;
     }
@@ -958,7 +963,6 @@ const getSelectedCount = (wbKey: string) => {
     .label { color: #e2e8f0 !important; }
     .text { color: #e2e8f0; }
 
-    /* 深色模式下额外的表单元素样式 */
     .toggle-switch {
       .slider { background: #4b5563; }
       input:checked + .slider { background: #6366f1; }
@@ -967,14 +971,18 @@ const getSelectedCount = (wbKey: string) => {
 
     .checkbox-row label { color: #e2e8f0; }
 
-    /* 按钮适配 */
     .btn.danger {
       background: #7f1d1d;
       color: #fecaca;
       &:hover { background: #991b1b; }
     }
 
-    /* 深色模式下的secondary按钮 - 全选/反选按钮适配 */
+    .btn.warning {
+      background: #78350f;
+      color: #fde68a;
+      &:hover { background: #92400e; }
+    }
+
     .btn.secondary {
       background: #374151;
       color: #e2e8f0;
@@ -991,13 +999,11 @@ const getSelectedCount = (wbKey: string) => {
       }
     }
 
-    /* 滚动条适配 */
     .custom-scrollbar {
       &::-webkit-scrollbar-thumb { background: #4b5563; }
       &::-webkit-scrollbar-thumb:hover { background: #6b7280; }
     }
 
-    /* 深色模式下筛选容器适配 */
     .lore-filter-container {
       background: #1f2937;
       border-color: #4b5563;
@@ -1036,7 +1042,7 @@ const getSelectedCount = (wbKey: string) => {
   background: transparent;
   border: none;
   cursor: pointer;
-  color: #111827; /* 加深 */
+  color: #111827;
   &:hover {
     background: #f3f4f6;
   }
@@ -1060,7 +1066,7 @@ const getSelectedCount = (wbKey: string) => {
 
   .label {
     font-size: 14px;
-    color: #111827; /* 加深 */
+    color: #111827;
     font-weight: 600;
   }
   .name-input {
@@ -1069,8 +1075,7 @@ const getSelectedCount = (wbKey: string) => {
     border: 1px solid transparent;
     padding: 4px 8px;
     border-radius: 4px;
-    /* 默认浅色模式强制样式 */
-    color: #000000 !important; /* 纯黑 */
+    color: #000000 !important;
     background: transparent;
 
     &:hover,
@@ -1113,7 +1118,7 @@ const getSelectedCount = (wbKey: string) => {
 .inner-tabs {
   display: flex;
   gap: 4px;
-  border-bottom: 1px solid #d1d5db; /* 加深边框 */
+  border-bottom: 1px solid #d1d5db;
   margin-bottom: 16px;
 }
 
@@ -1123,7 +1128,7 @@ const getSelectedCount = (wbKey: string) => {
   border: none;
   border-bottom: 2px solid transparent;
   cursor: pointer;
-  color: #374151; /* 加深 */
+  color: #374151;
   font-size: 13px;
   font-weight: 500;
   &:hover { color: #000000; }
@@ -1161,24 +1166,21 @@ const getSelectedCount = (wbKey: string) => {
     font-size: 12px;
     color: #000000 !important;
     margin-bottom: 4px;
-    font-weight: 700; /* 使用纯黑色提高可读性 */
+    font-weight: 700;
   }
 
   input, textarea {
     width: 100%;
     padding: 6px 8px;
-    border: 1px solid #d1d5db; /* 加深边框 */
+    border: 1px solid #d1d5db;
     border-radius: 4px;
     font-size: 13px;
-
-    /* 默认浅色模式：强制白色背景，深色文字 */
     background: #ffffff !important;
     color: #000000 !important;
 
     &:focus { border-color: #4f46e5; outline: none; }
   }
 
-  /* 注释文本域特殊样式 */
   .comment-textarea {
     min-height: 80px;
     resize: vertical;
@@ -1188,7 +1190,7 @@ const getSelectedCount = (wbKey: string) => {
 
   &.full-height { flex: 1; display: flex; flex-direction: column; textarea { flex: 1; resize: none; } }
   &.full-width { grid-column: 1 / -1; }
-  .tip { font-size: 11px; color: #4b5563; margin-bottom: 4px; font-weight: 500; /* 加深 */ }
+  .tip { font-size: 11px; color: #4b5563; margin-bottom: 4px; font-weight: 500; }
   .inline-tip { margin-left: 8px; color: #dc2626; }
 }
 
@@ -1239,7 +1241,7 @@ const getSelectedCount = (wbKey: string) => {
   align-items: center;
   .flex-grow {
     flex: 1;
-    font-weight: 600; /* 加深字体以提升可读性 */
+    font-weight: 600;
   }
   .preset-select-wrapper {
     width: 140px;
@@ -1247,7 +1249,6 @@ const getSelectedCount = (wbKey: string) => {
   }
 }
 
-/* 为正则表达式输入框单独设置字体粗细 */
 input[placeholder*="正则"],
 input[placeholder*="regex"] {
   font-weight: 600 !important;
@@ -1280,6 +1281,7 @@ input[placeholder*="regex"] {
   padding: 6px 12px; border-radius: 4px; border: none; cursor: pointer; font-size: 13px; font-weight: 500;
   &.primary { background: #4f46e5; color: white; &:hover { background: #4338ca; } }
   &.danger { background: #fee2e2; color: #991b1b; &:hover { background: #fecaca; } }
+  &.warning { background: #fef3c7; color: #92400e; &:hover { background: #fde68a; } }
   &.secondary {
     background: #f3f4f6;
     color: #374151;

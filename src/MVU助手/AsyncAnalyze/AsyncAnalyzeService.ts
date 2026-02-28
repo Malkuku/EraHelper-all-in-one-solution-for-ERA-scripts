@@ -23,7 +23,7 @@ export const handleAsyncAnalyzeTasks = async (message_id: number, triggeringEven
   const ruleName = store.activeRuleName;
   const currentRule = store.asyncAnalyzeSetting[ruleName];
 
-  if (!currentRule || !currentRule.staged_setting) {
+  if (!currentRule || !currentRule.task_refs) {
     setIsAnalyzing(false);
     return;
   }
@@ -32,10 +32,13 @@ export const handleAsyncAnalyzeTasks = async (message_id: number, triggeringEven
 
   await createBackup(message_id, ruleName);
 
-  const tasks = Object.entries(currentRule.staged_setting).map(([taskName, config]) => ({
-    taskName,
-    ...config
-  }));
+  const tasks = currentRule.task_refs
+    .map(taskName => {
+      const config = store.taskConfigSettings[taskName];
+      if (!config) return null;
+      return { taskName, ...config };
+    })
+    .filter(t => t !== null) as any[];
 
   const enabledTasks = tasks.filter(t => {
     if (triggeringEvent) {
@@ -129,8 +132,8 @@ export const handleAsyncAnalyzeTasks = async (message_id: number, triggeringEven
     if (pendingTriggerUpdates.size > 0 && currentAnalysisRunId === thisRunId) {
       let hasUpdates = false;
       pendingTriggerUpdates.forEach((floor, taskName) => {
-        if (store.asyncAnalyzeSetting[ruleName]?.staged_setting?.[taskName]) {
-          store.asyncAnalyzeSetting[ruleName].staged_setting[taskName].trigger_history = floor;
+        if (store.taskConfigSettings[taskName]) {
+          store.taskConfigSettings[taskName].trigger_history = floor;
           hasUpdates = true;
         }
       });

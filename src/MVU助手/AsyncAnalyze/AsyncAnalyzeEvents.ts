@@ -21,11 +21,12 @@ const updateEventListeners = () => {
   if (!store || !store.activeRuleName) return;
 
   const rule = store.asyncAnalyzeSetting[store.activeRuleName];
-  if (!rule || !rule.staged_setting) return;
+  if (!rule || !rule.task_refs) return;
 
   const eventsToListen = new Set<string>();
-  Object.values(rule.staged_setting).forEach(task => {
-    if (task.event_name && task.event_name.trim() !== '') {
+  rule.task_refs.forEach(taskName => {
+    const task = store.taskConfigSettings[taskName];
+    if (task && task.event_name && task.event_name.trim() !== '') {
       eventsToListen.add(task.event_name.trim());
     }
   });
@@ -72,7 +73,7 @@ export const initWatcher = () => {
   if (!store) return;
 
   watch(
-    [() => store.activeRuleName, () => store.asyncAnalyzeSetting],
+    [() => store.activeRuleName, () => store.asyncAnalyzeSetting, () => store.taskConfigSettings],
     () => {
       if (!isAnalyzing.value) {
         updateGlobalBlacklist();

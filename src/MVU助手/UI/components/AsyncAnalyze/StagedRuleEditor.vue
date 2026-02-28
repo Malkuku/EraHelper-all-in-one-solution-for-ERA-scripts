@@ -8,8 +8,9 @@
         <span class="current-rule">{{ currentRuleName || '未选择规则' }}</span>
       </div>
       <div class="header-controls">
-        <button class="btn primary" title="新建任务" @click="createTask">+ 新建任务</button>
-        <button class="btn primary" style="margin-left: 10px;" @click="saveAll">保存所有更改</button>
+        <button class="btn secondary" @click="showLinkModal = true">🔗 关联已有任务</button>
+        <button class="btn primary" style="margin-left: 10px;" title="新建全局任务并关联" @click="createTask">+ 新建任务</button>
+        <button class="btn primary" style="margin-left: 10px;" @click="saveAll">💾 保存所有更改</button>
       </div>
     </div>
 
@@ -47,11 +48,15 @@
             <span class="status-badge" :class="{ active: task.data.enable }">
               {{ task.data.enable ? '启用' : '禁用' }}
             </span>
+            <!-- 移除按钮 (仅在卡片悬停时显示，或者一直显示小图标) -->
+            <button class="btn-icon-remove" @click.stop="handleRemoveTask(task.key)" title="从当前规则组移除此任务 (不删除全局配置)">
+              ×
+            </button>
           </div>
           <div class="card-body">
             <div class="info-row">
               <span class="label">触发:</span>
-              <span class="value">执行顺序：{{ task.data.order }}/触发间隔：{{ task.data.trigger_index }}/上下文长度：{{ task.data.chat_history }}</span>
+              <span class="value">顺序:{{ task.data.order }} / 间隔:{{ task.data.trigger_index }} / 上下文:{{ task.data.chat_history }}</span>
             </div>
             <div v-if="task.data.event_name" class="info-row">
               <span class="label">触发事件:</span>
@@ -66,27 +71,51 @@
           </div>
         </div>
 
-        <!-- 新建任务占位卡片 (可选) -->
-        <div class="task-card add-card" @click="createTask">
+        <!-- 快捷添加卡片 -->
+        <div class="task-card add-card" @click="showLinkModal = true">
           <div class="add-icon">+</div>
-          <div class="add-text">新建任务</div>
+          <div class="add-text">关联 / 新建任务</div>
         </div>
       </div>
 
       <div v-if="sortedTasks.length === 0" class="empty-tip">
-        暂无普通任务，请点击右上角新建
+        当前规则组暂无任务，请点击“关联已有任务”或“新建任务”
       </div>
     </div>
 
-    <!-- 弹窗组件 -->
+    <!-- 关联任务弹窗 -->
+    <div v-if="showLinkModal" class="modal-overlay" @click.self="showLinkModal = false">
+      <div class="modal-content">
+        <h3>关联已有任务</h3>
+        <div class="modal-body custom-scrollbar">
+          <div v-if="availableTasks.length === 0" class="no-data">
+            没有可关联的任务 (所有全局任务都已加入当前规则，或全局池为空)
+          </div>
+          <ul v-else class="link-list">
+            <li v-for="taskName in availableTasks" :key="taskName" @click="linkTask(taskName)">
+              <span class="name">{{ taskName }}</span>
+              <span class="comment">{{ store.taskConfigSettings[taskName]?.comment || '无备注' }}</span>
+              <button class="btn small primary">选择</button>
+            </li>
+          </ul>
+        </div>
+        <div class="modal-footer">
+          <button class="btn secondary" @click="createTask">新建任务</button>
+          <button class="btn" @click="showLinkModal = false">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 任务编辑器弹窗 -->
     <TaskEditorModal
       v-if="showTaskModal"
       :rule-name="currentRuleName"
       :task-name="currentTaskName"
       @close="showTaskModal = false"
       @update:task-name="currentTaskName = $event"
-      @delete-task="handleDeleteTask"
+      @delete-task="handleRemoveTask"
     />
+    <!-- 注意：这里的 delete-task 事件现在对应的是移除引用 -->
   </div>
 </template>
 
@@ -99,49 +128,6 @@ import { Modal } from '@/MVU助手/utils/modal';
 import TaskEditorModal from './TaskEditorModal.vue';
 import Tooltip from '../Common/Tooltip.vue';
 
-// --- 类型定义 (保持不变) ---
-export interface AsyncAnalyzeSetting {
-  [key: string]: {
-    comment: string;
-    staged_setting: StagedSetting;
-    world_book: {
-      [key: string]: {
-        lores: string[];
-        lore_regex: string;
-      }
-    }
-  }
-}
-
-export interface StagedSetting {
-  [key: string]: {
-    comment: string;
-    enable: boolean;
-    order: number;
-    chat_history: number;
-    trigger_index: number;
-    trigger_history: number;
-    reroll_count: number;
-    prompt: string;
-    world_book: {
-      [key: string]: {
-        lores: string[];
-        lore_regex: string;
-      }
-    }
-    merge_setting: {
-      [key: string]: {
-        is_inject: boolean;
-        world_book: string;
-        target_lore: string;
-        content_regex: string[];
-        replace_regex: string;
-      }
-    };
-    api_config: string;
-  }
-}
-
 const store = useAsyncAnalyzeStore();
 const uiStore = useUiStore();
 const route = useRoute();
@@ -153,8 +139,9 @@ const GLOBAL_ID = '__GLOBAL__';
 const currentRuleName = ref<string>('');
 const currentTaskName = ref<string>('');
 const showTaskModal = ref(false);
+const showLinkModal = ref(false);
 
-// 监听路由参数变化，确保能正确切换规则
+// 监听路由参数变化
 watch(
   () => route.query.rule,
   (newRule) => {
@@ -175,19 +162,37 @@ onMounted(async () => {
 });
 
 // --- 计算属性 ---
+
 const currentRule = computed(() => {
   if (!currentRuleName.value) return null;
   return store.asyncAnalyzeSetting[currentRuleName.value];
 });
 
+// 获取当前规则组下的任务列表 (结合全局池数据)
 const sortedTasks = computed(() => {
-  if (!currentRule.value || !currentRule.value.staged_setting) return [];
-  return Object.entries(currentRule.value.staged_setting)
-    .map(([key, data]) => ({
-      key,
-      data,
-    }))
-    .sort((a, b) => a.data.order - b.data.order);
+  if (!currentRule.value || !currentRule.value.task_refs) return [];
+
+  return currentRule.value.task_refs
+    .map(taskName => {
+      const taskData = store.taskConfigSettings[taskName];
+      // 如果全局池里找不到这个任务，说明数据不一致，暂时过滤掉或显示错误
+      if (!taskData) return null;
+      return {
+        key: taskName,
+        data: taskData,
+      };
+    })
+    .filter((t): t is { key: string; data: any } => t !== null)
+    .sort((a, b) => (a.data.order || 0) - (b.data.order || 0));
+});
+
+// 获取所有未被当前规则组引用的全局任务
+const availableTasks = computed(() => {
+  if (!currentRule.value) return [];
+  const allTaskNames = Object.keys(store.taskConfigSettings);
+  const currentRefs = new Set(currentRule.value.task_refs || []);
+
+  return allTaskNames.filter(name => !currentRefs.has(name));
 });
 
 // --- 导航与保存 ---
@@ -201,71 +206,98 @@ const saveAll = async () => {
 };
 
 // --- 任务管理 ---
+
+// 1. 新建任务 (同时创建全局配置并关联)
 const createTask = async () => {
   if (!currentRule.value) return;
+
+  // 关闭关联弹窗，避免层级问题
+  showLinkModal.value = false;
+
   const name = await Modal.prompt('新建任务', '请输入新任务名称 (例如: AnalyzePersonality)');
   if (!name) return;
 
-  if (!currentRule.value.staged_setting) currentRule.value.staged_setting = {};
-
-  if (currentRule.value.staged_setting[name]) {
-    toastr.error('任务名称已存在');
+  // 检查全局池是否已存在
+  if (store.taskConfigSettings[name]) {
+    // 如果存在，询问是否直接关联
+    const confirmLink = await Modal.confirm('任务已存在', `全局任务池中已存在名为 "${name}" 的任务，是否直接将其关联到当前规则组？`);
+    if (confirmLink) {
+      linkTask(name);
+    }
     return;
   }
-  currentRule.value.staged_setting[name] = {
+
+  // 初始化新任务到全局池
+  store.taskConfigSettings[name] = {
     comment: '',
     enable: true,
+    event_name: '',
     order: 0,
     chat_history: 2,
     trigger_index: 1,
     trigger_history: 0,
     reroll_count: 0,
     prompt: '',
+    whiteListModel: false,
     api_config: '',
     world_book: {},
     merge_setting: {},
   };
 
-  // 创建后直接打开弹窗
+  // 关联到当前规则组
+  if (!currentRule.value.task_refs) currentRule.value.task_refs = [];
+  currentRule.value.task_refs.push(name);
+
+  toastr.success(`任务 "${name}" 已创建并关联`);
+
+  // 创建后直接打开编辑器
   openTaskEditor(name);
 };
 
-// ... existing code ...
+// 2. 关联已有任务
+const linkTask = (taskName: string) => {
+  if (!currentRule.value) return;
+  if (!currentRule.value.task_refs) currentRule.value.task_refs = [];
+
+  if (currentRule.value.task_refs.includes(taskName)) {
+    toastr.warning('该任务已关联');
+    return;
+  }
+
+  currentRule.value.task_refs.push(taskName);
+  toastr.success(`已关联任务: ${taskName}`);
+  showLinkModal.value = false;
+};
+
+// 3. 移除任务 (解绑)
+const handleRemoveTask = async (taskName?: string) => {
+  const targetName = taskName || currentTaskName.value;
+  if (!currentRule.value || !currentRule.value.task_refs || !targetName) return;
+
+  const confirmed = await Modal.confirm(
+    '移除确认',
+    `确定要从当前规则组中移除任务 "${targetName}" 吗？\n(注意：这只会解除引用，任务配置仍保留在全局池中)`
+  );
+
+  if (!confirmed) return;
+
+  // 过滤掉该引用
+  currentRule.value.task_refs = currentRule.value.task_refs.filter(ref => ref !== targetName);
+
+  // 如果是从弹窗触发的，关闭弹窗
+  if (showTaskModal.value && currentTaskName.value === targetName) {
+    showTaskModal.value = false;
+    currentTaskName.value = '';
+  }
+
+  toastr.success('任务已移除');
+};
+
 const openTaskEditor = (taskKey: string) => {
   currentTaskName.value = taskKey;
   showTaskModal.value = true;
 };
 
-// === 新增：带确认的删除逻辑 ===
-const handleDeleteTask = async () => {
-  // 1. 基础校验
-  if (!currentRule.value || !currentRule.value.staged_setting || !currentTaskName.value) return;
-
-  // 2. 调用 Modal 进行确认
-  const confirmed = await Modal.confirm(
-    '确认删除',
-    `确定要删除任务 "${currentTaskName.value}" 吗？此操作无法撤销。`
-  );
-
-  if (!confirmed) return;
-
-  // 3. 操作 Store 数据
-  // currentRule 是基于 store 的 computed 属性，直接修改其内部对象会触发 Pinia 状态更新
-  delete currentRule.value.staged_setting[currentTaskName.value];
-
-  // 4. 关闭弹窗并清理状态
-  showTaskModal.value = false;
-  currentTaskName.value = '';
-
-  // 5. (可选) 自动保存到后端/本地存储
-  // 如果你希望删除后立即持久化保存，取消下面这行的注释：
-  // await store.saveModelSettings();
-
-  // 6. 提示用户
-  if (typeof toastr !== 'undefined') {
-    toastr.success('任务已删除');
-  }
-};
 </script>
 
 <style scoped lang="scss">
@@ -275,6 +307,7 @@ const handleDeleteTask = async () => {
   height: 100%;
   background: #ffffff;
   color: #000000;
+  position: relative; /* For modal positioning */
 }
 
 /* Header */
@@ -327,7 +360,7 @@ const handleDeleteTask = async () => {
   flex: 1;
   overflow-y: auto;
   padding: 20px;
-  background: #f3f4f6; /* 浅灰背景衬托卡片 */
+  background: #f3f4f6;
 }
 
 .task-grid {
@@ -348,11 +381,16 @@ const handleDeleteTask = async () => {
   display: flex;
   flex-direction: column;
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  position: relative;
 
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     border-color: #d1d5db;
+
+    .btn-icon-remove {
+      opacity: 1;
+    }
   }
 
   &.disabled {
@@ -365,11 +403,38 @@ const handleDeleteTask = async () => {
   }
 }
 
+/* Remove Button on Card */
+.btn-icon-remove {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: #fee2e2;
+  color: #991b1b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0; /* Hidden by default */
+  transition: opacity 0.2s, background 0.2s;
+  font-size: 16px;
+  line-height: 1;
+  z-index: 2;
+
+  &:hover {
+    background: #ef4444;
+    color: white;
+  }
+}
+
 /* Global Card Special Style */
 .global-card {
   background: linear-gradient(to bottom right, #fff7ed, #ffffff);
   border-color: #fed7aa;
-  grid-column: 1 / -1; /* 横跨整行 */
+  grid-column: 1 / -1;
 
   .task-order {
     background: #ffedd5;
@@ -416,6 +481,7 @@ const handleDeleteTask = async () => {
   align-items: center;
   margin-bottom: 12px;
   gap: 8px;
+  padding-right: 20px; /* Space for remove button */
 }
 
 .task-order {
@@ -498,6 +564,20 @@ const handleDeleteTask = async () => {
       background: #4338ca;
     }
   }
+
+  &.secondary {
+    background: #fff;
+    border: 1px solid #d1d5db;
+    color: #374151;
+    &:hover {
+      background: #f3f4f6;
+    }
+  }
+
+  &.small {
+    padding: 4px 10px;
+    font-size: 12px;
+  }
 }
 
 /* Custom Scrollbar */
@@ -517,6 +597,93 @@ const handleDeleteTask = async () => {
   }
 }
 
+/* --- Modal Overlay Styles --- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  width: 500px;
+  max-width: 90%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+
+  h3 {
+    padding: 16px 20px;
+    margin: 0;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 18px;
+    color: #111827;
+  }
+
+  .modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .modal-footer {
+    padding: 16px 20px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+}
+
+.link-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #f3f4f6;
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover {
+      background: #f9fafb;
+    }
+
+    .name {
+      font-weight: 600;
+      color: #374151;
+    }
+    .comment {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-left: 10px;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+}
+
+.no-data {
+  text-align: center;
+  color: #9ca3af;
+  padding: 20px;
+}
+
 /* --- Dark Mode --- */
 .rule-editor-container.dark-mode {
   background: #111827;
@@ -531,7 +698,7 @@ const handleDeleteTask = async () => {
   .breadcrumb .separator { color: #6b7280; }
 
   .editor-body {
-    background: #111827; /* 深色背景 */
+    background: #111827;
   }
 
   .task-card {
@@ -574,22 +741,39 @@ const handleDeleteTask = async () => {
   .status-badge.active { background: #064e3b; color: #6ee7b7; }
 
   .card-body { color: #9ca3af; }
-  .info-row .label { color: #6b7280 !important; }  // 添加 !important 以确保暗色模式下正确显示
+  .info-row .label { color: #6b7280 !important; }
   .info-row .value { color: #d1d5db; }
 
+  /* Dark Mode for Modal */
+  .modal-content {
+    background: #1f2937;
+    color: #e2e8f0;
 
-  input,
-  textarea,
-  select {
-    color: #e2e8f0 !important;
-    background-color: #374151 !important; /* 建议同时也设置背景色以防万一 */
-    border-color: #4b5563 !important;
+    h3 {
+      border-bottom-color: #374151;
+      color: #e2e8f0;
+    }
+
+    .modal-footer {
+      border-top-color: #374151;
+    }
   }
 
-  /* 针对 placeholder 的颜色修复 (可选) */
-  input::placeholder,
-  textarea::placeholder {
-    color: #6b7280 !important;
+  .link-list li {
+    border-bottom-color: #374151;
+    &:hover {
+      background: #374151;
+    }
+    .name { color: #e2e8f0; }
+  }
+
+  .btn.secondary {
+    background: #374151;
+    border-color: #4b5563;
+    color: #e2e8f0;
+    &:hover {
+      background: #4b5563;
+    }
   }
 }
 </style>

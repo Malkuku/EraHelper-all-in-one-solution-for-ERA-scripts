@@ -1,7 +1,9 @@
+// 文件路径: src/MVU助手/stores/AsyncAnalyzeStore.ts
+
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { eraLogger } from '../utils/MvuHelperLogger';
-import { AsyncAnalyzeSetting, ApiConfigSetting } from '@/MVU助手/AsyncAnalyze/types/AsyncAnalyzeSetting';
+import { AsyncAnalyzeSetting, ApiConfigSetting, TaskConfigSetting } from '@/MVU助手/AsyncAnalyze/types/AsyncAnalyzeSetting';
 
 // 定义正则配置的类型接口
 export interface SavedRegexConfig {
@@ -28,17 +30,19 @@ export interface AnalyzeBackupState {
 }
 
 export const useAsyncAnalyzeStore = defineStore('KatAsyncAnalyze', () => {
-  // 所有的规则集合
+  // 所有的规则组集合
   const asyncAnalyzeSetting = ref<AsyncAnalyzeSetting>({});
+  // [新增] 所有的独立任务(规则)集合
+  const taskConfigSettings = ref<TaskConfigSetting>({});
   // 所有的API配置集合
   const apiConfigSettings = ref<ApiConfigSetting>({});
-  // 当前激活的规则名称
+  // 当前激活的规则组名称
   const activeRuleName = ref<string>('');
 
   // 保存的正则配置列表
   const savedRegexConfigs = ref<SavedRegexConfig[]>([]);
 
-  // [新增] 备份状态，用于回滚
+  // 备份状态，用于回滚
   const savedBackupState = ref<AnalyzeBackupState | null>(null);
 
   /**
@@ -47,9 +51,49 @@ export const useAsyncAnalyzeStore = defineStore('KatAsyncAnalyze', () => {
   const getModelSettings = async () => {
     const variables = getVariables({ type: 'script', script_id: getScriptId() });
 
+    // [新增] 兼容旧版本数据结构的迁移逻辑
     if (variables.async_analyze_setting) {
-      asyncAnalyzeSetting.value = variables.async_analyze_setting;
+      const loadedSettings = variables.async_analyze_setting;
+      let needsMigration = false;
+
+      for (const groupName in loadedSettings) {
+        // 如果发现旧版的 staged_setting，进行提取和迁移
+        if (loadedSettings[groupName].staged_setting) {
+          needsMigration = true;
+          const staged = loadedSettings[groupName].staged_setting;
+
+          // 将旧任务名存入引用数组
+          loadedSettings[groupName].task_refs = Object.keys(staged);
+
+          // 初始化全局任务池
+          if (!variables.task_config_settings) {
+            variables.task_config_settings = {};
+          }
+          // 将任务合并到全局任务池中
+          Object.assign(variables.task_config_settings, staged);
+
+          // 删除旧的嵌套结构
+          delete loadedSettings[groupName].staged_setting;
+        }
+
+        // 确保 task_refs 字段存在
+        if (!loadedSettings[groupName].task_refs) {
+          loadedSettings[groupName].task_refs = [];
+        }
+      }
+
+      asyncAnalyzeSetting.value = loadedSettings;
+
+      if (needsMigration) {
+        eraLogger.log('检测到旧版规则数据，已自动迁移至解耦结构');
+      }
     }
+
+    // [新增] 读取全局任务池配置
+    if (variables.task_config_settings) {
+      taskConfigSettings.value = variables.task_config_settings;
+    }
+
     if (variables.api_config_settings) {
       apiConfigSettings.value = variables.api_config_settings;
     }
@@ -64,7 +108,7 @@ export const useAsyncAnalyzeStore = defineStore('KatAsyncAnalyze', () => {
         : [];
     }
 
-    // [新增] 读取备份状态
+    // 读取备份状态
     if (variables.saved_analyze_backup) {
       savedBackupState.value = variables.saved_analyze_backup;
     }
@@ -78,10 +122,10 @@ export const useAsyncAnalyzeStore = defineStore('KatAsyncAnalyze', () => {
   const saveModelSettings = async () => {
     const saveVariables = {
       async_analyze_setting: asyncAnalyzeSetting.value,
+      task_config_settings: taskConfigSettings.value, // [新增] 保存全局任务池
       api_config_settings: apiConfigSettings.value,
       active_rule_name: activeRuleName.value,
       saved_regex_configs: savedRegexConfigs.value,
-      // [新增] 保存备份状态
       saved_analyze_backup: savedBackupState.value
     };
 
@@ -101,6 +145,7 @@ export const useAsyncAnalyzeStore = defineStore('KatAsyncAnalyze', () => {
    */
   const clearModelSettings = async () => {
     asyncAnalyzeSetting.value = {};
+    taskConfigSettings.value = {}; // [新增] 清空全局任务池
     apiConfigSettings.value = {};
     activeRuleName.value = '';
     savedRegexConfigs.value = [];
@@ -110,6 +155,7 @@ export const useAsyncAnalyzeStore = defineStore('KatAsyncAnalyze', () => {
 
   return {
     asyncAnalyzeSetting,
+    taskConfigSettings, // [新增] 暴露给组件
     apiConfigSettings,
     activeRuleName,
     savedRegexConfigs,

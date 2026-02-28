@@ -11,7 +11,7 @@ import { MvuUtil } from '@/Utils/MvuUtil';
 export const createBackup = async (message_id: number, ruleName: string) => {
   const store = getAsyncAnalyzeStore();
   const currentRule = store.asyncAnalyzeSetting[ruleName];
-  if (!currentRule || !currentRule.staged_setting) return;
+  if (!currentRule || !currentRule.task_refs) return;
 
   const backup: AnalyzeBackupState = {
     ruleName,
@@ -29,7 +29,10 @@ export const createBackup = async (message_id: number, ruleName: string) => {
     eraLogger.warn(`Backup: Failed to get message ${message_id}`);
   }
 
-  for (const [taskName, taskConfig] of Object.entries(currentRule.staged_setting)) {
+  for (const taskName of currentRule.task_refs) {
+    const taskConfig = store.taskConfigSettings[taskName];
+    if (!taskConfig) continue;
+
     backup.triggerHistory[taskName] = taskConfig.trigger_history || 0;
 
     if (taskConfig.merge_setting) {
@@ -81,10 +84,10 @@ export const performRollback = async (currentMessageId?: number) => {
 
   try {
     const rule = store.asyncAnalyzeSetting[backup.ruleName];
-    if (rule && rule.staged_setting) {
+    if (rule && rule.task_refs) {
       for (const [taskName, historyFloor] of Object.entries(backup.triggerHistory)) {
-        if (rule.staged_setting[taskName]) {
-          rule.staged_setting[taskName].trigger_history = historyFloor;
+        if (store.taskConfigSettings[taskName]) {
+          store.taskConfigSettings[taskName].trigger_history = historyFloor;
         }
       }
     }

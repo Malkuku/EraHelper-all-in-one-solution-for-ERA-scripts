@@ -8,7 +8,7 @@
           import-text="导入配置"
           export-text="导出配置"
           confirm-title="导入配置确认"
-          confirm-content="导入新配置将合并到当前配置中，重名规则组将被覆盖，确定要继续吗？"
+          confirm-content="导入新配置将合并到当前配置中，重名规则组和任务将被覆盖，确定要继续吗？"
           @import-confirmed="handleImportConfirmed"
           @export-data="handleExportData"
         />
@@ -34,12 +34,12 @@
             <span class="rule-name">{{ key }}</span>
             <div class="rule-tags">
               <span v-if="store.activeRuleName === key" class="tag success">当前启用</span>
-              <!-- 兼容旧数据，使用 || {} -->
-              <span class="tag info">{{ Object.keys(setting.staged_setting || {}).length }} 个任务</span>
+              <!-- 使用新的 task_refs 数组长度 -->
+              <span class="tag info">{{ setting.task_refs?.length || 0 }} 个任务</span>
             </div>
           </div>
           <div class="card-actions">
-            <!-- 新增：移动位置按钮 -->
+            <!-- 移动位置按钮 -->
             <button
               class="btn small secondary btn-move"
               :disabled="index === 0"
@@ -60,9 +60,9 @@
             <button v-if="store.activeRuleName !== key" class="btn small primary" @click="activateRule(key as string)">
               启用
             </button>
-            <!-- 新增：复制按钮 -->
+            <!-- 复制按钮 -->
             <button class="btn small secondary" @click="copyRule(key as string)">复制</button>
-            <!-- 修改：编辑按钮添加 info 类，改变颜色 -->
+            <!-- 编辑按钮 -->
             <button class="btn small info" @click="editRule(key as string)">编辑</button>
             <button class="btn small danger" @click="deleteRule(key as string)">删除</button>
           </div>
@@ -74,11 +74,12 @@
         </div>
 
         <div class="card-preview">
-          <!-- 简单预览该规则组下的任务名称 -->
-          <span v-for="(task, taskName) in setting.staged_setting || {}" :key="taskName" class="task-pill">
+          <!-- 简单预览该规则组下的任务名称 (从 task_refs 中读取) -->
+          <span v-for="taskName in setting.task_refs || []" :key="taskName" class="task-pill" :class="{ 'missing-task': !store.taskConfigSettings[taskName] }">
             {{ taskName }}
+            <span v-if="!store.taskConfigSettings[taskName]" title="该任务在全局任务池中不存在"> (丢失)</span>
           </span>
-          <span v-if="Object.keys(setting.staged_setting || {}).length === 0" class="no-task-tip">暂无任务</span>
+          <span v-if="!(setting.task_refs?.length)" class="no-task-tip">暂无任务</span>
         </div>
       </div>
     </div>
@@ -113,10 +114,10 @@ const createNewRule = async () => {
     return;
   }
 
-  // 初始化新结构：包含注释、分步设置、全局世界书配置
+  // 初始化新结构：包含注释、任务引用数组、全局世界书配置
   store.asyncAnalyzeSetting[name] = {
     comment: '',
-    staged_setting: {},
+    task_refs: [], // [修改] 使用 task_refs 替代 staged_setting
     world_book: {},
   };
   newRuleName.value = '';
@@ -158,7 +159,7 @@ const copyRule = async (key: string) => {
     return;
   }
 
-  // 深拷贝配置
+  // 深拷贝配置 (只会复制引用 task_refs，不会复制实际的全局任务)
   try {
     store.asyncAnalyzeSetting[trimmedName] = JSON.parse(JSON.stringify(originalSetting));
 
@@ -170,7 +171,7 @@ const copyRule = async (key: string) => {
   }
 };
 
-// 新增：调整规则组位置
+// 调整规则组位置
 const moveRule = async (key: string, direction: number) => {
   const keys = Object.keys(store.asyncAnalyzeSetting);
   const index = keys.indexOf(key);
@@ -183,8 +184,6 @@ const moveRule = async (key: string, direction: number) => {
   [newKeys[index], newKeys[newIndex]] = [newKeys[newIndex], newKeys[index]];
 
   // 重建对象以保持顺序
-  // 注意：这里假设 store.asyncAnalyzeSetting 是一个普通对象，
-  // JS 引擎通常会按照插入顺序遍历字符串键（非整数）。
   const newSettings: any = {};
   for (const k of newKeys) {
     newSettings[k] = store.asyncAnalyzeSetting[k];
@@ -208,7 +207,7 @@ const deleteRule = async (key: string) => {
   // 使用统一的 Modal.confirm 进行确认
   const confirmed = await Modal.confirm(
     '删除确认',
-    `确定要删除规则组 "${key}" 吗？此操作不可恢复。`
+    `确定要删除规则组 "${key}" 吗？此操作不可恢复。\n(注：全局任务池中的任务不会被删除)`
   );
 
   if (!confirmed) return;
@@ -235,15 +234,40 @@ const handleImportConfirmed = async (content: string, file: File) => {
   try {
     const importedData = JSON.parse(content);
 
-    // 检查导入的数据格式是否正确
     if (typeof importedData !== 'object' || importedData === null) {
       throw new Error('导入的文件格式不正确');
     }
 
+    let rulesData = importedData;
+    let tasksData = {};
+
+    // [新增] 兼容新版导出格式：包含 rules 和 tasks
+    if (importedData.rules && importedData.tasks) {
+      rulesData = importedData.rules;
+      tasksData = importedData.tasks;
+    }
+
+    // 合并全局任务池
+    if (Object.keys(tasksData).length > 0) {
+      Object.assign(store.taskConfigSettings, tasksData);
+    }
+
     // 合并导入的数据到现有配置中，重名规则组将被覆盖
-    for (const [ruleName, ruleSetting] of Object.entries(importedData)) {
-      // 确保导入的规则符合 AsyncAnalyzeSetting 格式
+    for (const [ruleName, ruleSetting] of Object.entries(rulesData)) {
       if (isValidRuleSetting(ruleSetting)) {
+        // [新增] 兼容旧版数据：如果存在 staged_setting，自动提取到全局任务池
+        if ((ruleSetting as any).staged_setting) {
+          const staged = (ruleSetting as any).staged_setting;
+          ruleSetting.task_refs = Object.keys(staged);
+          Object.assign(store.taskConfigSettings, staged);
+          delete (ruleSetting as any).staged_setting;
+        }
+
+        // 确保 task_refs 存在
+        if (!ruleSetting.task_refs) {
+          ruleSetting.task_refs = [];
+        }
+
         store.asyncAnalyzeSetting[ruleName as string] = ruleSetting;
       } else {
         console.warn(`规则组 "${ruleName}" 格式不正确，跳过导入`);
@@ -251,7 +275,7 @@ const handleImportConfirmed = async (content: string, file: File) => {
     }
 
     await store.saveModelSettings();
-    toastr.success(`成功导入 ${Object.keys(importedData).length} 个规则组配置`);
+    toastr.success(`成功导入配置`);
   } catch (error) {
     console.error('导入配置失败:', error);
     toastr.error(`导入失败: ${(error as Error).message}`);
@@ -264,16 +288,20 @@ function isValidRuleSetting(setting: any): setting is AsyncAnalyzeSetting[string
     typeof setting === 'object' &&
     setting !== null &&
     typeof setting.comment === 'string' &&
-    typeof setting.staged_setting === 'object' &&
-    typeof setting.world_book === 'object'
+    typeof setting.world_book === 'object' &&
+    // 兼容新版的 task_refs 或 旧版的 staged_setting
+    (Array.isArray(setting.task_refs) || typeof setting.staged_setting === 'object')
   );
 }
 
 // 处理导出数据
 const handleExportData = () => {
   try {
-    // 准备导出的数据
-    const exportData = { ...store.asyncAnalyzeSetting };
+    // [修改] 准备导出的数据，同时导出规则组和全局任务池，防止任务丢失
+    const exportData = {
+      rules: store.asyncAnalyzeSetting,
+      tasks: store.taskConfigSettings
+    };
 
     // 转换为 JSON 字符串
     const jsonData = JSON.stringify(exportData, null, 2);
@@ -428,6 +456,12 @@ const handleExportData = () => {
   color: #4b5563;
   padding: 2px 8px;
   border-radius: 12px;
+
+  &.missing-task {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+  }
 }
 
 .no-task-tip {
@@ -479,7 +513,6 @@ const handleExportData = () => {
     }
   }
 
-  /* 新增：Info 按钮样式 (用于编辑) - 青色/蓝绿色 */
   &.info {
     background: #0ea5e9; /* Sky blue / Cyan */
     color: white;
@@ -488,7 +521,6 @@ const handleExportData = () => {
     }
   }
 
-  /* 新增：Secondary 按钮样式 (用于复制) - 灰色边框 */
   &.secondary {
     background: #fff;
     border: 1px solid #d1d5db;
@@ -600,6 +632,12 @@ const handleExportData = () => {
   .task-pill {
     background: #374151;
     color: #cbd5e1;
+
+    &.missing-task {
+      background: #450a0a;
+      color: #fca5a5;
+      border-color: #7f1d1d;
+    }
   }
 
   .tag.success {
