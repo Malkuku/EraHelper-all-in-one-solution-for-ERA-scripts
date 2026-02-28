@@ -43,14 +43,17 @@
           v-for="task in sortedTasks"
           :key="task.key"
           class="task-card"
-          :class="{ disabled: !task.data.enable }"
+          :class="{ disabled: !task.data.event_name && !task.data.enable }"
           @click="openTaskEditor(task.key)"
         >
           <div class="card-header">
             <span class="task-order">#{{ task.data.order }}</span>
             <span class="task-name" :title="task.key">{{ task.key }}</span>
-            <span class="status-badge" :class="{ active: task.data.enable }">
-              {{ task.data.enable ? '启用' : '禁用' }}
+            <span class="status-badge" :class="{ 
+              'event-trigger': task.data.event_name,
+              active: !task.data.event_name && task.data.enable 
+            }">
+              {{ task.data.event_name ? '事件触发' : (task.data.enable ? '启用' : '禁用') }}
             </span>
             <!-- 移除按钮 (仅在卡片悬停时显示，或者一直显示小图标) -->
             <button class="btn-icon-remove" @click.stop="handleRemoveTask(task.key)" title="从当前规则组移除此任务 (不删除全局配置)">
@@ -512,6 +515,11 @@ const openTaskEditor = (taskKey: string) => {
     background: #dcfce7;
     color: #166534;
   }
+
+  &.event-trigger {
+    background: #e0e7ff;
+    color: #3730a3;
+  }
 }
 
 .card-body {
@@ -737,6 +745,7 @@ const openTaskEditor = (taskKey: string) => {
   .task-order { background: #374151; color: #d1d5db; }
   .status-badge { background: #374151; color: #9ca3af; }
   .status-badge.active { background: #064e3b; color: #6ee7b7; }
+  .status-badge.event-trigger { background: #312e81; color: #c7d2fe; }
 
   .card-body { color: #9ca3af; }
   .info-row .label { color: #6b7280 !important; }

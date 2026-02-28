@@ -33,8 +33,11 @@
         <div class="card-header">
           <div class="title-area">
             <span class="task-name" :title="taskName">{{ taskName }}</span>
-            <span class="status-badge" :class="{ active: store.taskConfigSettings[taskName].enable }">
-              {{ store.taskConfigSettings[taskName].enable ? '启用' : '禁用' }}
+            <span class="status-badge" :class="{
+              'event-trigger': store.taskConfigSettings[taskName].event_name,
+              active: !store.taskConfigSettings[taskName].event_name && store.taskConfigSettings[taskName].enable
+            }">
+              {{ store.taskConfigSettings[taskName].event_name ? '事件触发' : (store.taskConfigSettings[taskName].enable ? '启用' : '禁用') }}
             </span>
           </div>
           <div class="card-actions">
@@ -234,6 +237,7 @@ const closeTaskModal = async () => {
   showTaskModal.value = false;
   currentEditingTask.value = '';
   await store.saveModelSettings();
+  toastr.success('任务配置已保存');
 };
 
 const handleTaskRenamed = (newName: string) => {
@@ -395,6 +399,11 @@ const handleModalDelete = () => {
       background: #dcfce7;
       color: #166534;
     }
+
+    &.event-trigger {
+      background: #e0e7ff;
+      color: #3730a3;
+    }
   }
 }
 
@@ -543,6 +552,7 @@ const handleModalDelete = () => {
   .task-name { color: #e2e8f0; }
   .status-badge { background: #374151; color: #9ca3af; }
   .status-badge.active { background: #064e3b; color: #6ee7b7; }
+  .status-badge.event-trigger { background: #312e81; color: #c7d2fe; }
 
   .comment-text { color: #9ca3af; }
 

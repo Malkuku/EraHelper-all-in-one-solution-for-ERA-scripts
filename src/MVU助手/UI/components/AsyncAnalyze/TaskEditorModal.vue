@@ -11,7 +11,11 @@
           </div>
           <div class="task-actions">
             <template v-if="!isGlobalSettings">
-              <label class="toggle-switch">
+              <div v-if="editingData.event_name" class="event-badge" title="此任务由事件触发，无需手动启用/禁用">
+                <span class="icon">⚡</span>
+                <span class="text">事件触发</span>
+              </div>
+              <label v-else class="toggle-switch">
                 <input v-model="editingData.enable" type="checkbox" />
                 <span class="slider"></span>
                 <span class="text">{{ editingData.enable ? '已启用' : '已禁用' }}</span>
@@ -460,6 +464,18 @@ watch(() => props.taskName, () => {
   currentWbKey.value = '';
   currentMergeKey.value = '';
 });
+
+// 监听 event_name 变化，如果有值则强制禁用 enable，确保事件触发任务默认禁用常规轮询
+watch(
+  () => editingData.value?.event_name,
+  (newVal) => {
+    if (!isGlobalSettings.value && newVal && typeof newVal === 'string' && newVal.trim() !== '') {
+      if (editingData.value.enable) {
+        editingData.value.enable = false;
+      }
+    }
+  }
+);
 
 // 监听世界书切换，重置筛选
 watch(() => currentWbKey.value, () => {
@@ -969,6 +985,11 @@ const getSelectedCount = (wbKey: string) => {
       .text { color: #e2e8f0; }
     }
 
+    .event-badge {
+      background: #312e81;
+      color: #c7d2fe;
+    }
+
     .checkbox-row label { color: #e2e8f0; }
 
     .btn.danger {
@@ -1112,6 +1133,21 @@ const getSelectedCount = (wbKey: string) => {
   input:checked + .slider { background: #4f46e5; }
   input:checked + .slider::after { left: 18px; }
   .text { font-size: 12px; color: #111827; font-weight: 500; }
+}
+
+/* Event Badge */
+.event-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: #e0e7ff;
+  color: #3730a3;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: help;
+  user-select: none;
 }
 
 /* Inner Tabs */
