@@ -9,9 +9,10 @@ import { router } from './router/router';
 import { useEraEditStore } from '../stores/EraEditStore';
 import { eraLogger } from '../utils/MvuHelperLogger';
 import { UseVersionControlStore } from '@/MVU助手/stores/UseVersionControlStore';
-import { handleLoresFilter, updateGlobalBlacklist } from '@/MVU助手/AsyncAnalyze/AsyncAnalyzeFilter';
+import { handleLoresFilter } from '@/MVU助手/AsyncAnalyze/AsyncAnalyzeFilter';
 import { handleMessageReceived, reSendEraUpdate } from '@/MVU助手/AsyncAnalyze/AsyncAnalyzeService';
 import { KatEvents } from '@/Constants/KatEvent';
+import { initWatcher } from '@/MVU助手/AsyncAnalyze/AsyncAnalyzeEvents';
 
 let vueApp: VueApp | null = null;
 let mountPoint: JQuery<HTMLDivElement> | null = null;
@@ -81,7 +82,7 @@ $(async () => {
   (window as any).UiStore = useUiStore(pinia);
   (window as any).AsyncAnalyzeStore = useAsyncAnalyzeStore(pinia);
   useAsyncAnalyzeStore().getModelSettings();
-  await updateGlobalBlacklist();
+  initWatcher();
   (window as any).EraEditStore = useEraEditStore(pinia);
   await UseVersionControlStore().loadSettings();
   const currentBookName = getCharWorldbookNames('current').primary;

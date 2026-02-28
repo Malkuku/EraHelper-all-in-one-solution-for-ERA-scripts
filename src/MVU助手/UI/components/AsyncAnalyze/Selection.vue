@@ -198,7 +198,6 @@ const moveRule = async (key: string, direction: number) => {
 const activateRule = async (key: string) => {
   store.activeRuleName = key;
   await store.saveModelSettings();
-  await updateGlobalBlacklist();
   toastr.success(`已启用规则组: ${key}`);
 };
 

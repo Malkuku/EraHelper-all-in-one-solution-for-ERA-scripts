@@ -87,6 +87,7 @@ export async function executeSingleTask(task: any, message_id: number, runId: nu
       localFilterList = [...new Set(tempFilterList)];
     } catch (e) {
       eraLogger.error('Task world_book processing failed', e);
+      toastr.error(`任务 [${task.taskName}] 过滤配置处理失败`);
       localFilterList = [];
     }
   } else {

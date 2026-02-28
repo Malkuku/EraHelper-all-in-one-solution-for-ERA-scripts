@@ -72,7 +72,7 @@ export const handleAsyncAnalyzeTasks = async (message_id: number, triggeringEven
       const groupTasks = taskGroups.get(order)!;
       eraLogger.log(`正在执行第 ${order} 阶任务组，共 ${groupTasks.length} 个任务`);
       if (!triggeringEvent) {
-        toastr.info(`正在执行第 ${order} 阶任务组，共 ${groupTasks.length} 个任务`);
+        toastr.success(`正在执行第 ${order} 阶任务组，共 ${groupTasks.length} 个任务`);
       }
 
       const groupResults: TaskResult[] = [];
@@ -189,7 +189,7 @@ export const handleMessageReceived = async (message_id: number) => {
     }
 
     setIsAnalyzing(true);
-    toastr.info('开始执行分步分析规则...');
+    toastr.success('开始执行分步分析规则...');
     eraLogger.info(`开始执行分步分析规则: ${store.activeRuleName}`);
 
     handleAsyncAnalyzeTasks(message_id, '');

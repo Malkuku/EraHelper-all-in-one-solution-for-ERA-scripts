@@ -149,6 +149,7 @@ export async function processMainMessageVariables(message_id: number) {
       await MvuUtil.updateMvuDataFromContent();
     }
   } catch (e) {
+    toastr.error('[AsyncAnalyze] 处理正文变量标签时出错');
     eraLogger.error('[AsyncAnalyze] 处理正文变量标签时出错:', e);
   }
 }
@@ -277,5 +278,6 @@ export async function applyGroupResults(results: TaskResult[], message_id: numbe
 
   } catch (e) {
     eraLogger.error('[AsyncAnalyze] 应用任务结果时出错:', e);
+    toastr.error('应用分析结果时发生错误，请检查日志');
   }
 }

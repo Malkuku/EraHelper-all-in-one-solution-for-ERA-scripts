@@ -70,6 +70,7 @@ export const updateGlobalBlacklist = async () => {
 
   } catch (e) {
     eraLogger.error('Failed to update global blacklist:', e);
+    toastr.error('更新全局黑名单失败，请检查世界书配置');
     blacklistLores.value = [];
     isWhitelistMode.value = false;
   }
