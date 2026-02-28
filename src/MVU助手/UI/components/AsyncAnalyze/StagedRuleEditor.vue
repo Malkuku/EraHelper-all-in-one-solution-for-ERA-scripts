@@ -8,9 +8,7 @@
         <span class="current-rule">{{ currentRuleName || '未选择规则' }}</span>
       </div>
       <div class="header-controls">
-        <button class="btn secondary" @click="showLinkModal = true">🔗 关联已有任务</button>
-        <button class="btn primary" style="margin-left: 10px;" title="新建全局任务并关联" @click="createTask">+ 新建任务</button>
-        <button class="btn primary" style="margin-left: 10px;" @click="saveAll">💾 保存所有更改</button>
+        <button class="btn primary" style="margin-left: 10px;" @click="saveAll">保存所有更改</button>
       </div>
     </div>
 
@@ -32,6 +30,12 @@
             配置发送给正文的世界书
             <Tooltip content="这里配置的世界书条目就是正文AI能看到的所有条目，兼容酒馆设置（关闭的条目AI同样看不到，同理，绿灯条目会按照关键词触发）；没有被配置的世界书也会按照原本酒馆的规则发送给AI" placement="top" />
           </div>
+        </div>
+
+        <!-- 快捷添加卡片 -->
+        <div class="task-card add-card" @click="showLinkModal = true">
+          <div class="add-icon">+</div>
+          <div class="add-text">关联 / 新建任务</div>
         </div>
 
         <!-- 普通任务卡片 -->
@@ -69,12 +73,6 @@
               </span>
             </div>
           </div>
-        </div>
-
-        <!-- 快捷添加卡片 -->
-        <div class="task-card add-card" @click="showLinkModal = true">
-          <div class="add-icon">+</div>
-          <div class="add-text">关联 / 新建任务</div>
         </div>
       </div>
 

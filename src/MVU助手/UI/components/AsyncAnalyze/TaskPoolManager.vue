@@ -52,7 +52,7 @@
           <!-- 引用情况展示 -->
           <div class="usage-section">
             <div class="usage-title">
-              引用情况 ({{ taskUsage[taskName].length }}):
+              引用 ({{ taskUsage[taskName].length }}):
             </div>
             <div v-if="taskUsage[taskName].length > 0" class="usage-tags">
               <span v-for="rule in taskUsage[taskName].slice(0, 3)" :key="rule" class="usage-tag" :title="rule">
@@ -63,7 +63,7 @@
               </span>
             </div>
             <div v-else class="usage-tags">
-              <span class="usage-tag orphaned">未被任何规则组使用</span>
+              <span class="usage-tag orphaned">未被引用</span>
             </div>
           </div>
         </div>
@@ -330,8 +330,8 @@ const handleModalDelete = () => {
 
 .task-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* 减小最小宽度 */
+  gap: 12px; /* 减小网格间距 */
   overflow-y: auto;
   padding-bottom: 20px;
   align-content: start;
@@ -341,7 +341,7 @@ const handleModalDelete = () => {
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  padding: 16px;
+  padding: 12px; /* 减小内边距 */
   display: flex;
   flex-direction: column;
   transition: all 0.2s ease;
@@ -361,19 +361,20 @@ const handleModalDelete = () => {
 .card-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 12px;
+  align-items: center; /* 垂直居中对齐 */
+  margin-bottom: 8px; /* 减小下边距 */
   gap: 8px;
 
   .title-area {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
+    flex-direction: row; /* 水平排列 */
+    align-items: center;
+    gap: 8px;
     overflow: hidden;
   }
 
   .task-name {
-    font-size: 16px;
+    font-size: 15px; /* 稍微减小字号 */
     font-weight: 600;
     color: #111827;
     white-space: nowrap;
@@ -382,12 +383,13 @@ const handleModalDelete = () => {
   }
 
   .status-badge {
-    align-self: flex-start;
+    flex-shrink: 0; /* 防止被挤压 */
     font-size: 11px;
     padding: 2px 6px;
     border-radius: 10px;
     background: #e5e7eb;
     color: #4b5563;
+    line-height: 1.2;
 
     &.active {
       background: #dcfce7;
@@ -398,7 +400,7 @@ const handleModalDelete = () => {
 
 .card-actions {
   display: flex;
-  gap: 4px;
+  gap: 2px; /* 减小按钮间距 */
   flex-shrink: 0;
 }
 
@@ -410,34 +412,37 @@ const handleModalDelete = () => {
 }
 
 .comment-text {
-  font-size: 13px;
+  font-size: 12px; /* 减小字号 */
   color: #6b7280;
-  margin-bottom: 16px;
+  margin-bottom: 8px; /* 减小下边距 */
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1; /* 改为单行显示，节省空间 */
   -webkit-box-orient: vertical;
   overflow: hidden;
   line-height: 1.4;
-  min-height: 36px;
 }
 
 .usage-section {
   background: #f9fafb;
   border-radius: 6px;
-  padding: 8px 10px;
+  padding: 6px 8px; /* 减小内边距 */
   border: 1px solid #f3f4f6;
+  display: flex; /* 改为 Flex 布局 */
+  align-items: center; /* 垂直居中 */
+  gap: 8px;
 
   .usage-title {
     font-size: 12px;
     color: #4b5563;
-    margin-bottom: 6px;
     font-weight: 500;
+    white-space: nowrap; /* 防止换行 */
+    flex-shrink: 0;
   }
 
   .usage-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 4px; /* 减小标签间距 */
   }
 
   .usage-tag {
@@ -447,7 +452,7 @@ const handleModalDelete = () => {
     padding: 2px 6px;
     border-radius: 4px;
     white-space: nowrap;
-    max-width: 100px;
+    max-width: 80px; /* 稍微减小最大宽度 */
     overflow: hidden;
     text-overflow: ellipsis;
 
@@ -485,7 +490,7 @@ const handleModalDelete = () => {
     padding: 4px;
     background: transparent;
     border-radius: 4px;
-    font-size: 14px;
+    font-size: 13px; /* 稍微减小图标大小 */
     line-height: 1;
     &:hover { background: #f3f4f6; }
     &.danger-text:hover { background: #fee2e2; }

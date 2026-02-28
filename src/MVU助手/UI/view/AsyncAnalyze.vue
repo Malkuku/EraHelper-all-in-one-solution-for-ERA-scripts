@@ -7,7 +7,7 @@
         class="tab-button"
         active-class="active"
       >
-        规则选择
+        规则组选择
       </router-link>
 
       <router-link
@@ -23,7 +23,7 @@
         class="tab-button"
         active-class="active"
       >
-        规则编辑
+        规则组配置
       </router-link>
 
 
@@ -35,15 +35,6 @@
         规则编辑
       </router-link>
 
-      <!-- 新增：额外功能/设置路由 -->
-      <router-link
-        to="/AsyncAnalyze/Settings"
-        class="tab-button"
-        active-class="active"
-      >
-        额外功能
-      </router-link>
-
       <a
         class="tab-button"
         :class="{ active: showRegexTester }"
@@ -51,6 +42,14 @@
       >
         正则测试
       </a>
+
+      <router-link
+        to="/AsyncAnalyze/Settings"
+        class="tab-button"
+        active-class="active"
+      >
+        额外功能
+      </router-link>
     </div>
 
     <!-- 子路由渲染区域 -->
