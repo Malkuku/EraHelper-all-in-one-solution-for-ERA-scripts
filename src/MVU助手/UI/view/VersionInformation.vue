@@ -20,7 +20,8 @@ const versionHistory = ref([
     date: '2026-03-05',
     changes: [
       '把info换成success防止被自己肘掉信息',
-      'swipe时将mvu回滚到上一层楼'
+      'swipe时将mvu回滚到上一层楼',
+      '去掉了冗余发送的mvu事件'
     ],
   },
   {
