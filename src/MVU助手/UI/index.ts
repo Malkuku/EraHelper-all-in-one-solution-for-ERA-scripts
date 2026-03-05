@@ -13,6 +13,7 @@ import { handleLoresFilter } from '@/MVU助手/AsyncAnalyze/AsyncAnalyzeFilter';
 import { handleMessageReceived, reSendEraUpdate } from '@/MVU助手/AsyncAnalyze/AsyncAnalyzeService';
 import { KatEvents } from '@/Constants/KatEvent';
 import { initWatcher } from '@/MVU助手/AsyncAnalyze/AsyncAnalyzeEvents';
+import { MvuUtil } from '@/Utils/MvuUtil';
 
 let vueApp: VueApp | null = null;
 let mountPoint: JQuery<HTMLDivElement> | null = null;
@@ -112,6 +113,7 @@ $(async () => {
   eventOn(tavern_events.WORLDINFO_ENTRIES_LOADED, handleLoresFilter);
   eventOn(tavern_events.MESSAGE_RECEIVED, handleMessageReceived);
   eventOn(KatEvents.kat_resend_mvu_update, reSendEraUpdate);
+  eventOn(tavern_events.MESSAGE_SWIPED,MvuUtil.backUpMvuData);
 
   // eventOn('kat:handle_era_finished', async ()=>{
   //

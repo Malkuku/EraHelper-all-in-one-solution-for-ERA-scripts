@@ -38,7 +38,7 @@ export const restoreGlobalPreset = async () => {
 export async function executeSingleTask(task: any, message_id: number, runId: number): Promise<TaskResult | null> {
   const store = getAsyncAnalyzeStore();
   eraLogger.info(`>>> 开始执行任务: ${task.taskName}`);
-  toastr.info(`正在执行分步任务: ${task.taskName}`);
+  toastr.success(`正在执行分步任务: ${task.taskName}`);
 
   const apiConfigName = task.api_config;
   const apiConfig = store.apiConfigSettings[apiConfigName];

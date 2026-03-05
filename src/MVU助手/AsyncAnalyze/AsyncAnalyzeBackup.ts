@@ -74,12 +74,12 @@ export const performRollback = async (currentMessageId?: number) => {
 
   if (actualCurrentMessageId !== backup.messageId) {
     const msg = `当前楼层 (${actualCurrentMessageId}) 与备份楼层 (${backup.messageId}) 不同，跳过回滚`;
-    toastr.info(msg);
+    toastr.success(msg);
     eraLogger.info(msg);
     return;
   }
 
-  toastr.info('正在回滚分步分析数据...');
+  toastr.success('正在回滚分步分析数据...');
   eraLogger.info('开始回滚分步分析数据...');
 
   try {

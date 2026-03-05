@@ -5,7 +5,7 @@ import { useUiStore } from '@/MVU助手/stores/UIStore';
 const uiStore = useUiStore();
 
 // 当前版本号
-const currentVersion = ref('v1.0.0');
+const currentVersion = ref('v1.0.1');
 
 // 作者信息
 const author = ref({
@@ -15,6 +15,14 @@ const author = ref({
 
 // 版本更新历史记录
 const versionHistory = ref([
+  {
+    version: 'v1.0.1',
+    date: '2026-03-05',
+    changes: [
+      '把info换成success防止被自己肘掉信息',
+      'swipe时将mvu回滚到上一层楼'
+    ],
+  },
   {
     version: 'v1.0.0',
     date: '2026-02-25',
