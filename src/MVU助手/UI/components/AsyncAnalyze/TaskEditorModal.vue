@@ -1388,4 +1388,129 @@ input[placeholder*="regex"] {
     }
   }
 }
+
+@media (max-width: 768px) {
+  .modal-overlay {
+    align-items: flex-start; /* 顶部对齐，防止键盘顶起时居中计算错误 */
+  }
+
+  .modal-container {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    border-radius: 0;
+  }
+
+  .task-editor {
+    padding: 10px;
+  }
+
+  .task-header {
+    flex-direction: column;
+    align-items: flex-start;
+    position: relative;
+    padding-right: 40px;
+    gap: 12px;
+  }
+
+  .task-title-edit {
+    width: 100%;
+    flex-wrap: wrap;
+    .name-input {
+      width: 100%;
+      margin-top: 4px;
+    }
+  }
+
+  .close-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+  }
+
+  .task-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .inner-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    &::-webkit-scrollbar {
+      height: 4px;
+    }
+  }
+
+  .tab-btn {
+    white-space: nowrap;
+  }
+
+  .tab-content {
+    padding-right: 0;
+  }
+
+  .list-editor {
+    flex-direction: column;
+    border: none;
+  }
+
+  .list-content {
+    order: 1;
+    flex: 1;
+    border-radius: 0;
+    padding: 0 0 10px 0;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .list-sidebar {
+    order: 2;
+    width: 100%;
+    height: 160px;
+    max-height: none;
+    border-right: none;
+    border-top: 1px solid #d1d5db;
+    border-bottom: none;
+    border-radius: 0;
+  }
+
+  .modal-container.dark-mode .list-sidebar {
+    border-top-color: #4b5563;
+    border-bottom-color: transparent;
+  }
+
+  .modal-container.dark-mode .list-content {
+    border-bottom-color: #4b5563;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .regex-input-group {
+    flex-direction: column;
+    align-items: stretch;
+    .preset-select-wrapper {
+      width: 100%;
+    }
+  }
+
+  .regex-row {
+    flex-wrap: wrap;
+    .preset-select-wrapper {
+      width: calc(100% - 40px);
+      flex-grow: 1;
+    }
+  }
+
+  .lore-filter-container .filter-row {
+    flex-direction: column;
+    .filter-actions {
+      width: 100%;
+      button {
+        flex: 1;
+      }
+    }
+  }
+}
 </style>

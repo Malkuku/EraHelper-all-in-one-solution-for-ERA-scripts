@@ -49,9 +49,9 @@
           <div class="card-header">
             <span class="task-order">#{{ task.data.order }}</span>
             <span class="task-name" :title="task.key">{{ task.key }}</span>
-            <span class="status-badge" :class="{ 
+            <span class="status-badge" :class="{
               'event-trigger': task.data.event_name,
-              active: !task.data.event_name && task.data.enable 
+              active: !task.data.event_name && task.data.enable
             }">
               {{ task.data.event_name ? '事件触发' : (task.data.enable ? '启用' : '禁用') }}
             </span>
@@ -608,8 +608,8 @@ const openTaskEditor = (taskKey: string) => {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
@@ -626,6 +626,7 @@ const openTaskEditor = (taskKey: string) => {
   display: flex;
   flex-direction: column;
   box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  overflow: hidden;
 
   h3 {
     padding: 16px 20px;
@@ -781,6 +782,37 @@ const openTaskEditor = (taskKey: string) => {
     &:hover {
       background: #4b5563;
     }
+  }
+}
+@media (max-width: 768px) {
+  .modal-overlay {
+    align-items: flex-start; /* 顶部对齐，防止键盘顶起时居中计算错误 */
+  }
+
+  .modal-content {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    border-radius: 0;
+  }
+
+  .editor-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .header-controls {
+    width: 100%;
+    button {
+      width: 100%;
+      margin-left: 0 !important;
+    }
+  }
+
+  .task-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>
