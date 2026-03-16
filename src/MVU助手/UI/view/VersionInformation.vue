@@ -17,11 +17,12 @@ const author = ref({
 const versionHistory = ref([
   {
     version: 'v1.0.1',
-    date: '2026-03-05',
+    date: '2026-03-15',
     changes: [
+      '优化错误回滚的判断',
       '把info换成success防止被自己肘掉信息',
-      'swipe时将mvu回滚到上一层楼',
-      '去掉了冗余发送的mvu事件'
+      'swipe时将mvu变量回滚到上一层楼',
+      '优化部分模块的移动端适配'
     ],
   },
   {

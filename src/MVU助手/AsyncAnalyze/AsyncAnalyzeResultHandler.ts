@@ -281,3 +281,43 @@ export async function applyGroupResults(results: TaskResult[], message_id: numbe
     toastr.error('应用分析结果时发生错误，请检查日志');
   }
 }
+
+/**
+ * 验证任务结果：如果定义了捕获正则，检查是否至少有一个正则捕获到了内容
+ * 如果所有正则都未捕获到内容，返回 false
+ */
+export function validateTaskResult(result: TaskResult): boolean {
+  if (!result.mergeSettings || Object.keys(result.mergeSettings).length === 0) {
+    return true;
+  }
+
+  let hasAnyRegex = false;
+  const allRegexes: string[] = [];
+
+  for (const setting of Object.values(result.mergeSettings)) {
+    const { content_regex } = setting as any;
+    if (content_regex && Array.isArray(content_regex) && content_regex.length > 0) {
+      hasAnyRegex = true;
+      allRegexes.push(...content_regex);
+    }
+  }
+
+  // 如果没有定义任何正则，视为验证通过
+  if (!hasAnyRegex) {
+    return true;
+  }
+
+  // 获取当前变量快照用于转换（保持与 applyGroupResults 一致的逻辑）
+  const statData = (window as any).getVariables?.({type:'message', message_id: -1})?.stat_data || null;
+  const convertedFullText = convertLegacyTagsToJSONPatch(result.extractedContent, statData);
+
+  // 检查是否至少有一个正则匹配成功
+  for (const regexStr of allRegexes) {
+    const parts = RegexUtils.extractContentByRegex(convertedFullText, regexStr);
+    if (parts.length > 0) {
+      return true;
+    }
+  }
+
+  return false;
+}

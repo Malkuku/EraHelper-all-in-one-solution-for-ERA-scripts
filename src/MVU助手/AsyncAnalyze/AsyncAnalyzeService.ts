@@ -8,7 +8,7 @@ import {
 } from './AsyncAnalyzeState';
 import { updateGlobalBlacklist } from './AsyncAnalyzeFilter';
 import { createBackup, performRollback } from './AsyncAnalyzeBackup';
-import { processMainMessageVariables, applyGroupResults } from './AsyncAnalyzeResultHandler';
+import { processMainMessageVariables, applyGroupResults, validateTaskResult } from './AsyncAnalyzeResultHandler';
 import { executeSingleTask, restoreGlobalPreset } from './AsyncAnalyzeTaskRunner';
 // eslint-disable-next-line import-x/no-cycle
 import { initWatcher } from './AsyncAnalyzeEvents';
@@ -93,6 +93,10 @@ export const handleAsyncAnalyzeTasks = async (message_id: number, triggeringEven
         try {
           const result = await executeSingleTask(task, message_id, thisRunId);
           if (result) {
+            // 校验正则捕获：如果定义了正则但全部未捕获到内容，视为错误
+            if (!validateTaskResult(result)) {
+              throw new Error(`任务 [${task.taskName}] 所有捕获正则均未获取到内容`);
+            }
             groupResults.push(result);
           }
           pendingTriggerUpdates.set(task.taskName, currentFloor);
@@ -108,6 +112,10 @@ export const handleAsyncAnalyzeTasks = async (message_id: number, triggeringEven
                 eraLogger.log(`任务 [${task.taskName}] 重试第 ${i+1} 次`);
                 const result = await executeSingleTask(task, message_id, thisRunId);
                 if (result) {
+                  // 重试时同样需要校验正则
+                  if (!validateTaskResult(result)) {
+                    throw new Error(`重试: 所有捕获正则均未获取到内容`);
+                  }
                   groupResults.push(result);
                 }
                 pendingTriggerUpdates.set(task.taskName, currentFloor);

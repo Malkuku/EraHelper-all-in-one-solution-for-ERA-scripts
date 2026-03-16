@@ -1396,7 +1396,8 @@ input[placeholder*="regex"] {
 
   .modal-container {
     width: 100%;
-    height: 100%;
+    height: 100vh;
+    height: 100dvh;
     max-width: none;
     border-radius: 0;
   }
