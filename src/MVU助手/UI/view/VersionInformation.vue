@@ -17,12 +17,14 @@ const author = ref({
 const versionHistory = ref([
   {
     version: 'v1.0.1',
-    date: '2026-03-15',
+    date: '2026-03-18',
     changes: [
       '优化错误回滚的判断',
       '把info换成success防止被自己肘掉信息',
       'swipe时将mvu变量回滚到上一层楼',
-      '优化部分模块的移动端适配'
+      '优化部分模块的移动端适配',
+      '将API配置挂载到了全局函数，前端可以通过共享配置来实现更灵活的generate',
+      // TODO '优化执行流程中的预设切换逻辑'
     ],
   },
   {
