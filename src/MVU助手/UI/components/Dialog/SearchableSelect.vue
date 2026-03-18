@@ -320,6 +320,9 @@ onUnmounted(() => {
   input[type="checkbox"] {
     margin: 0;
     accent-color: #4f46e5; /* 优化复选框颜色 */
+    width: 8px; /* 强制固定宽度，防止继承 width: 100% */
+    height: 8px; /* 强制固定高度 */
+    flex-shrink: 0; /* 防止被挤压 */
   }
 }
 
