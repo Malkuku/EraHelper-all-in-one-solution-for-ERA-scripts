@@ -29,6 +29,16 @@ export interface AnalyzeBackupState {
   };
 }
 
+// 在 AsyncAnalyzeStore.ts 顶部附近添加接口定义
+export interface AsyncAnalyzeGlobalAPI {
+  getApiConfigSettings: () => ApiConfigSetting;
+  setApiConfigSettings: (settings: ApiConfigSetting) => void;
+  getModelSettings: () => Promise<void>;
+  saveModelSettings: () => Promise<void>;
+  clearModelSettings: () => Promise<void>;
+}
+
+
 export const useAsyncAnalyzeStore = defineStore('KatAsyncAnalyze', () => {
   // 所有的规则组集合
   const asyncAnalyzeSetting = ref<AsyncAnalyzeSetting>({});
@@ -152,6 +162,24 @@ export const useAsyncAnalyzeStore = defineStore('KatAsyncAnalyze', () => {
     savedBackupState.value = null;
     await saveModelSettings();
   };
+
+
+  const asyncAnalyzeAPI: AsyncAnalyzeGlobalAPI = {
+    // 提供获取和设置 API 配置的方法
+    getApiConfigSettings: () => apiConfigSettings.value,
+    setApiConfigSettings: (val: ApiConfigSetting) => {
+      apiConfigSettings.value = val;
+    },
+    // 将 Store 内部的操作方法也暴露出去
+    getModelSettings,
+    saveModelSettings,
+    clearModelSettings
+  };
+
+  (window as any).KatAsyncAnalyzeAPI = asyncAnalyzeAPI;
+
+  // 注册到全局，命名为 'AsyncAnalyzeAPI'
+  initializeGlobal('KatAsyncAnalyzeAPI', asyncAnalyzeAPI);
 
   return {
     asyncAnalyzeSetting,
