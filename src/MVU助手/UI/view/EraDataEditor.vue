@@ -23,11 +23,26 @@
         <!-- 使用 FileImportExport 组件替换原来的导入/导出按钮 -->
         <FileImportExport
           ref="fileImportExportRef"
-          import-text="导入JSON"
+          import-text="导入完整数据"
           export-text="导出草稿"
           :require-confirm="true"
           @import-confirmed="handleFileLoaded"
           @export-data="exportDraft"
+        />
+
+        <!-- 导入差分数据按钮 -->
+        <button class="toolbar-btn" @click="triggerDiffImport">
+          <svg class="icon" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0zM7.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3v-3z" />
+          </svg>
+          导入差分数据
+        </button>
+        <input
+          type="file"
+          ref="diffFileInput"
+          accept=".json"
+          style="display: none"
+          @change="onDiffFileChange"
         />
       </div>
       <div class="toolbar-right">
@@ -256,7 +271,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'; // 引入 watch
 import { useEraEditStore } from '../../stores/EraEditStore';
-import { cloneDeep, set } from 'lodash';
+import { cloneDeep, set, merge } from 'lodash';
 import EraConfirmModal from '../components/Dialog/EraConfirmModal.vue';
 import FileImportExport from '../components/File/FileImportExport.vue';
 import PathSearch from '../components/Search/PathSearch.vue';
@@ -366,6 +381,58 @@ function handleFileLoaded(content: string) {
     eraLogger.error('导入数据失败:', error);
     statusMessage.value = '导入失败，请检查文件格式';
     alert(`导入失败：${error instanceof Error ? error.message : '未知错误'}`);
+  }
+}
+
+// --- 差分导入 ---
+const diffFileInput = ref<HTMLInputElement | null>(null);
+
+function triggerDiffImport() {
+  diffFileInput.value?.click();
+}
+
+function onDiffFileChange(event: Event) {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const content = e.target?.result as string;
+    if (content) {
+      openConfirmModal('导入差分数据', '确定要将此文件中的数据合并到当前数据中吗？已有字段将被覆盖。', 'confirm', () => {
+        handleDiffFileLoaded(content);
+      });
+    }
+    // 清空 input 以便下次能选择同一个文件
+    if (diffFileInput.value) {
+      diffFileInput.value.value = '';
+    }
+  };
+  reader.readAsText(file);
+}
+
+function handleDiffFileLoaded(content: string) {
+  try {
+    const diffData = JSON.parse(content);
+    if (typeof diffData !== 'object' || diffData === null || Array.isArray(diffData)) {
+      throw new Error('差分数据必须是一个JSON对象');
+    }
+
+    // 使用 lodash 的 merge 进行深度合并
+    currentData.value = merge({}, currentData.value, diffData);
+
+    // 如果在 raw 模式，更新 rawJsonString
+    if (editMode.value === 'raw') {
+      rawJsonString.value = JSON.stringify(currentData.value, null, 2);
+      validateRawJson();
+    }
+
+    statusMessage.value = `成功导入差分数据`;
+  } catch (error) {
+    eraLogger.error('导入差分数据失败:', error);
+    statusMessage.value = '导入差分数据失败，请检查文件格式';
+    alert(`导入差分数据失败：${error instanceof Error ? error.message : '未知错误'}`);
   }
 }
 
@@ -1355,11 +1422,6 @@ textarea::placeholder {
   }
 }
 
-/*
-   已删除 @media (prefers-color-scheme: dark) 块
-   这个块之前强制在系统深色模式下使用浅色主题，导致 .dark-mode 类失效
-*/
-
 /* 使用 :deep 选择器穿透子组件样式 */
 :deep(.json-node-editor) {
   input,
@@ -1677,4 +1739,3 @@ textarea::placeholder {
   }
 }
 </style>
-
