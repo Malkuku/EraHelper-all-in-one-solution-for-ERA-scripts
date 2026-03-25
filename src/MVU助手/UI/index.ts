@@ -1,19 +1,19 @@
 import { createPinia } from 'pinia';
 import { App as VueApp, createApp } from 'vue';
-import App from './App.vue';
 import { useUiStore } from '../stores/UIStore';
 import { createMountPoint, destroyMountPoint, deteleportStyle, teleportStyle } from '../utils/dom';
+import App from './App.vue';
 
-import { useAsyncAnalyzeStore } from '../stores/AsyncAnalyzeStore';
-import { router } from './router/router';
-import { useEraEditStore } from '../stores/EraEditStore';
-import { eraLogger } from '../utils/MvuHelperLogger';
-import { UseVersionControlStore } from '@/MVU助手/stores/UseVersionControlStore';
-import { handleLoresFilter } from '@/MVU助手/AsyncAnalyze/AsyncAnalyzeFilter';
-import { handleMessageReceived, reSendEraUpdate } from '@/MVU助手/AsyncAnalyze/AsyncAnalyzeService';
 import { KatEvents } from '@/Constants/KatEvent';
 import { initWatcher } from '@/MVU助手/AsyncAnalyze/AsyncAnalyzeEvents';
+import { handleLoresFilter } from '@/MVU助手/AsyncAnalyze/AsyncAnalyzeFilter';
+import { handleMessageReceived, handleMessageSent, reSendEraUpdate } from '@/MVU助手/AsyncAnalyze/AsyncAnalyzeService';
+import { UseVersionControlStore } from '@/MVU助手/stores/UseVersionControlStore';
 import { MvuUtil } from '@/Utils/MvuUtil';
+import { useAsyncAnalyzeStore } from '../stores/AsyncAnalyzeStore';
+import { useEraEditStore } from '../stores/EraEditStore';
+import { eraLogger } from '../utils/MvuHelperLogger';
+import { router } from './router/router';
 
 let vueApp: VueApp | null = null;
 let mountPoint: JQuery<HTMLDivElement> | null = null;
@@ -112,6 +112,7 @@ $(async () => {
   // 监听事件
   eventOn(tavern_events.WORLDINFO_ENTRIES_LOADED, handleLoresFilter);
   eventOn(tavern_events.MESSAGE_RECEIVED, handleMessageReceived);
+  eventOn(tavern_events.MESSAGE_SENT, handleMessageSent);
   eventOn(KatEvents.kat_resend_mvu_update, reSendEraUpdate);
   eventOn(tavern_events.MESSAGE_SWIPED,MvuUtil.backUpMvuData);
 

@@ -1,24 +1,31 @@
 import { eraLogger } from '../utils/MvuHelperLogger';
-import {
-  getAsyncAnalyzeStore,
-  isAnalyzing,
-  setIsAnalyzing,
-  currentAnalysisRunId,
-  incrementRunId
-} from './AsyncAnalyzeState';
-import { updateGlobalBlacklist } from './AsyncAnalyzeFilter';
 import { createBackup, performRollback } from './AsyncAnalyzeBackup';
-import { processMainMessageVariables, applyGroupResults, validateTaskResult } from './AsyncAnalyzeResultHandler';
+import { updateGlobalBlacklist } from './AsyncAnalyzeFilter';
+import { applyGroupResults, processMainMessageVariables, validateTaskResult } from './AsyncAnalyzeResultHandler';
+import {
+  currentAnalysisRunId,
+  getAsyncAnalyzeStore,
+  incrementRunId,
+  isAnalyzing,
+  setIsAnalyzing
+} from './AsyncAnalyzeState';
 import { executeSingleTask, restoreGlobalPreset } from './AsyncAnalyzeTaskRunner';
+import { KatEvents } from '@/Constants/KatEvent';
 // eslint-disable-next-line import-x/no-cycle
 import { initWatcher } from './AsyncAnalyzeEvents';
 import { TaskResult } from './AsyncAnalyzeTypes';
-import { KatEvents } from '@/Constants/KatEvent';
 
 /**
  * 核心：处理分步分析任务队列
+ * @param message_id 消息ID
+ * @param triggeringEvent 触发事件名称
+ * @param orderFilter order筛选条件：'negative' 只处理负数order，'positive' 只处理非负数order，undefined 处理全部
  */
-export const handleAsyncAnalyzeTasks = async (message_id: number, triggeringEvent: string = '') => {
+export const handleAsyncAnalyzeTasks = async (
+  message_id: number,
+  triggeringEvent: string = '',
+  orderFilter?: 'negative' | 'positive'
+) => {
   const store = getAsyncAnalyzeStore();
   const ruleName = store.activeRuleName;
   const currentRule = store.asyncAnalyzeSetting[ruleName];
@@ -44,7 +51,13 @@ export const handleAsyncAnalyzeTasks = async (message_id: number, triggeringEven
     if (triggeringEvent) {
       return t.event_name === triggeringEvent;
     } else {
-      return t.enable;
+      if (!t.enable) return false;
+      if (orderFilter === 'negative') {
+        return t.order < 0;
+      } else if (orderFilter === 'positive') {
+        return t.order >= 0;
+      }
+      return true;
     }
   });
 
@@ -171,7 +184,7 @@ export const handleAsyncAnalyzeTasks = async (message_id: number, triggeringEven
 };
 
 /**
- * 处理接收到的massage_received事件
+ * 处理接收到的massage_received事件（只处理order >= 0的任务）
  */
 export const handleMessageReceived = async (message_id: number) => {
   try {
@@ -200,11 +213,44 @@ export const handleMessageReceived = async (message_id: number) => {
     toastr.success('开始执行分步分析规则...');
     eraLogger.info(`开始执行分步分析规则: ${store.activeRuleName}`);
 
-    handleAsyncAnalyzeTasks(message_id, '');
+    handleAsyncAnalyzeTasks(message_id, '', 'positive');
 
   } catch (e) {
     eraLogger.error('分步分析主流程异常:', e);
     toastr.error('分步分析执行出错');
+  }
+};
+
+/**
+ * 处理用户发送消息事件（只处理order < 0的任务，按从小到大顺序执行）
+ */
+export const handleMessageSent = async (message_id: number) => {
+  try {
+    initWatcher();
+
+    if (getLastMessageId() == 0 || message_id == 0) {
+      return;
+    }
+
+    const store = getAsyncAnalyzeStore();
+    if (!store.activeRuleName || !store.asyncAnalyzeSetting[store.activeRuleName]) {
+      return;
+    }
+
+    if (isAnalyzing.value) {
+      toastr.warning('上一个分析任务尚未完成');
+      return;
+    }
+
+    setIsAnalyzing(true);
+    toastr.success('开始执行用户发送消息分析...');
+    eraLogger.info(`开始执行用户发送消息分析: ${store.activeRuleName}`);
+
+    await handleAsyncAnalyzeTasks(message_id, '', 'negative'); //这里必须等待完成，否则正文会提前输出
+
+  } catch (e) {
+    eraLogger.error('用户发送消息分析流程异常:', e);
+    toastr.error('用户发送消息分析执行出错');
   }
 };
 
