@@ -5,7 +5,7 @@ import { useUiStore } from '@/MVU助手/stores/UIStore';
 const uiStore = useUiStore();
 
 // 当前版本号
-const currentVersion = ref('v1.0.1');
+const currentVersion = ref('v1.1.0');
 
 // 作者信息
 const author = ref({
@@ -16,7 +16,7 @@ const author = ref({
 // 版本更新历史记录
 const versionHistory = ref([
   {
-    version: 'v1.0.1',
+    version: 'v1.1.0',
     date: '2026-03-25',
     changes: [
       '优化错误回滚的判断',
@@ -25,6 +25,7 @@ const versionHistory = ref([
       '优化部分模块的移动端适配',
       '将API配置挂载到了全局函数，前端可以通过共享配置来实现更灵活的generate',
       '当order为负数时会在user发送消息时执行任务',
+      'fix: 更新推送时使用$all会作为普通字段处理',
       // TODO '优化执行流程中的预设切换逻辑'
     ],
   },

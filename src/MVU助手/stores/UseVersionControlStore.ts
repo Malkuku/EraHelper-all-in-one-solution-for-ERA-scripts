@@ -177,12 +177,36 @@ export const UseVersionControlStore = defineStore('EraVersionControl', () => {
   };
 
   const applyEdit = (target: any, rule: any) => {
-    _.mergeWith(target, rule, (objValue, srcValue) => {
-      // 如果新的值(srcValue)是数组，直接返回新数组，实现覆盖而非合并
-      if (_.isArray(srcValue)) {
-        return srcValue;
+    // 确保 target 和 rule 都是对象
+    if (!target || typeof target !== 'object' || !rule || typeof rule !== 'object') return;
+
+    for (const key in rule) {
+      if (key === '$all') {
+        const subRule = rule['$all'];
+        // 遍历 target 中的所有 key，将 subRule 应用到每一个子对象上
+        for (const targetKey in target) {
+          // 确保子节点是对象才能继续深度编辑
+          if (target[targetKey] && typeof target[targetKey] === 'object') {
+            applyEdit(target[targetKey], subRule);
+          }
+        }
+      } else {
+        const srcValue = rule[key];
+
+        // 如果 rule 中的值是纯对象，则进行深度递归合并
+        if (_.isPlainObject(srcValue)) {
+          // 如果 target 中没有这个 key，或者它不是一个纯对象，则初始化为空对象
+          if (!target[key] || !_.isPlainObject(target[key])) {
+            target[key] = {};
+          }
+          applyEdit(target[key], srcValue);
+        } else {
+          // 如果是数组或基本数据类型（字符串、数字、布尔等），直接覆盖
+          // 这保留了你原代码中“数组实现覆盖而非合并”的逻辑
+          target[key] = srcValue;
+        }
       }
-    });
+    }
   };
 
   /**
