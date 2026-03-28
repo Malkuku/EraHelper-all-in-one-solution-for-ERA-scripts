@@ -41,9 +41,16 @@ function flattenObjectToJSONPatch(
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
 
       const sanitizedKey = key.replace(/[.[\]]/g, '_');
-      const escapedKey = sanitizedKey.replace(/~/g, '~0').replace(/\//g, '~1');
-      const newPath = `${currentPath}/${escapedKey}`;
+      const escapedKey = sanitizedKey.replace(/~/g, '~0').replace(/\//g, '~1'); const newPath = `${currentPath}/${escapedKey}`;
       const value = obj[key];
+
+      // 检查路径是否存在
+      const pathExists = statData ? checkPathExists(statData, newPath) : true;
+
+      // 如果是 Edit (replace) 操作，且路径不存在，则直接过滤掉
+      if (op === 'replace' && statData && !pathExists) {
+        continue;
+      }
 
       // 判断是否为空对象
       const isEmptyObject = typeof value === 'object' && value !== null && !Array.isArray(value) && Object.keys(value).length === 0;
@@ -53,7 +60,7 @@ function flattenObjectToJSONPatch(
       // AND (排除情况：如果是删除操作 且 是空对象，则不进入递归，直接视为删除该节点)
       if (typeof value === 'object' && value !== null && !Array.isArray(value) && !(op === 'remove' && isEmptyObject)) {
 
-        if (statData && !checkPathExists(statData, newPath) && op !== 'remove') {
+        if (statData && !pathExists && op === 'insert') {
           patches.push({ op: 'insert', path: newPath, value: value });
         } else {
           patches = patches.concat(flattenObjectToJSONPatch(value, newPath, op, statData));
