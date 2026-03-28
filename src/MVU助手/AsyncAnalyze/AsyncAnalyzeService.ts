@@ -273,5 +273,5 @@ export const reSendEraUpdate = async () => {
   }
 
   toastr.success('开始重算分步分析');
-  await handleAsyncAnalyzeTasks(currentMessageId, '');
+  await handleAsyncAnalyzeTasks(currentMessageId, '', 'positive');
 };
