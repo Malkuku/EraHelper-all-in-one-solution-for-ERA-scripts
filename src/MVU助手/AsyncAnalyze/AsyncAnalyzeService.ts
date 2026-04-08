@@ -1,3 +1,4 @@
+import { KatEvents } from '@/Constants/KatEvent';
 import { eraLogger } from '../utils/MvuHelperLogger';
 import { createBackup, performRollback } from './AsyncAnalyzeBackup';
 import { updateGlobalBlacklist } from './AsyncAnalyzeFilter';
@@ -10,7 +11,6 @@ import {
   setIsAnalyzing
 } from './AsyncAnalyzeState';
 import { executeSingleTask, restoreGlobalPreset } from './AsyncAnalyzeTaskRunner';
-import { KatEvents } from '@/Constants/KatEvent';
 // eslint-disable-next-line import-x/no-cycle
 import { initWatcher } from './AsyncAnalyzeEvents';
 import { TaskResult } from './AsyncAnalyzeTypes';
@@ -97,7 +97,12 @@ export const handleAsyncAnalyzeTasks = async (
         const lastTrigger = task.trigger_history || 0;
 
         if (task.trigger_index > 1 && (currentFloor - lastTrigger) < task.trigger_index) {
-          eraLogger.log(`任务 [${task.taskName}] 跳过: 未达到触发间隔`);
+          if (lastTrigger > currentFloor) {
+            eraLogger.log(`任务 [${task.taskName}] 存档切换 detected (当前: ${currentFloor}, 上次: ${lastTrigger})，更新 trigger_history`);
+            pendingTriggerUpdates.set(task.taskName, currentFloor);
+            return;
+          }
+          eraLogger.log(`任务 [${task.taskName}] 跳过: 未达到触发间隔 (当前: ${currentFloor}, 上次: ${lastTrigger}, 间隔: ${task.trigger_index})`);
           return;
         }
 
