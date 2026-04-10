@@ -3,6 +3,14 @@
 @.cursor/rules/项目基本概念.mdc
 @.cursor/rules/mcp.mdc
 @.cursor/rules/酒馆变量.mdc
+<<<<<<< HEAD
 @.cursor/rules/前端界面.mdc
 @.cursor/rules/脚本.mdc
 @.cursor/rules/mvu变量框架.mdc
+=======
+@.cursor/rules/酒馆助手接口.mdc
+@.cursor/rules/前端界面.mdc
+@.cursor/rules/脚本.mdc
+@.cursor/rules/mvu变量框架.mdc
+@.cursor/rules/mvu角色卡.mdc
+>>>>>>> 304e8c08c9a8646568197fb30d79c23676d3a5a0
