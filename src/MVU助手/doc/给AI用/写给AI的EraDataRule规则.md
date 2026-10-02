@@ -1,3 +1,5 @@
+> 历史文档：EraDataRule 机制已移除。以下内容不适用于当前 MVU 助手，也不应作为现行规则或 API 契约使用。
+
 ### EraDataRule 构建指南
 
 #### 1. 核心概念 (Core Concepts)
