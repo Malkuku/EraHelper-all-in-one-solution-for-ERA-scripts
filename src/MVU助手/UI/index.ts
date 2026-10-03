@@ -116,10 +116,6 @@ $(async () => {
   eventOn(KatEvents.kat_resend_mvu_update, reSendEraUpdate);
   eventOn(tavern_events.MESSAGE_SWIPED,MvuUtil.backUpMvuData);
 
-  // eventOn('kat:handle_era_finished', async ()=>{
-  //
-  // });
-
   // 监听 `GENERATE_AFTER_DATA` 事件，在提示词发送前处理 ERA 宏
   //eventOn(tavern_events.GENERATE_AFTER_DATA, handleTestPrompt);
 });

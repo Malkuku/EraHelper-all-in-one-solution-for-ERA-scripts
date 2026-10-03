@@ -6,7 +6,7 @@
 
 ## 版本规则
 
-版本设置保存在当前脚本变量的 `era_data_rule.version_control`，目前字段为 `enable` 和 `lore_name`。当前版本读取自 `stat_data.system.当前版本`，缺失时按 0 处理。
+版本设置保存在当前脚本变量的 `era_data_rule.version_control`，目前字段为 `enable` 和 `lore_name`。`era_data_rule` 是保留下来的持久化键名，不表示已移除的 EraDataRule 规则引擎仍在运行。当前版本读取自 `stat_data.system.当前版本`，缺失时按 0 处理。
 
 指定世界书条目中的更新块采用 `<del|v="版本号">JSON</del>` 或 `<edit|v="版本号">JSON</edit>`。实现按数值版本升序解析，只应用高于当前版本的块。`del` 递归删除字段，`edit` 递归合并对象并覆盖标量或数组；两者都支持 `$all` 应用到子对象。预览后写入完整目标 `stat_data`，并设置 `system.当前版本` 为目标版本。
 
