@@ -210,12 +210,12 @@
                   <p class="muted">错误代码：{{ task.error.code }}</p>
                   <pre v-if="task.error.details?.response">{{ task.error.details.response }}</pre>
                   <p v-else>
-                    本阶段未取得后端响应内容。控制台按运行 ID
-                    {{ result.runId }} 查看过程日志；请求和原始输出见控制台的调试级别日志。
+                    本阶段未取得后端响应内容。下方过程日志可查看已执行阶段、请求和错误。
                   </p>
                 </details>
               </section>
             </details>
+            <RunLog :run-id="result.runId" />
             <details class="diagnostic">
               <summary>运行诊断</summary>
               <button class="text-button" @click="copyDiagnostic(result)">复制诊断</button>
@@ -247,6 +247,8 @@ import { createEventIntegrationRules } from '../../AsyncAnalyze/EventIntegration
 import { Modal } from '../../utils/modal';
 import TaskManager from '../components/AsyncAnalyze/TaskManager.vue';
 import Settings from '../components/AsyncAnalyze/Settings.vue';
+import RunLog from '../components/AsyncAnalyze/RunLog.vue';
+import { taskRunLogs } from '../../AsyncAnalyze/TaskDiagnostics';
 
 const store = useTaskStore();
 const uiStore = useUiStore();
@@ -403,7 +405,7 @@ function dataImpact(result: RunResult) {
 }
 async function copyDiagnostic(result: RunResult) {
   try {
-    await navigator.clipboard.writeText(JSON.stringify(result, null, 2));
+    await navigator.clipboard.writeText(JSON.stringify({ ...result, logs: taskRunLogs.get(result.runId) ?? [] }, null, 2));
     feedback.value = '已复制运行诊断。内容包含返回文本与写入目标，请按需分享。';
   } catch {
     feedback.value = '无法访问剪贴板，请展开运行诊断查看信息。';

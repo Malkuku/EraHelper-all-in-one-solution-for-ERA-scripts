@@ -28,6 +28,8 @@ const path = require('node:path');
   await tip.waitFor();
   await page.waitForTimeout(250);
   const checkPosition = async () => {
+    assert(await tip.evaluate(el => el.matches(':popover-open')), 'field help is in the browser top layer');
+    assert.equal(await tip.evaluate(el => getComputedStyle(el).visibility), 'visible');
     const a = await help.boundingBox(), b = await tip.boundingBox();
     assert(b.x >= 0 && b.y >= 0 && b.x + b.width <= page.viewportSize().width + 1);
     assert(Math.abs((a.x + a.width / 2) - Math.max(b.x, Math.min(b.x + b.width, a.x + a.width / 2))) < 2);

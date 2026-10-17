@@ -191,6 +191,7 @@ export async function generateTask(context: GenerationContext): Promise<string> 
     }
     requestDetails.elapsedMs = Date.now() - requestedAt;
     const responseText = diagnosticText(result ?? rawText, context.secret);
+    taskLog('debug', '后端原始响应', { ...label, httpStatus: response.status, response: responseText }, context.secret);
     requestDetails.response =
       responseText.length > 12000 ? responseText.slice(0, 12000) + '\n[响应过长，已截断]' : responseText;
     const backend = result?.error;

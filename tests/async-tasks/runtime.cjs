@@ -29,11 +29,13 @@ global.waitGlobalInitialized = async () => {};
 global.Mvu = { getMvuData: () => ({ stat_data: {} }), parseMessage: async () => undefined, replaceMvuData: async () => {} };
 const events = [];
 const notifications = [];
-global.toastr = Object.fromEntries(['info', 'success', 'warning', 'error'].map(level => [level,
-  (message, title, options) => notifications.push({ level, message, title, options })]));
+global.toastr = { error: () => { throw Error('task notifications must not use toastr'); } };
 global.eventEmit = async (name, result) => { events.push({ name, result }); };
 const { createPinia, setActivePinia } = require('pinia'); setActivePinia(createPinia());
 const root = path.resolve(__dirname, '../../src/MVU助手');
+const diagnostics = require(path.join(root, 'AsyncAnalyze/TaskDiagnostics.ts'));
+const showNotice = diagnostics.showTaskNotice;
+diagnostics.showTaskNotice = notice => { showNotice(notice); notifications.push(notice); };
 const { useTaskStore } = require(path.join(root, 'stores/TaskStore.ts'));
 const { emptySettings, TaskSchema } = require(path.join(root, 'AsyncAnalyze/TaskSchema.ts'));
 const { runTaskChain, rerunCurrentTasks, cancelTaskRun, activeTaskRuns, initializeTaskRuntime, disposeTaskRuntime, taskRunResults, getUnrecoveredJournals } = require(path.join(root, 'AsyncAnalyze/TaskRuntime.ts'));
@@ -70,14 +72,15 @@ async function main() {
   const gate = deferred(); model = async body => { await gate.promise; return success(body.model); };
   const first = eventRun('same', 'caller-1'); await until(() => calls.length === 1);
   assert.equal(notifications.length, 1, 'background event start must be visible without mounting the UI');
-  assert.match(notifications[0].title, /任务开始/);
+  assert.match(notifications[0].title, /任务处理中/);
   assert.match(notifications[0].message, /same.*A/);
-  assert.equal(notifications[0].options.escapeHtml, true);
+  assert.equal(notifications[0].running, true);
+  assert.equal(diagnostics.taskNotices.get(notifications[0].runId).running, true);
   const duplicate = await eventRun('same', 'caller-2'); assert.equal(duplicate.status, 'busy'); assert.equal(duplicate.requestId, 'caller-2'); assert(duplicate.activeRunId);
   const independent = eventRun('other', 'caller-3'); await until(() => calls.length === 2);
   gate.resolve(); assert.equal((await first).status, 'succeeded'); assert.equal((await independent).status, 'succeeded');
   assert.equal(notifications.filter(item => item.level === 'success').length, 2, 'each independent run must report completion exactly once');
-  assert.equal(notifications.filter(item => item.title.includes('任务开始')).length, 2, 'busy request must not report a new start');
+  assert.equal(notifications.filter(item => item.running).length, 2, 'busy request must not report a new start');
   assert.equal(events.filter(value => value.result.requestId === 'caller-2').length, 1);
 
   resetChat('regular-event-name'); await configure([task('A', { eventName: 'regular' })]);
@@ -300,13 +303,16 @@ async function notificationChecks() {
   assert.equal(notifications.at(-1).level, 'warning');
   assert.match(notifications.at(-1).title, /部分成功/);
   assert.match(notifications.at(-1).message, /成功 1 项，失败 1 项/);
-  assert.equal(notifications[0].options.escapeHtml, true, 'user task names must not render as HTML');
+  assert(notifications[0].message.includes('<b>A</b>'), 'names are passed as text for Vue interpolation');
+  assert.equal(diagnostics.taskNotices.get(partial.runId).running, false, 'terminal notice replaces running state');
+  const logs = diagnostics.taskRunLogs.get(partial.runId);
+  for (const message of ['模型请求内容', '模型原始输出', '生成失败']) assert(logs.some(entry => entry.message === message));
 
   resetChat('notification-failure'); await configure([task('A', { eventName: 'notice' })]);
   model = async () => success('OK');
-  const previousToastr = global.toastr, previousWarn = console.warn;
+  const previousNotice = diagnostics.showTaskNotice, previousWarn = console.warn;
   const warnings = [];
-  global.toastr = { info: () => { throw Error('toast unavailable'); }, success: () => { throw Error('toast unavailable'); } };
+  diagnostics.showTaskNotice = () => { throw Error('notice unavailable'); };
   console.warn = (...args) => warnings.push(args);
   try {
     const result = await eventRun('notice');
@@ -314,7 +320,7 @@ async function notificationChecks() {
     assert.equal(events.filter(item => item.result.runId === result.runId).length, 1, 'toast failure must preserve the result event');
     assert.equal(activeTaskRuns.size, 0);
     assert.equal(warnings.length, 2);
-  } finally { global.toastr = previousToastr; console.warn = previousWarn; }
+  } finally { diagnostics.showTaskNotice = previousNotice; console.warn = previousWarn; }
 }
 async function unfinishedRuntimeChecks() {
   const priorFetch = global.fetch;

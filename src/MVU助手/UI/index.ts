@@ -75,6 +75,7 @@ $(async () => {
   vueApp.use(pinia);
   vueApp.use(router);
   vueApp.mount(mountPoint[0]);
+  teleportStyle();
 
   // 获取 store 实例并暴露到 window，以便外部函数调用
   eraLogger.debug('initialize', '正在初始化 store 实例');

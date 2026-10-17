@@ -516,6 +516,10 @@ async function generationErrorChecks() {
       global.fetch = ordinaryFetch;
       assert.equal(await generateTask(await make()), 'PHASE_RESULT');
       const dump = JSON.stringify(logs);
+      const retained = JSON.stringify([...require(path.join(root, 'TaskDiagnostics.ts')).taskRunLogs.values()]);
+      assert(retained.includes('模型请求内容') && retained.includes('后端原始响应'), 'UI retains requests and backend responses');
+      assert(!retained.includes(privateKey), 'retained UI logs must redact the configured key');
+      assert(!retained.includes('user:password@'), 'retained UI logs must redact URL credentials');
       for (const message of ['世界书扫描完成', '发送模型请求', '模型请求内容', '模型原始输出', '生成失败', '模型响应完成']) assert(dump.includes(message), message);
       assert(!dump.includes(privateKey), 'logs must redact the configured key, including upstream echoes');
       assert(!dump.includes('user:password@'), 'diagnostics must not disclose URL credentials');

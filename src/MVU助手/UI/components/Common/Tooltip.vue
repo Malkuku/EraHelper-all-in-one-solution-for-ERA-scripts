@@ -26,6 +26,7 @@
         ref="floatingRef"
         class="mvu-field-help"
         role="tooltip"
+        popover="manual"
         :style="{ ...floatingStyles, visibility: isPositioned ? 'visible' : 'hidden' }"
       >
         {{ content || '无内容' }}
@@ -34,7 +35,7 @@
   </span>
 </template>
 <script setup lang="ts">
-import { onBeforeUnmount, ref, useId } from 'vue';
+import { onBeforeUnmount, ref, useId, watch } from 'vue';
 import { useFloating, offset, flip, shift, autoUpdate } from '@floating-ui/vue';
 const props = withDefaults(
   defineProps<{ content?: string; placement?: 'top' | 'bottom' | 'left' | 'right'; delay?: number }>(),
@@ -44,6 +45,9 @@ const tooltipId = useId();
 const visible = ref(false);
 const referenceRef = ref<HTMLElement | null>(null);
 const floatingRef = ref<HTMLElement | null>(null);
+watch(floatingRef, element => {
+  if (element && !element.matches(':popover-open')) element.showPopover();
+}, { flush: 'post' });
 const { floatingStyles, isPositioned } = useFloating(referenceRef, floatingRef, {
   open: visible,
   placement: () =>
@@ -100,6 +104,9 @@ onBeforeUnmount(hide);
   height: 16px;
 }
 .mvu-field-help {
+  inset: auto;
+  margin: 0;
+  border: 0;
   width: max-content;
   max-width: min(340px, calc(100vw - 16px));
   box-sizing: border-box;

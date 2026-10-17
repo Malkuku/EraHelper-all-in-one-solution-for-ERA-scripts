@@ -1,6 +1,6 @@
 import { ref, shallowReactive, watch } from 'vue';
 import { z } from 'zod';
-import { taskLog } from './TaskDiagnostics';
+import { taskLog, showTaskNotice } from './TaskDiagnostics';
 import { useTaskStore } from '../stores/TaskStore';
 import { bindMessage, currentChatKey, createGenerationContext, MessageIdentity, assertMessage } from './generation/GenerationHost';
 import { generateTask } from './generation/TaskGeneration';
@@ -42,9 +42,9 @@ function errorOf(error: unknown, phase: TaskFailure['phase'] = 'prepare') {
 function resultFor(requestId: string, runId: string, trigger: Trigger, messageId: number): RunResult {
   return { version: 1, requestId, runId, trigger, messageId, chatId: '', status: 'failed', tasks: [], warnings: [], rollback: { status: 'not_needed', errors: [] } };
 }
-function notifyRun(level: 'info' | 'success' | 'warning' | 'error', title: string, message: string) {
+function notifyRun(runId: string, level: 'info' | 'success' | 'warning' | 'error', title: string, message: string, running = false) {
   try {
-    toastr[level](message, `MVU助手 · ${title}`, { escapeHtml: true, closeButton: true });
+    showTaskNotice({ runId, level, title: `MVU助手 · ${title}`, message, running });
   } catch (error) {
     // Notification failure must not change task settlement or prevent result delivery.
     console.warn('[MVU助手] 无法显示任务通知', error);
@@ -71,13 +71,12 @@ function notifyResult(result: RunResult) {
     ...failures, ...skipped,
     residue ? '存在未恢复的修改，请打开运行结果检查' : result.rollback.status === 'completed' ? '本链提交已回滚' : '',
     ...result.warnings.map(warning => warning.message),
-    '详情见助手的“运行结果”',
   ].filter(Boolean).join('；');
   const titles = { succeeded: '任务完成', partial: '任务部分成功', failed: '任务失败', cancelled: '任务已取消', busy: '任务正在运行', skipped: '本次未执行' };
   const level = result.status === 'failed' || residue ? 'error'
     : result.status === 'succeeded' && !result.warnings.length ? 'success'
     : result.status === 'busy' || result.status === 'cancelled' ? 'info' : 'warning';
-  notifyRun(level, titles[result.status], detail);
+  notifyRun(result.runId, level, titles[result.status], detail);
 }
 async function publish(result: RunResult) {
   const published = structuredClone(result);
@@ -279,7 +278,7 @@ export async function runTaskChain(options: { messageId: number; trigger: Trigge
       if (reason) { taskResult.reason = reason; taskLog('info', '任务跳过', { runId, taskId: task.id, taskName: task.name, reason }); }
       else ready.push({ task, result: taskResult });
     }
-    if (ready.length) notifyRun('info', '任务开始', `楼层 ${options.messageId}${options.trigger.kind === 'event' ? ` · 事件 ${options.trigger.eventName}` : ''}：${ready.map(item => item.task.name || '未命名任务').join('、')}`);
+    if (ready.length) notifyRun(runId, 'info', '任务处理中', `楼层 ${options.messageId}${options.trigger.kind === 'event' ? ` · 事件 ${options.trigger.eventName}` : ''}：${ready.map(item => item.task.name || '未命名任务').join('、')}`, true);
     const orders = [...new Set(ready.map(item => item.task.order))].sort((a, b) => a - b);
     for (const order of orders) {
       if (run.controller.signal.aborted) break;
