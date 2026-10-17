@@ -1,6 +1,7 @@
 // Retirement gate for the former character-data updater.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'C:/Users/xiaohao/AppData/Local/npm-cache/_npx/e41f203b7505f1fb/node_modules/playwright');
 const assert = require('node:assert/strict'), path = require('node:path');
+const metadata = require(path.resolve(__dirname, '../../../../../../src/MVU助手/release.json'));
 (async () => {
  const browser = await chromium.launch({headless:true, executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
  try {
@@ -15,12 +16,11 @@ const assert = require('node:assert/strict'), path = require('node:path');
    assert.deepEqual(await page.getByRole('navigation', { name: '主要功能', exact: true }).getByRole('button').allTextContents(),['任务工作台','变量编辑','关于']);
    await page.getByRole('button',{name:'关于',exact:true}).click();
    await page.getByRole('heading',{name:'作者信息',exact:true}).waitFor();
-   assert.equal(await page.locator('.version-badge').innerText(),'v2.0.0');
+   assert.equal(await page.locator('.version-badge').innerText(),'v'+metadata.version);
    const release = page.locator('.history-item').first();
-   assert.equal(await release.getByRole('heading').innerText(),'v2.0.0');
-   assert.match(await release.innerText(),/2026-10-17/);
-   assert.match(await release.innerText(),/独立任务生成/);
-   assert.match(await release.innerText(),/移除角色数据版本更新/);
+   assert.equal(await release.getByRole('heading').innerText(),'v'+metadata.version);
+   assert.equal(await release.locator('time').innerText(),metadata.date);
+   assert.deepEqual(await release.locator('li').allTextContents(),metadata.changes);
    assert.match(await page.locator('.notes-list').last().innerText(),/自更新方案待定/);
    assert(await page.locator('.version-badge').isVisible());
    await page.getByRole('button',{name:'变量编辑',exact:true}).click();
