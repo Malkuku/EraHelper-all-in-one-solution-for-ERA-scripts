@@ -46,12 +46,16 @@ const clearResults = () => { taskRunResults.value = []; };
 </script>
 
 <style scoped>
-.task-page { padding: 10px; color: #111827; }
+.task-page { padding: 10px; color: #111827; color-scheme: light; }
 .runs { margin-top: 20px; border-top: 1px solid #cbd5e1; padding-top: 12px; }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .run { border: 1px solid #cbd5e1; border-radius: 6px; margin: 10px 0; padding: 10px; overflow-wrap: anywhere; }
 pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
-button { padding: 6px 10px; border: 1px solid #94a3b8; border-radius: 5px; cursor: pointer; }
+/* 控件挂载在宿主页上，显式覆盖浏览器及酒馆的控件配色。 */
+button { padding: 6px 10px; border: 1px solid #94a3b8; border-radius: 5px; cursor: pointer; color: #111827 !important; background: #f9fafb !important; }
+button:hover { background: #e5e7eb !important; }
 .error { color: #dc2626; }.warning { color: #a16207; }
-.dark-mode { color: #e2e8f0; }.dark-mode .run { border-color: #64748b; }
+.dark-mode { color: #e2e8f0; color-scheme: dark; }.dark-mode .run { border-color: #64748b; }
+.dark-mode button { color: #e2e8f0 !important; background: #374151 !important; }
+.dark-mode button:hover { background: #4b5563 !important; }
 </style>

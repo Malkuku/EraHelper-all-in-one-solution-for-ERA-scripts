@@ -745,6 +745,7 @@ function setEntryUid(write: WriteSpec, event: Event) {
   --line: #d1d5db;
   --text: #111827;
   --muted: #6b7280;
+  color-scheme: light;
   padding: 16px;
   color: var(--text);
   font-size: 14px;
@@ -756,6 +757,7 @@ function setEntryUid(write: WriteSpec, event: Event) {
   --line: #4b5563;
   --text: #e5e7eb;
   --muted: #9ca3af;
+  color-scheme: dark;
 }
 fieldset {
   border: 0;
@@ -815,8 +817,8 @@ select {
   padding: 8px;
   border: 1px solid var(--line);
   border-radius: 5px;
-  color: var(--text);
-  background: var(--soft);
+  color: var(--text) !important;
+  background: var(--soft) !important;
   font: inherit;
 }
 input[type='checkbox'] {
@@ -830,8 +832,8 @@ button,
   padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  color: var(--text);
-  background: var(--panel);
+  color: var(--text) !important;
+  background: var(--panel) !important;
   cursor: pointer;
   font: inherit;
 }
@@ -841,8 +843,8 @@ button:hover,
 }
 button.primary,
 button.selected {
-  background: #4f46e5;
-  color: #fff;
+  background: #4f46e5 !important;
+  color: #fff !important;
   border-color: #4f46e5;
 }
 button:disabled {
@@ -850,7 +852,7 @@ button:disabled {
   cursor: wait;
 }
 button.danger {
-  color: #dc2626;
+  color: #dc2626 !important;
 }
 .file-button input {
   display: none;
