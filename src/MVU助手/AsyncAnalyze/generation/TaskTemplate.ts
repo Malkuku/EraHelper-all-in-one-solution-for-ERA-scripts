@@ -1,5 +1,6 @@
 import { applyTaskRegex, TaskFailure } from '../TaskSchema';
 import { GenerationContext, RawEntry, readNativeBook, TextMessage } from './GenerationHost';
+import { substituteTaskMacros } from './TaskMacros';
 
 type EjsApi = {
   prepareContext(env: Record<string, any>, end: number): Promise<Record<string, any>>;
@@ -83,7 +84,7 @@ export class TaskTemplate {
   }
   async render(text: string, data: Record<string, any> = {}): Promise<string> {
     this.context.controller.signal.throwIfAborted();
-    const input = this.context.ctx.substituteParams(text);
+    const input = substituteTaskMacros(this.context.ctx, text);
     if (!input.includes('<%')) return input;
     if (!this.api) throw new TaskFailure('unsupported_host', 'EJS 模板需要 ST-Prompt-Template 的公开渲染接口', 'template');
     const previous = Object.keys(data).map(key => [key, Object.prototype.hasOwnProperty.call(this.env, key), this.env[key]] as const);
@@ -91,13 +92,13 @@ export class TaskTemplate {
     try {
       const output = await this.api.evalTemplate(input, this.env, { cache: false, filename: `kat-task/${this.context.runId}/${this.context.task.id}` });
       this.context.controller.signal.throwIfAborted();
-      return this.context.ctx.substituteParams(String(output));
+      return substituteTaskMacros(this.context.ctx, String(output));
     } finally {
       for (const [key, existed, value] of previous) { if (existed) this.env[key] = value; else delete this.env[key]; }
     }
   }
   private keyMatch(haystack: string, key: string, entry: RawEntry): boolean {
-    const needle = this.context.ctx.substituteParams(key).trim();
+    const needle = substituteTaskMacros(this.context.ctx, key).trim();
     if (!needle) return false;
     if (needle.startsWith('/')) {
       const last = needle.lastIndexOf('/');

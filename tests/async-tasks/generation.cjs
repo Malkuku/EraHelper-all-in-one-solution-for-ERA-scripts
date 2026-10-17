@@ -42,6 +42,7 @@ const tokenFetch = async (url, init) => {
   return { ok: true, json: async () => url.pathname.endsWith('/encode') ? { ids: Array.from({ length: body.text.length }) } : { token_count: JSON.stringify(body).length + 2 } };
 };
 async function main() {
+  await helperVariableMacroChecks();
   await tavernRegexInputChecks();
   assert.equal(TaskSchema.parse({ ...task('A'), historyDepth: 0, scan: { depth: 0 } }).historyDepth, 0);
   assert.equal(TaskSchema.parse({ ...task('A'), eventName: 'loop:result' }).eventName, 'loop:result', 'unfinished event is editable; execution owns validity');
@@ -104,6 +105,63 @@ async function main() {
   await editableConfigurationChecks();
   await generationErrorChecks();
   console.log('PASS: generation boundary and independent isolation, cancellation, positions, template phases, budgets and native preservation checks');
+}
+
+async function helperVariableMacroChecks() {
+  const { substituteTaskMacros } = require(path.join(root, 'generation/TaskMacros.ts'));
+  const prior = { chat: host.chat, substitute: host.substituteParams, get: global.getVariables, fetch: global.fetch, ejs: window.parent.EjsTemplate };
+  const variables = { stat_data: { 世界: { 时间: '清晨', 天数: 3, '$内部': 'hidden' }, 列表: [{ name: '城镇', '$secret': 1 }] } };
+  const calls = [];
+  try {
+    host.chat = [identity.raw, { mes: 'new user message', name: 'Player', is_user: true }];
+    identity.raw.variables = [variables];
+    host.substituteParams = text => text.replaceAll('{{char}}', 'Char');
+    global.getVariables = options => { calls.push(options); return structuredClone(variables); };
+    global.fetch = async (input, init) => {
+      const url = new URL(input);
+      if (!url.pathname.endsWith('/generate')) return tokenFetch(url, init);
+      const messages = JSON.parse(init.body).messages;
+      const text = messages.map(message => message.content).join('\n');
+      assert(text.includes('TIME=清晨') && text.includes('PRESET=清晨') && text.includes('WORLD=清晨'));
+      assert(!text.includes('{{get_'));
+      return { ok: true, json: async () => ({ choices: [{ message: { content: 'MACRO_RESULT' } }] }) };
+    };
+    const macro = '{{get_message_variable::stat_data.世界.时间}}';
+    assert.equal(substituteTaskMacros(host, macro), '清晨', 'original reported input');
+    assert.deepEqual(calls.pop(), { type: 'message', message_id: 0 }, 'latest floor with variables, not last user floor');
+    assert.equal(substituteTaskMacros(host, '{{char}}/' + macro + '/' + macro), 'Char/清晨/清晨');
+    for (const scope of ['message', 'chat', 'character', 'preset', 'global']) {
+      assert.equal(substituteTaskMacros(host, `{{get_${scope}_variable::stat_data.世界.天数}}`), '3');
+      assert.equal(substituteTaskMacros(host, `{{get_${scope}_variable::missing}}`), 'null');
+      assert.equal(substituteTaskMacros(host, `{{format_${scope}_variable::stat_data.世界}}`), '时间: 清晨\n天数: 3');
+      assert.equal(substituteTaskMacros(host, `{{format_${scope}_variable_quoted::stat_data.世界}}`), '时间: "清晨"\n天数: 3');
+    }
+    assert.equal(substituteTaskMacros(host, '{{get_message_variable::stat_data.列表}}'), '[{"name":"城镇"}]');
+    assert.equal(substituteTaskMacros(host, '  {{format_message_variable::stat_data.世界}}'), '  时间: 清晨\n  天数: 3');
+    assert.equal(substituteTaskMacros(host, '{{unknown_macro}}'), '{{unknown_macro}}');
+    const configured = structuredClone(settings);
+    configured.tasks[0].prompt = 'TIME=' + macro;
+    configured.presets[0].raw.prompts[0].content = 'PRESET=' + macro;
+    const context = await createGenerationContext('helper-macros', configured.tasks[0], configured, identity, new AbortController(), '', { sticky: {}, cooldown: {} });
+    context.candidates = [entry('A', { disable: false, constant: false, key: [macro], content: 'WORLD=' + macro })];
+    context.scanHistory = ['清晨'];
+    window.parent.EjsTemplate = undefined;
+    assert.equal(await generateTask(context), 'MACRO_RESULT');
+    window.parent.EjsTemplate = { prepareContext: async env => env, evalTemplate: async () => macro };
+    const renderer = new TaskTemplate(context); await renderer.initialize();
+    assert.equal(await renderer.render('<%= value %>'), '清晨', 'macros returned by EJS expand too');
+    let sends = 0;
+    global.fetch = async (input, init) => { if (new URL(input).pathname.endsWith('/generate')) sends++; return tokenFetch(new URL(input), init); };
+    global.getVariables = () => { throw new Error('variable read failed'); };
+    await assert.rejects(generateTask(context), /variable read failed/);
+    assert.equal(sends, 0, 'variable failure blocks the request');
+    assert.equal(variables.stat_data.世界.$内部, 'hidden', 'source variables remain intact');
+  } finally {
+    delete identity.raw.variables;
+    host.chat = prior.chat; host.substituteParams = prior.substitute; global.fetch = prior.fetch;
+    window.parent.EjsTemplate = prior.ejs;
+    if (prior.get === undefined) delete global.getVariables; else global.getVariables = prior.get;
+  }
 }
 
 async function tavernRegexInputChecks() {

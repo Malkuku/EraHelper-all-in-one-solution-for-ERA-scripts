@@ -1,5 +1,6 @@
 import { GenerationContext, RawEntry, TimedState } from './GenerationHost';
 import { scanNativeWorldInfo } from './NativeWorldInfo.js';
+import { substituteTaskMacros } from './TaskMacros';
 
 export type ScanResult = {
   worldInfoBefore: string; worldInfoAfter: string;
@@ -16,7 +17,7 @@ export async function scanWorldInfo(context: GenerationContext, entries: RawEntr
     floor: context.identity.messageId + 1, timedState: context.timedState,
     context: { tagMap: { ...(context.ctx.tagMap ?? {}), ...(character?.avatar ? { [character.avatar]: context.ctx.tagMap?.[character.avatar] ?? [] } : {}) } }, characterFilename: character?.avatar?.replace(/\.[^.]+$/, '') ?? '',
     characterTagKey: character?.avatar,
-    signal: context.controller.signal, substitute: (text: string) => context.ctx.substituteParams(text), countTokens: context.tokenCounter.count,
+    signal: context.controller.signal, substitute: (text: string) => substituteTaskMacros(context.ctx, text), countTokens: context.tokenCounter.count,
     scanData: {
       trigger: 'normal', personaDescription: context.ctx.chatMetadata.persona_description ?? '',
       characterDescription: data.description ?? character?.description ?? '', characterPersonality: data.personality ?? character?.personality ?? '',
