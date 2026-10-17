@@ -5,7 +5,6 @@ import { createMountPoint, destroyMountPoint, deteleportStyle, teleportStyle } f
 import App from './App.vue';
 
 import { initializeTaskRuntime, disposeTaskRuntime } from '@/MVU助手/AsyncAnalyze/TaskRuntime';
-import { UseVersionControlStore } from '@/MVU助手/stores/UseVersionControlStore';
 import { MvuUtil } from '@/Utils/MvuUtil';
 import { useTaskStore } from '../stores/TaskStore';
 import { useEraEditStore } from '../stores/EraEditStore';
@@ -84,14 +83,6 @@ $(async () => {
   await useUiStore(pinia).getModeSetting();
   initializeTaskRuntime();
   (window as any).EraEditStore = useEraEditStore(pinia);
-  await UseVersionControlStore().loadSettings();
-  const currentBookName = getCharWorldbookNames('current').primary;
-  if(UseVersionControlStore().settings.enable
-    && UseVersionControlStore().settings.lore_name
-    && currentBookName){
-    await UseVersionControlStore().fetchCurrentVersion();
-    await UseVersionControlStore().checkAndNotify(currentBookName);
-  }
 
   // 传送样式，也只执行一次
   teleportStyle();

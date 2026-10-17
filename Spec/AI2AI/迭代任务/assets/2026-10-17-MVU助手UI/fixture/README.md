@@ -32,3 +32,5 @@ Edge默认路径为 `C:/Program Files (x86)/Microsoft/Edge/Application/msedge.ex
 `geometry.cjs` 的683×384测量表示1366×768在200%时的等效CSS可用空间，不代表原生浏览器zoom或移动软键盘实测。`contrast.cjs` 抽样实际computed style，并对照WCAG相对亮度公式测量；不代表完整无障碍认证。
 
 `group-layout.cjs` 是用户截图后补充的定向回归证据：五任务组和两个空组，验证紧凑列表、独立展开、导航前两项与组操作；`first-use.cjs` 的组选择按钮名称同步为“选择此组”。脚本不复制业务判断，不新增平行确定性suite。
+
+2026-10-17 移除角色数据版本更新：`version.cjs` 已改为退出门禁并核验关于页 2.0.0、发行日期与更新说明；保留旧启用设置作为反例。`entry-fixture.ts` 不再加载旧 store，`geometry.cjs`/`contrast.cjs` 移除旧页面场景。旧版本页面截图与报告仅为历史证据。

@@ -1,5 +1,35 @@
-const {chromium}=require(process.env.PLAYWRIGHT_MODULE || 'C:/Users/xiaohao/AppData/Local/npm-cache/_npx/e41f203b7505f1fb/node_modules/playwright');const assert=require('node:assert/strict'),path=require('node:path');
-(async()=>{const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});const page=await browser.newPage({viewport:{width:1024,height:600}});page.setDefaultTimeout(4000);const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('file:///'+path.join(__dirname,'index.html').replaceAll('\\','/'));await page.waitForFunction(()=>window.ready);const button=name=>page.getByRole('button',{name,exact:true});await button('数据更新').click();await page.getByRole('status').filter({hasText:'尚未检查'}).waitFor();await button('检查更新').click();await page.getByRole('heading',{name:'v1.04 → v1.05',exact:true}).waitFor();assert.equal(await page.locator('.change-card').count(),4);await page.getByLabel('搜索变更路径').fill('角色.生命');assert.equal(await page.locator('.change-card').count(),1);assert.match(await page.locator('.value-pair').innerText(),/原值\s+10\s+更新后\s+12/);await page.getByLabel('搜索变更路径').fill('');
-await page.evaluate(()=>window.writeFail=true);await button('确认并执行变量更新').click();await page.getByRole('dialog',{name:'执行变量更新',exact:true}).getByRole('button',{name:'确定',exact:true}).click();await page.getByRole('alert').filter({hasText:/模拟写入失败/}).waitFor();assert(await page.getByRole('heading',{name:'v1.04 → v1.05',exact:true}).isVisible());assert.equal(await page.evaluate(()=>window.test.version.currentVersion),1.04);await page.screenshot({path:path.join(__dirname,'version-failure-retained.png')});
-await page.evaluate(()=>window.writeFail=false);await button('确认并执行变量更新').click();await page.getByRole('dialog',{name:'执行变量更新',exact:true}).getByRole('button',{name:'确定',exact:true}).click();await page.getByRole('status').filter({hasText:'已成功更新绑定消息至 v1.05。'}).waitFor();assert.equal(await page.evaluate(()=>window.messageData[0].stat_data.system.当前版本),1.05);
-await page.evaluate(()=>window.rules='<edit|v="1.06">{bad}</edit>');await button('检查更新').click();await page.getByRole('alert').filter({hasText:/JSON 损坏/}).waitFor();assert.match(await page.locator('.section-actions').innerText(),/检查未完成/);assert.equal(await page.getByRole('heading',{name:'当前已是最新版本',exact:true}).count(),0,'corruption cannot appear as latest');assert.deepEqual(errors,[]);console.log('PASS full App exact versions, searchable before/after diff, failed write retains preview, success-only transition, damaged version block failure');await browser.close()})().catch(e=>{console.error(e);process.exit(1)});
+// Retirement gate for the former character-data updater.
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'C:/Users/xiaohao/AppData/Local/npm-cache/_npx/e41f203b7505f1fb/node_modules/playwright');
+const assert = require('node:assert/strict'), path = require('node:path');
+(async () => {
+ const browser = await chromium.launch({headless:true, executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
+ try {
+  const page = await browser.newPage(); const errors=[]; page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('file:///' + path.join(__dirname,'index.html').replaceAll(String.fromCharCode(92),'/'));
+  await page.waitForFunction(()=>window.ready);
+  const before=await page.evaluate(()=>({messages:window.messageData,settings:window.scriptVariables}));
+  assert(before.settings.era_data_rule.version_control.enable);
+  assert.equal(await page.evaluate(()=>window.test.router.hasRoute('VersionUpdater')),false);
+  for(const width of [1200,375]) {
+   await page.setViewportSize({width,height:812});
+   assert.deepEqual(await page.getByRole('navigation', { name: '主要功能', exact: true }).getByRole('button').allTextContents(),['任务工作台','变量编辑','关于']);
+   await page.getByRole('button',{name:'关于',exact:true}).click();
+   await page.getByRole('heading',{name:'作者信息',exact:true}).waitFor();
+   assert.equal(await page.locator('.version-badge').innerText(),'v2.0.0');
+   const release = page.locator('.history-item').first();
+   assert.equal(await release.getByRole('heading').innerText(),'v2.0.0');
+   assert.match(await release.innerText(),/2026-10-17/);
+   assert.match(await release.innerText(),/独立任务生成/);
+   assert.match(await release.innerText(),/移除角色数据版本更新/);
+   assert.match(await page.locator('.notes-list').last().innerText(),/自更新方案待定/);
+   assert(await page.locator('.version-badge').isVisible());
+   await page.getByRole('button',{name:'变量编辑',exact:true}).click();
+   await page.locator('.variable-editor').waitFor();
+   assert.equal(await page.getByRole('button',{name:'数据更新',exact:true}).count(),0);
+   assert.equal(await page.getByRole('button',{name:'确认并执行变量更新',exact:true}).count(),0);
+  }
+  assert.deepEqual(await page.evaluate(()=>({messages:window.messageData,settings:window.scriptVariables})),before);
+  assert.equal(await page.evaluate(()=>window.writes.length),0); assert.deepEqual(errors,[]);
+  console.log('PASS retired updater: three navigation entries, no updater route/actions, legacy settings inert, user data untouched, variable editor available at 1200/375');
+ } finally {await browser.close();}
+})().catch(e=>{console.error(e);process.exitCode=1});

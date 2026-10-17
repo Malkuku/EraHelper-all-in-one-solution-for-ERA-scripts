@@ -58,7 +58,6 @@ const route = useRoute();
 const pages = [
   { path: '/AsyncAnalyze', label: '任务工作台' },
   { path: '/EraDataEdit', label: '变量编辑' },
-  { path: '/VersionUpdater', label: '数据更新' },
   { path: '/Version', label: '关于' },
 ];
 const close = () => {

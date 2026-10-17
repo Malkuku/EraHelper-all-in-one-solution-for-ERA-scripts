@@ -1,4 +1,4 @@
-// Manual variable editing/version preview safety. One deterministic primary responsibility.
+// Manual variable editing safety. One deterministic primary responsibility.
 const assert = require('node:assert/strict');
 const fs = require('node:fs'), path = require('node:path'), ts = require('typescript');
 require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
@@ -8,9 +8,8 @@ const { createPinia, setActivePinia } = require('pinia');
 global._ = require('lodash');
 const root = path.resolve(__dirname, '../src/MVU助手');
 const { captureEditTarget, saveEditTarget } = require(path.join(root, 'utils/MvuEditTarget.ts'));
-const { UseVersionControlStore } = require(path.join(root, 'stores/UseVersionControlStore.ts'));
 const { commitTask, releaseJournal } = require(path.join(root, 'AsyncAnalyze/TaskCommit.ts'));
-let chatId, chat, data, writes, events, rules, failure, waitHook, eventHook, setterHook, sourceHook;
+let chatId, chat, data, writes, events, failure, waitHook, eventHook, setterHook;
 const clone = structuredClone;
 global.window = { parent: { SillyTavern: { getContext: () => ({ chat, characters: [{ avatar: 'test' }], characterId: 0, getCurrentChatId: () => chatId }) } } };
 global.getLastMessageId = () => chat.length - 1;
@@ -22,9 +21,8 @@ global.Mvu = { getMvuData: options => clone(data[options.message_id]), replaceMv
   if (failure) throw Error('setter failed');
   writes.push({ next: clone(next), options }); data[options.message_id] = clone(next); if (setterHook) await setterHook();
 } };
-global.getWorldbook = async () => { if (sourceHook) await sourceHook(); return [{ name: '更新', content: rules }]; };
 global.getScriptId = () => 'test'; global.getVariables = () => ({}); global.toastr = { info() {}, error() {} };
-function reset() { chatId = 'chat-A'; chat = [{ swipe_id: 0 }]; data = [{ stat_data: { system: { 当前版本: 1.04 }, hero: { hp: 10, drop: true }, list: [1] }, unrelated: { keep: true } }]; writes = []; events = []; failure = false; waitHook = eventHook = setterHook = sourceHook = null; rules = '<edit|v="1.05">{"hero":{"hp":12},"new":"yes","list":[2,3]}</edit><del|v="1.05">{"hero":{"drop":null}}</del>'; setActivePinia(createPinia()); }
+function reset() { chatId = 'chat-A'; chat = [{ swipe_id: 0 }]; data = [{ stat_data: { system: { 当前版本: 1.04 }, hero: { hp: 10, drop: true }, list: [1] }, unrelated: { keep: true } }]; writes = []; events = []; failure = false; waitHook = eventHook = setterHook = null; setActivePinia(createPinia()); }
 function deferred() { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; }
 const changes = {
   'new floor': () => { chat.push({ swipe_id: 0 }); data.push({ stat_data: {} }); },
@@ -33,21 +31,15 @@ const changes = {
   'message replaced': () => { chat[0] = { swipe_id: 0 }; },
   'baseline changed': () => { data[0].stat_data.hero.hp = 99; },
 };
-async function preview() { const store = UseVersionControlStore(); await store.fetchCurrentVersion(); await store.parseUpdateRules('book', '更新'); await store.calculateUpdate(); return store; }
 async function main() {
   for (const [name, change] of Object.entries(changes)) {
     reset(); const target = await captureEditTarget(); change(); await assert.rejects(saveEditTarget(target, { user: 'draft' }), /变化|外部更新/, name); assert.equal(writes.length, 0, name);
-    reset(); const store = await preview(); const retained = store.previewDiff; change(); await assert.rejects(store.executeFullUpdate(), /变化|外部更新/, name); assert.equal(writes.length, 0, name); assert.strictEqual(store.previewDiff, retained, name);
   }
   reset(); const target = await captureEditTarget(); waitHook = changes['new floor']; await assert.rejects(saveEditTarget(target, { x: 1 }), /变化/); assert.equal(writes.length, 0, 'recheck after init wait');
-  reset(); const store = await preview(); sourceHook = changes['baseline changed']; await assert.rejects(store.executeFullUpdate(), /外部更新/); assert.equal(writes.length, 0, 'recheck after source read');
   reset(); const captured = await captureEditTarget(); const next = await saveEditTarget(captured, { edited: true }); assert.deepEqual(writes[0].options, { type: 'message', message_id: 0 }); assert.deepEqual(data[0].unrelated, { keep: true }); assert.deepEqual(next.baseline, { edited: true }); assert.deepEqual(events[0][2].stat_data.hero.hp, 10, 'notification before snapshot is not mutated');
-  reset(); const s = await preview(); assert.equal(s.currentVersion, 1.04); assert.equal(s.targetVersion, 1.05); assert(s.previewDiff.changes.some(c => c.path.join('.') === 'hero.hp' && c.before === 10 && c.after === 12)); assert(s.previewDiff.changes.some(c => c.kind === 'deleted' && c.path.join('.') === 'hero.drop')); assert.deepEqual(s.previewDiff.finalData.list, [2, 3]);
-  failure = true; const retained = s.previewDiff; await assert.rejects(s.executeFullUpdate(), /保存未能确认/); assert.strictEqual(s.previewDiff, retained); assert.equal(s.currentVersion, 1.04); failure = false; await s.executeFullUpdate(); assert.equal(s.previewDiff, null); assert.equal(s.currentVersion, 1.05); assert.equal(data[0].stat_data.system.当前版本, 1.05);
-  reset(); const staleSource = await preview(); rules += '\nchanged'; await assert.rejects(staleSource.executeFullUpdate(), /版本记录已变化/); assert(staleSource.previewDiff); assert.equal(writes.length, 0);
-  for (const bad of ['<edit|v="1.05">{bad}</edit>', '<edit|v="wat">{}</edit>', '<edit|v="1.05">[]</edit>', '<edit|v="1.05">{}', 'no update blocks']) {
-    reset(); rules = bad; const invalid = UseVersionControlStore(); await assert.rejects(invalid.parseUpdateRules('book', '更新')); assert(invalid.checkError); await assert.rejects(invalid.calculateUpdate(), /成功检查/); assert.equal(invalid.previewDiff, null); assert.equal(writes.length, 0);
-  }
+  reset(); const failedTarget = await captureEditTarget(); failure = true;
+  await assert.rejects(saveEditTarget(failedTarget, { edited: true }), /保存未能确认/);
+  assert.equal(writes.length, 0); assert.equal(events.length, 0); assert.equal(data[0].stat_data.hero.hp, 10);
   reset(); const afterWrite = await captureEditTarget(); eventHook = changes['chat changed']; await assert.rejects(saveEditTarget(afterWrite, { changed: true }), /写入已发出/); assert.equal(writes.length, 1, 'completion ambiguity is surfaced after host write');
   reset(); data[0].stat_data = []; await assert.rejects(captureEditTarget(), /不是 JSON 对象/);
   // Two manual editors with the same baseline cannot both pass while the host setter awaits.
@@ -77,6 +69,6 @@ async function main() {
   // Notification listeners may start another save: release before notifying and surface changed result.
   reset(); const outer = await captureEditTarget(); eventHook = async () => { eventHook = null; const inner = await captureEditTarget(); await saveEditTarget(inner, { listener: true }); };
   await assert.rejects(saveEditTarget(outer, { outer: true }), /保存通知期间目标变量已变化/); assert.equal(writes.length, 2); assert.deepEqual(data[0].stat_data, { listener: true });
-  console.log('PASS manual MVU identity/baseline barriers, async races, exact-target writes, version diffs/precision, corrupt sources, preserved failed preview; concurrent manual/task locking and nested notification saves');
+  console.log('PASS manual MVU identity/baseline barriers, async races, exact-target writes, concurrent manual/task locking and nested notification saves');
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

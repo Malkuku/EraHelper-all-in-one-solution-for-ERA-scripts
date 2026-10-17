@@ -5,7 +5,6 @@ import App from '@/MVU助手/UI/App.vue';
 import { router } from '@/MVU助手/UI/router/router';
 import { useUiStore } from '@/MVU助手/stores/UIStore';
 import { useTaskStore } from '@/MVU助手/stores/TaskStore';
-import { UseVersionControlStore } from '@/MVU助手/stores/UseVersionControlStore';
 import { emptySettings, ScanSchema } from '@/MVU助手/AsyncAnalyze/TaskSchema';
 import { taskRunResults, activeTaskRuns } from '@/MVU助手/AsyncAnalyze/TaskRuntime';
 const w=window as any;
@@ -25,5 +24,5 @@ w.getVariables=(options:any)=>structuredClone(options?.type==='message'?w.messag
 w.updateVariablesWith=async(fn:any)=>{w.scriptVariables=fn(structuredClone(w.scriptVariables));w.saved.push(structuredClone(w.scriptVariables));};
 w.Mvu={getMvuData:(o:any)=>structuredClone(w.messageData.at(o.message_id)),replaceMvuData:async(data:any,o:any)=>{if(w.writeFail)throw Error('模拟写入失败');w.writes.push({data:structuredClone(data),target:o});w.messageData[o.message_id<0?w.messageData.length-1:o.message_id]=structuredClone(data);}};
 const pinia=createPinia();const app=createApp(App).use(pinia).use(router);const ui=useUiStore(pinia);ui.showUI=true;
-const tasks=useTaskStore(pinia);await tasks.load();const version=UseVersionControlStore(pinia);await version.loadSettings();
-w.test={ui,tasks,version,router,taskRunResults,activeTaskRuns};await router.isReady();app.mount('#app');w.ready=true;
+const tasks=useTaskStore(pinia);await tasks.load();
+w.test={ui,tasks,router,taskRunResults,activeTaskRuns};await router.isReady();app.mount('#app');w.ready=true;
