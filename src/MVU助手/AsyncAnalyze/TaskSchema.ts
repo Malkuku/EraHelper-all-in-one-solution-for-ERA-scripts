@@ -1,15 +1,11 @@
 import { z } from 'zod';
 
 const integer = z.number().int().nonnegative();
-export const RegexSpecSchema = z.object({ pattern: z.string(), flags: z.string() }).superRefine((value, ctx) => {
-  try { new RegExp(value.pattern, value.flags); } catch (error) {
-    ctx.addIssue({ code: 'custom', message: String(error) });
-  }
-});
+export const RegexSpecSchema = z.object({ pattern: z.string(), flags: z.string() });
 export type RegexSpec = z.infer<typeof RegexSpecSchema>;
 export const RegexPresetSchema = RegexSpecSchema.safeExtend({
   id: z.string().min(1),
-  name: z.string().min(1),
+  name: z.string(),
   replacement: z.string().default(''),
 });
 export type RegexPreset = z.infer<typeof RegexPresetSchema>;
@@ -44,7 +40,7 @@ export type ScanSettings = z.infer<typeof ScanSchema>;
 export const WriteSchema = z.object({
   id: z.string().min(1),
   target: z.discriminatedUnion('kind', [z.object({ kind: z.literal('message') }), z.object({
-    kind: z.literal('worldbook'), bookName: z.string().min(1), entryUid: integer.optional(), entryName: z.string().min(1),
+    kind: z.literal('worldbook'), bookName: z.string(), entryUid: integer.optional(), entryName: z.string(),
   })]),
   extract: z.array(RegexSpecSchema),
   operation: z.discriminatedUnion('kind', [z.object({ kind: z.literal('append') }), z.object({ kind: z.literal('replace'), regex: RegexSpecSchema })]),
@@ -53,16 +49,16 @@ export type WriteSpec = z.infer<typeof WriteSchema>;
 export const INTERNAL_EVENTS = new Set(['kat_task_chain:result', 'kat_task_chain:rerun', 'kat_task_run:cancel']);
 export const eventNameIsValid = (name: string) => name === '' || (name === name.trim() && !name.endsWith(':result') && !INTERNAL_EVENTS.has(name));
 export const TaskSchema = z.object({
-  id: z.string().min(1), name: z.string().min(1), comment: z.string().default(''), enabled: z.boolean(),
-  eventName: z.string().refine(eventNameIsValid, '事件名与内部结果频道冲突'), order: z.number().int().default(0),
+  id: z.string().min(1), name: z.string(), comment: z.string().default(''), enabled: z.boolean(),
+  eventName: z.string(), order: z.number().int().default(0),
   historyDepth: integer.default(2), triggerInterval: integer.min(1).default(1), retryCount: integer.default(0),
-  prompt: z.string(), connectionId: z.string().min(1),
-  candidateBooks: z.array(z.object({ bookName: z.string().min(1), entryUids: z.array(integer), nameRegexes: z.array(RegexSpecSchema) })),
+  prompt: z.string(), connectionId: z.string(),
+  candidateBooks: z.array(z.object({ bookName: z.string(), entryUids: z.array(integer), nameRegexes: z.array(RegexSpecSchema) })),
   scan: ScanSchema,
   regexRules: z.array(RegexSpecSchema.safeExtend({
     id: z.string().min(1), stage: z.enum(['history', 'worldinfo', 'prompt', 'response']), replacement: z.string(), enabled: z.boolean(),
   })),
-  output: z.discriminatedUnion('mode', [z.object({ mode: z.literal('return') }), z.object({ mode: z.literal('write'), writes: z.array(WriteSchema).min(1) })]),
+  output: z.discriminatedUnion('mode', [z.object({ mode: z.literal('return') }), z.object({ mode: z.literal('write'), writes: z.array(WriteSchema) })]),
 }).superRefine((task, ctx) => {
   for (const [field, list] of [['regexRules', task.regexRules], ['writes', task.output.mode === 'write' ? task.output.writes : []]] as const) {
     const ids = list.map(item => item.id);
@@ -72,14 +68,11 @@ export const TaskSchema = z.object({
 export type TaskConfig = z.infer<typeof TaskSchema>;
 export const ConfigSchema = z.object({
   schemaVersion: z.literal(2), activeGroupId: z.string().nullable(), automatic: z.object({ minReceivedChars: integer.default(300) }),
-  groups: z.array(z.object({ id: z.string().min(1), name: z.string().min(1), comment: z.string(), taskIds: z.array(z.string()) })),
+  groups: z.array(z.object({ id: z.string().min(1), name: z.string(), comment: z.string(), taskIds: z.array(z.string()) })),
   tasks: z.array(TaskSchema),
   regexPresets: z.array(RegexPresetSchema).default([]),
-  connections: z.array(z.object({ id: z.string().min(1), name: z.string().min(1), comment: z.string(), baseUrl: z.url().refine(value => {
-    const url = new URL(value);
-    return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password;
-  }, '连接仅支持无内嵌凭据的 HTTP/HTTPS 地址'), model: z.string().min(1), secretRef: z.string().min(1), presetId: z.string().min(1).nullable() })),
-  presets: z.array(z.object({ id: z.string().min(1), name: z.string().min(1), raw: z.record(z.string(), z.unknown()) })),
+  connections: z.array(z.object({ id: z.string().min(1), name: z.string(), comment: z.string(), baseUrl: z.string(), model: z.string(), secretRef: z.string().min(1), presetId: z.string().min(1).nullable() })),
+  presets: z.array(z.object({ id: z.string().min(1), name: z.string(), raw: z.record(z.string(), z.unknown()).refine(raw => z.json().safeParse(raw).success, '预设必须为 JSON 对象') })),
 }).superRefine((config, ctx) => {
   for (const field of ['groups', 'tasks', 'connections', 'presets', 'regexPresets'] as const) {
     const ids = new Set<string>();
@@ -96,15 +89,6 @@ export const ConfigSchema = z.object({
   if (config.activeGroupId !== null && !config.groups.some(group => group.id === config.activeGroupId)) {
     ctx.addIssue({ code: 'custom', path: ['activeGroupId'], message: '活动组不存在' });
   }
-  config.connections.forEach((connection, index) => {
-    if (connection.presetId !== null && !config.presets.some(preset => preset.id === connection.presetId))
-      ctx.addIssue({ code: 'custom', path: ['connections', index, 'presetId'], message: '绑定预设不存在' });
-  });
-  config.tasks.forEach((task, index) => {
-    const connection = config.connections.find(item => item.id === task.connectionId);
-    if (!connection) ctx.addIssue({ code: 'custom', path: ['tasks', index, 'connectionId'], message: 'API 配置不存在' });
-    else if (!connection.presetId) ctx.addIssue({ code: 'custom', path: ['tasks', index, 'connectionId'], message: '任务使用的 API 尚未绑定预设' });
-  });
 });
 export type TaskSettings = z.infer<typeof ConfigSchema>;
 export const emptySettings = (): TaskSettings => ({ schemaVersion: 2, activeGroupId: null, automatic: { minReceivedChars: 300 }, groups: [], tasks: [], connections: [], presets: [], regexPresets: [] });

@@ -7,6 +7,7 @@ const legacyKeys = ['async_analyze_setting', 'task_config_settings', 'api_config
 export const useTaskStore = defineStore('KatTasks', () => {
   const settings = ref<TaskSettings>(emptySettings());
   const configurationError = ref('');
+  const configurationWarning = ref('');
   const secretKey = () => `kat.async-tasks.secrets.v1:${getScriptId()}`;
   const storage = () => window.parent.localStorage;
   const readSecrets = (): Record<string, string> => {
@@ -49,7 +50,21 @@ export const useTaskStore = defineStore('KatTasks', () => {
     }, { type: 'script', script_id: getScriptId() });
     settings.value = parsed;
     configurationError.value = '';
+    configurationWarning.value = '';
+    // Credential cleanup cannot undo or misreport a successful configuration save.
+    try {
+      const retainedReferences = new Set(parsed.connections.map(connection => connection.secretRef));
+      const secrets = readSecrets();
+      let changed = false;
+      for (const reference of Object.keys(secrets)) if (!retainedReferences.has(reference)) {
+        delete secrets[reference];
+        changed = true;
+      }
+      if (changed) storage().setItem(secretKey(), JSON.stringify(secrets));
+    } catch (error) {
+      configurationWarning.value = `配置已保存，本地密钥清理未完成：${error instanceof Error ? error.message : String(error)}`;
+    }
   }
   function snapshot(): TaskSettings { return klona(settings.value); }
-  return { settings, configurationError, load, replaceSettings, snapshot, getSecret, setSecret, deleteSecret };
+  return { settings, configurationError, configurationWarning, load, replaceSettings, snapshot, getSecret, setSecret, deleteSecret };
 });

@@ -1,0 +1,118 @@
+[
+  {
+    "viewport": [
+      1200,
+      900
+    ],
+    "pageWidth": 1200,
+    "managerWidth": 1102,
+    "managerClient": 1102,
+    "save": {
+      "x": 1069,
+      "y": 202.265625,
+      "width": 82,
+      "height": 38,
+      "top": 202.265625,
+      "right": 1151,
+      "bottom": 240.265625,
+      "left": 1069
+    },
+    "references": {
+      "x": 429,
+      "y": 1062.046875,
+      "width": 722,
+      "height": 65.796875,
+      "top": 1062.046875,
+      "right": 1151,
+      "bottom": 1127.84375,
+      "left": 429
+    }
+  },
+  {
+    "viewport": [
+      768,
+      600
+    ],
+    "pageWidth": 768,
+    "managerWidth": 670,
+    "managerClient": 670,
+    "save": {
+      "x": 637,
+      "y": 202.265625,
+      "width": 82,
+      "height": 38,
+      "top": 202.265625,
+      "right": 719,
+      "bottom": 240.265625,
+      "left": 637
+    },
+    "references": {
+      "x": 207,
+      "y": 1333.609375,
+      "width": 512,
+      "height": 65.796875,
+      "top": 1333.609375,
+      "right": 719,
+      "bottom": 1399.40625,
+      "left": 207
+    }
+  },
+  {
+    "viewport": [
+      375,
+      812
+    ],
+    "pageWidth": 375,
+    "managerWidth": 351,
+    "managerClient": 351,
+    "save": {
+      "x": 281,
+      "y": 126.390625,
+      "width": 82,
+      "height": 38,
+      "top": 126.390625,
+      "right": 363,
+      "bottom": 164.390625,
+      "left": 281
+    },
+    "references": {
+      "x": 12,
+      "y": 1230.046875,
+      "width": 351,
+      "height": 65.796875,
+      "top": 1230.046875,
+      "right": 363,
+      "bottom": 1295.84375,
+      "left": 12
+    }
+  },
+  {
+    "viewport": [
+      683,
+      384
+    ],
+    "pageWidth": 683,
+    "managerWidth": 659,
+    "managerClient": 659,
+    "save": {
+      "x": 589,
+      "y": 134.078125,
+      "width": 82,
+      "height": 38,
+      "top": 134.078125,
+      "right": 671,
+      "bottom": 172.078125,
+      "left": 589
+    },
+    "references": {
+      "x": 170,
+      "y": 1265.421875,
+      "width": 501,
+      "height": 65.796875,
+      "top": 1265.421875,
+      "right": 671,
+      "bottom": 1331.21875,
+      "left": 170
+    }
+  }
+]

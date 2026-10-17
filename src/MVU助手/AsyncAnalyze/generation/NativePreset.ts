@@ -7,9 +7,27 @@ const PromptSchema = z.object({
   injection_position: z.number().int().optional(), injection_depth: z.number().int().nonnegative().optional(),
   injection_order: z.number().optional(), forbid_overrides: z.boolean().optional(),
 }).passthrough();
+const PromptOrderSchema = z.object({ character_id: z.number(), order: z.array(z.object({ identifier: z.string(), enabled: z.boolean() }).passthrough()) }).passthrough();
+/** Editor shape is independent from generation budgets and reference completeness. */
+export const NativePresetEditorSchema = z.object({
+  prompts: z.array(PromptSchema).default([]),
+  prompt_order: z.array(PromptOrderSchema).default([]),
+}).passthrough();
+export type NativePresetEditor = z.infer<typeof NativePresetEditorSchema>;
+/** Initialize only missing editing collections, preserving the native raw object. */
+export function preparePresetEditor(raw: Record<string, unknown>): NativePresetEditor {
+  const shape = NativePresetEditorSchema.safeParse(raw);
+  if (!shape.success) throw new Error(z.prettifyError(shape.error));
+  if (!Array.isArray(raw.prompts)) raw.prompts = [];
+  if (!Array.isArray(raw.prompt_order)) raw.prompt_order = [];
+  const editor = raw as NativePresetEditor;
+  if (!editor.prompt_order.some(item => item.character_id === 100001))
+    editor.prompt_order.push({ character_id: 100001, order: [] });
+  return editor;
+}
 export const NativePresetSchema = z.object({
   prompts: z.array(PromptSchema),
-  prompt_order: z.array(z.object({ character_id: z.number(), order: z.array(z.object({ identifier: z.string(), enabled: z.boolean() }).passthrough()) }).passthrough()),
+  prompt_order: z.array(PromptOrderSchema),
   openai_max_context: z.number().int().positive(), openai_max_tokens: z.number().int().positive().default(300),
   temp_openai: z.number().default(1), freq_pen_openai: z.number().default(0), pres_pen_openai: z.number().default(0),
   top_p_openai: z.number().default(1), top_k_openai: z.number().default(0), seed: z.number().int().default(-1),

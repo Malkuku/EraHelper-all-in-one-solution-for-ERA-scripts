@@ -1,5 +1,6 @@
 import { applyTaskRegex, TaskConfig, TaskFailure, TaskSettings } from '../TaskSchema';
-import { NativePreset, parseNativePreset } from './NativePreset';
+import { NativePreset } from './NativePreset';
+import { validateTaskReadiness } from '../TaskConfiguration';
 
 export type RawEntry = {
   uid: number; world: string; comment: string; content: string; key: string[]; keysecondary: string[];
@@ -101,12 +102,9 @@ export async function createGenerationContext(
   runId: string, task: TaskConfig, settings: TaskSettings, identity: MessageIdentity,
   controller: AbortController, secret: string, timedState: TimedState,
 ): Promise<GenerationContext> {
+  const { connection, preset } = validateTaskReadiness(settings, task);
   const ctx = hostContext();
   assertMessage(identity, controller.signal);
-  const connection = settings.connections.find(item => item.id === task.connectionId);
-  const record = settings.presets.find(item => item.id === connection?.presetId);
-  if (!connection || !record) throw new TaskFailure('missing_config', '连接或预设引用不存在', 'prepare');
-  const preset = parseNativePreset(structuredClone(record.raw));
   const rawHistory = task.historyDepth === 0 ? [] : ctx.chat.slice(Math.max(0, identity.messageId - task.historyDepth + 1), identity.messageId + 1);
   const history: TextMessage[] = rawHistory.map(message => {
     let content = applyTaskRegex(message.mes, task, 'history').replace(/\r/g, '');

@@ -1,0 +1,126 @@
+[
+  {
+    "viewport": [
+      1440,
+      900
+    ],
+    "card": {
+      "x": 380,
+      "y": 45,
+      "width": 680,
+      "height": 810,
+      "scrollHeight": 810,
+      "clientHeight": 810
+    },
+    "content": {
+      "x": 404,
+      "y": 126,
+      "width": 632,
+      "height": 705,
+      "scrollHeight": 847,
+      "clientHeight": 705
+    },
+    "manager": {
+      "x": 408,
+      "y": 130,
+      "width": 624,
+      "height": 838.59375,
+      "scrollHeight": 839,
+      "clientHeight": 839
+    },
+    "bodyOverflow": false
+  },
+  {
+    "viewport": [
+      1024,
+      600
+    ],
+    "card": {
+      "x": 172,
+      "y": -75,
+      "width": 680,
+      "height": 750,
+      "scrollHeight": 750,
+      "clientHeight": 750
+    },
+    "content": {
+      "x": 196,
+      "y": 6,
+      "width": 632,
+      "height": 645,
+      "scrollHeight": 847,
+      "clientHeight": 645
+    },
+    "manager": {
+      "x": 200,
+      "y": 10,
+      "width": 624,
+      "height": 838.59375,
+      "scrollHeight": 839,
+      "clientHeight": 839
+    },
+    "bodyOverflow": false
+  },
+  {
+    "viewport": [
+      768,
+      600
+    ],
+    "card": {
+      "x": 44,
+      "y": -75,
+      "width": 680,
+      "height": 750,
+      "scrollHeight": 750,
+      "clientHeight": 750
+    },
+    "content": {
+      "x": 68,
+      "y": 6,
+      "width": 632,
+      "height": 645,
+      "scrollHeight": 847,
+      "clientHeight": 645
+    },
+    "manager": {
+      "x": 72,
+      "y": 10,
+      "width": 624,
+      "height": 838.59375,
+      "scrollHeight": 839,
+      "clientHeight": 839
+    },
+    "bodyOverflow": false
+  },
+  {
+    "viewport": [
+      375,
+      812
+    ],
+    "card": {
+      "x": 0,
+      "y": 0,
+      "width": 375,
+      "height": 812,
+      "scrollHeight": 812,
+      "clientHeight": 812
+    },
+    "content": {
+      "x": 12,
+      "y": 63,
+      "width": 351,
+      "height": 737,
+      "scrollHeight": 1022,
+      "clientHeight": 737
+    },
+    "manager": {
+      "x": 16,
+      "y": 67,
+      "width": 343,
+      "height": 1013.6875,
+      "scrollHeight": 1014,
+      "clientHeight": 1014
+    },
+    "bodyOverflow": false
+  }
+]

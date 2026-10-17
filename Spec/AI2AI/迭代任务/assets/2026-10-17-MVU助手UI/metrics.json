@@ -1,0 +1,626 @@
+[
+  {
+    "label": "1440x900",
+    "route": "/AsyncAnalyze",
+    "viewport": [
+      1440,
+      900
+    ],
+    "pageWidth": 1440,
+    "panel": {
+      "x": 24,
+      "y": 24,
+      "width": 1392,
+      "height": 852,
+      "bottom": 876,
+      "right": 1416
+    },
+    "close": {
+      "x": 1322.453125,
+      "y": 46.59375,
+      "width": 68.546875,
+      "height": 40.390625,
+      "bottom": 86.984375,
+      "right": 1391
+    },
+    "horizontal": []
+  },
+  {
+    "label": "1440x900",
+    "route": "/EraDataEdit",
+    "viewport": [
+      1440,
+      900
+    ],
+    "pageWidth": 1440,
+    "panel": {
+      "x": 24,
+      "y": 24,
+      "width": 1392,
+      "height": 852,
+      "bottom": 876,
+      "right": 1416
+    },
+    "close": {
+      "x": 1322.453125,
+      "y": 46.59375,
+      "width": 68.546875,
+      "height": 40.390625,
+      "bottom": 86.984375,
+      "right": 1391
+    },
+    "horizontal": []
+  },
+  {
+    "label": "1440x900",
+    "route": "/VersionUpdater",
+    "viewport": [
+      1440,
+      900
+    ],
+    "pageWidth": 1440,
+    "panel": {
+      "x": 24,
+      "y": 24,
+      "width": 1392,
+      "height": 852,
+      "bottom": 876,
+      "right": 1416
+    },
+    "close": {
+      "x": 1322.453125,
+      "y": 46.59375,
+      "width": 68.546875,
+      "height": 40.390625,
+      "bottom": 86.984375,
+      "right": 1391
+    },
+    "horizontal": []
+  },
+  {
+    "label": "1440x900",
+    "route": "/Version",
+    "viewport": [
+      1440,
+      900
+    ],
+    "pageWidth": 1440,
+    "panel": {
+      "x": 24,
+      "y": 24,
+      "width": 1392,
+      "height": 852,
+      "bottom": 876,
+      "right": 1416
+    },
+    "close": {
+      "x": 1322.453125,
+      "y": 46.59375,
+      "width": 68.546875,
+      "height": 40.390625,
+      "bottom": 86.984375,
+      "right": 1391
+    },
+    "horizontal": []
+  },
+  {
+    "label": "1366x768",
+    "route": "/AsyncAnalyze",
+    "viewport": [
+      1366,
+      768
+    ],
+    "pageWidth": 1366,
+    "panel": {
+      "x": 24,
+      "y": 24,
+      "width": 1318,
+      "height": 720,
+      "bottom": 744,
+      "right": 1342
+    },
+    "close": {
+      "x": 1248.453125,
+      "y": 46.59375,
+      "width": 68.546875,
+      "height": 40.390625,
+      "bottom": 86.984375,
+      "right": 1317
+    },
+    "horizontal": []
+  },
+  {
+    "label": "1366x768",
+    "route": "/EraDataEdit",
+    "viewport": [
+      1366,
+      768
+    ],
+    "pageWidth": 1366,
+    "panel": {
+      "x": 24,
+      "y": 24,
+      "width": 1318,
+      "height": 720,
+      "bottom": 744,
+      "right": 1342
+    },
+    "close": {
+      "x": 1248.453125,
+      "y": 46.59375,
+      "width": 68.546875,
+      "height": 40.390625,
+      "bottom": 86.984375,
+      "right": 1317
+    },
+    "horizontal": []
+  },
+  {
+    "label": "1366x768",
+    "route": "/VersionUpdater",
+    "viewport": [
+      1366,
+      768
+    ],
+    "pageWidth": 1366,
+    "panel": {
+      "x": 24,
+      "y": 24,
+      "width": 1318,
+      "height": 720,
+      "bottom": 744,
+      "right": 1342
+    },
+    "close": {
+      "x": 1248.453125,
+      "y": 46.59375,
+      "width": 68.546875,
+      "height": 40.390625,
+      "bottom": 86.984375,
+      "right": 1317
+    },
+    "horizontal": []
+  },
+  {
+    "label": "1366x768",
+    "route": "/Version",
+    "viewport": [
+      1366,
+      768
+    ],
+    "pageWidth": 1366,
+    "panel": {
+      "x": 24,
+      "y": 24,
+      "width": 1318,
+      "height": 720,
+      "bottom": 744,
+      "right": 1342
+    },
+    "close": {
+      "x": 1248.453125,
+      "y": 46.59375,
+      "width": 68.546875,
+      "height": 40.390625,
+      "bottom": 86.984375,
+      "right": 1317
+    },
+    "horizontal": []
+  },
+  {
+    "label": "1024x600",
+    "route": "/AsyncAnalyze",
+    "viewport": [
+      1024,
+      600
+    ],
+    "pageWidth": 1024,
+    "panel": {
+      "x": 24,
+      "y": 24,
+      "width": 976,
+      "height": 552,
+      "bottom": 576,
+      "right": 1000
+    },
+    "close": {
+      "x": 906.453125,
+      "y": 46.59375,
+      "width": 68.546875,
+      "height": 40.390625,
+      "bottom": 86.984375,
+      "right": 975
+    },
+    "horizontal": []
+  },
+  {
+    "label": "1024x600",
+    "route": "/EraDataEdit",
+    "viewport": [
+      1024,
+      600
+    ],
+    "pageWidth": 1024,
+    "panel": {
+      "x": 24,
+      "y": 24,
+      "width": 976,
+      "height": 552,
+      "bottom": 576,
+      "right": 1000
+    },
+    "close": {
+      "x": 906.453125,
+      "y": 46.59375,
+      "width": 68.546875,
+      "height": 40.390625,
+      "bottom": 86.984375,
+      "right": 975
+    },
+    "horizontal": []
+  },
+  {
+    "label": "1024x600",
+    "route": "/VersionUpdater",
+    "viewport": [
+      1024,
+      600
+    ],
+    "pageWidth": 1024,
+    "panel": {
+      "x": 24,
+      "y": 24,
+      "width": 976,
+      "height": 552,
+      "bottom": 576,
+      "right": 1000
+    },
+    "close": {
+      "x": 906.453125,
+      "y": 46.59375,
+      "width": 68.546875,
+      "height": 40.390625,
+      "bottom": 86.984375,
+      "right": 975
+    },
+    "horizontal": []
+  },
+  {
+    "label": "1024x600",
+    "route": "/Version",
+    "viewport": [
+      1024,
+      600
+    ],
+    "pageWidth": 1024,
+    "panel": {
+      "x": 24,
+      "y": 24,
+      "width": 976,
+      "height": 552,
+      "bottom": 576,
+      "right": 1000
+    },
+    "close": {
+      "x": 906.453125,
+      "y": 46.59375,
+      "width": 68.546875,
+      "height": 40.390625,
+      "bottom": 86.984375,
+      "right": 975
+    },
+    "horizontal": []
+  },
+  {
+    "label": "768x600",
+    "route": "/AsyncAnalyze",
+    "viewport": [
+      768,
+      600
+    ],
+    "pageWidth": 768,
+    "panel": {
+      "x": 24,
+      "y": 24,
+      "width": 720,
+      "height": 552,
+      "bottom": 576,
+      "right": 744
+    },
+    "close": {
+      "x": 650.453125,
+      "y": 46.59375,
+      "width": 68.546875,
+      "height": 40.390625,
+      "bottom": 86.984375,
+      "right": 719
+    },
+    "horizontal": []
+  },
+  {
+    "label": "768x600",
+    "route": "/EraDataEdit",
+    "viewport": [
+      768,
+      600
+    ],
+    "pageWidth": 768,
+    "panel": {
+      "x": 24,
+      "y": 24,
+      "width": 720,
+      "height": 552,
+      "bottom": 576,
+      "right": 744
+    },
+    "close": {
+      "x": 650.453125,
+      "y": 46.59375,
+      "width": 68.546875,
+      "height": 40.390625,
+      "bottom": 86.984375,
+      "right": 719
+    },
+    "horizontal": []
+  },
+  {
+    "label": "768x600",
+    "route": "/VersionUpdater",
+    "viewport": [
+      768,
+      600
+    ],
+    "pageWidth": 768,
+    "panel": {
+      "x": 24,
+      "y": 24,
+      "width": 720,
+      "height": 552,
+      "bottom": 576,
+      "right": 744
+    },
+    "close": {
+      "x": 650.453125,
+      "y": 46.59375,
+      "width": 68.546875,
+      "height": 40.390625,
+      "bottom": 86.984375,
+      "right": 719
+    },
+    "horizontal": []
+  },
+  {
+    "label": "768x600",
+    "route": "/Version",
+    "viewport": [
+      768,
+      600
+    ],
+    "pageWidth": 768,
+    "panel": {
+      "x": 24,
+      "y": 24,
+      "width": 720,
+      "height": 552,
+      "bottom": 576,
+      "right": 744
+    },
+    "close": {
+      "x": 650.453125,
+      "y": 46.59375,
+      "width": 68.546875,
+      "height": 40.390625,
+      "bottom": 86.984375,
+      "right": 719
+    },
+    "horizontal": []
+  },
+  {
+    "label": "375x812",
+    "route": "/AsyncAnalyze",
+    "viewport": [
+      375,
+      812
+    ],
+    "pageWidth": 375,
+    "panel": {
+      "x": 0,
+      "y": 0,
+      "width": 375,
+      "height": 812,
+      "bottom": 812,
+      "right": 375
+    },
+    "close": {
+      "x": 294.453125,
+      "y": 10,
+      "width": 68.546875,
+      "height": 40.390625,
+      "bottom": 50.390625,
+      "right": 363
+    },
+    "horizontal": []
+  },
+  {
+    "label": "375x812",
+    "route": "/EraDataEdit",
+    "viewport": [
+      375,
+      812
+    ],
+    "pageWidth": 375,
+    "panel": {
+      "x": 0,
+      "y": 0,
+      "width": 375,
+      "height": 812,
+      "bottom": 812,
+      "right": 375
+    },
+    "close": {
+      "x": 294.453125,
+      "y": 10,
+      "width": 68.546875,
+      "height": 40.390625,
+      "bottom": 50.390625,
+      "right": 363
+    },
+    "horizontal": []
+  },
+  {
+    "label": "375x812",
+    "route": "/VersionUpdater",
+    "viewport": [
+      375,
+      812
+    ],
+    "pageWidth": 375,
+    "panel": {
+      "x": 0,
+      "y": 0,
+      "width": 375,
+      "height": 812,
+      "bottom": 812,
+      "right": 375
+    },
+    "close": {
+      "x": 294.453125,
+      "y": 10,
+      "width": 68.546875,
+      "height": 40.390625,
+      "bottom": 50.390625,
+      "right": 363
+    },
+    "horizontal": []
+  },
+  {
+    "label": "375x812",
+    "route": "/Version",
+    "viewport": [
+      375,
+      812
+    ],
+    "pageWidth": 375,
+    "panel": {
+      "x": 0,
+      "y": 0,
+      "width": 375,
+      "height": 812,
+      "bottom": 812,
+      "right": 375
+    },
+    "close": {
+      "x": 294.453125,
+      "y": 10,
+      "width": 68.546875,
+      "height": 40.390625,
+      "bottom": 50.390625,
+      "right": 363
+    },
+    "horizontal": []
+  },
+  {
+    "label": "200percent",
+    "route": "/AsyncAnalyze",
+    "viewport": [
+      683,
+      384
+    ],
+    "pageWidth": 683,
+    "panel": {
+      "x": 0,
+      "y": 0,
+      "width": 683,
+      "height": 384,
+      "bottom": 384,
+      "right": 683
+    },
+    "close": {
+      "x": 602.453125,
+      "y": 10,
+      "width": 68.546875,
+      "height": 40.390625,
+      "bottom": 50.390625,
+      "right": 671
+    },
+    "horizontal": []
+  },
+  {
+    "label": "200percent",
+    "route": "/EraDataEdit",
+    "viewport": [
+      683,
+      384
+    ],
+    "pageWidth": 683,
+    "panel": {
+      "x": 0,
+      "y": 0,
+      "width": 683,
+      "height": 384,
+      "bottom": 384,
+      "right": 683
+    },
+    "close": {
+      "x": 602.453125,
+      "y": 10,
+      "width": 68.546875,
+      "height": 40.390625,
+      "bottom": 50.390625,
+      "right": 671
+    },
+    "horizontal": []
+  },
+  {
+    "label": "200percent",
+    "route": "/VersionUpdater",
+    "viewport": [
+      683,
+      384
+    ],
+    "pageWidth": 683,
+    "panel": {
+      "x": 0,
+      "y": 0,
+      "width": 683,
+      "height": 384,
+      "bottom": 384,
+      "right": 683
+    },
+    "close": {
+      "x": 602.453125,
+      "y": 10,
+      "width": 68.546875,
+      "height": 40.390625,
+      "bottom": 50.390625,
+      "right": 671
+    },
+    "horizontal": []
+  },
+  {
+    "label": "200percent",
+    "route": "/Version",
+    "viewport": [
+      683,
+      384
+    ],
+    "pageWidth": 683,
+    "panel": {
+      "x": 0,
+      "y": 0,
+      "width": 683,
+      "height": 384,
+      "bottom": 384,
+      "right": 683
+    },
+    "close": {
+      "x": 602.453125,
+      "y": 10,
+      "width": 68.546875,
+      "height": 40.390625,
+      "bottom": 50.390625,
+      "right": 671
+    },
+    "horizontal": []
+  }
+]

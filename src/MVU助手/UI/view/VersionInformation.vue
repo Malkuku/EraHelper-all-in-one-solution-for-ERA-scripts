@@ -32,10 +32,8 @@ const versionHistory = ref([
   {
     version: 'v1.0.0',
     date: '2026-02-25',
-    changes: [
-      '正式改名为MVU助手'
-    ],
-  }
+    changes: ['正式改名为MVU助手'],
+  },
 ]);
 </script>
 
@@ -92,158 +90,70 @@ const versionHistory = ref([
 
 <style scoped lang="scss">
 .version-container {
-  padding: 8px 16px;
-  font-family: 'Inter', sans-serif;
-  color: #334155;
-  line-height: 1.6;
+  color: var(--mvu-text, #172338);
+  line-height: 1.7;
+  max-width: 920px;
+  margin-inline: auto;
+  overflow-wrap: anywhere;
 }
-
 .section {
-  margin-bottom: 2.5rem;
+  margin-bottom: 28px;
 }
-
 .section-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #334155;
-  margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid #e2e8f0;
+  font-size: 19px;
+  font-weight: 650;
+  margin: 0 0 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--mvu-line, #d7dfea);
+  color: inherit;
 }
-
-.author-info {
-  font-size: 0.9rem;
-  a {
-    color: #4f46e5;
-    text-decoration: none;
-    transition: color 0.2s ease;
-    &:hover {
-      color: darken(#4f46e5, 10%);
-      text-decoration: underline;
-    }
-  }
+a,
+.version-number {
+  color: var(--mvu-accent, #4b4de0);
 }
-
+a:hover {
+  text-decoration: underline;
+}
 .version-badge {
   display: inline-block;
-  background-color: #4f46e5;
-  color: white;
-  padding: 0.3em 0.8em;
-  border-radius: 1em;
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: 0.5px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: var(--mvu-soft, #f6f8fb);
+  color: var(--mvu-accent, #4b4de0);
+  font-weight: 650;
 }
-
 .notes-list,
 .changes-list {
-  list-style-type: disc;
-  padding-left: 20px;
-  font-size: 0.9rem;
-  color: #64748b;
-
-  li {
-    margin-bottom: 0.5rem;
-  }
+  padding-left: 22px;
+  color: var(--mvu-muted, #53637b);
+  font-size: 14px;
 }
-
+li {
+  margin-bottom: 8px;
+}
 .history-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  display: grid;
+  gap: 16px;
 }
-
 .history-item {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--mvu-panel, #fff);
+  border: 1px solid var(--mvu-line, #d7dfea);
   border-radius: 12px;
-  padding: 1rem 1.5rem;
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  }
+  padding: 18px 20px;
 }
-
 .history-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.75rem;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
 }
-
 .version-number {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #4f46e5;
+  margin: 0;
+  font-size: 16px;
 }
-
 .version-date {
-  font-size: 0.8rem;
-  color: #64748b;
-  font-style: italic;
+  color: var(--mvu-muted, #53637b);
+  font-size: 13px;
 }
-
-.changes-list {
-  color: #475569;
-}
-
-
-/* 黑夜模式 */
-.dark-mode {
-  .version-container {
-    color: #cbd5e1;
-  }
-
-  .section-title {
-    color: #e2e8f0;
-    border-bottom: 1px solid #4b5563;
-  }
-
-  .author-info {
-    a {
-      color: #818cf8;
-
-      &:hover {
-        color: #a5b4fc;
-      }
-    }
-  }
-
-  .version-badge {
-    background-color: #4f46e5;
-    color: #f8fafc;
-  }
-
-  .notes-list,
-  .changes-list {
-    color: #9ca3af;
-  }
-
-  .history-item {
-    background: #374151;
-    border: 1px solid #4b5563;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-
-    &:hover {
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
-    }
-  }
-
-  .version-number {
-    color: #818cf8;
-  }
-
-  .version-date {
-    color: #9ca3af;
-  }
-
-  .changes-list {
-    color: #cbd5e1;
-  }
-}
-
 </style>

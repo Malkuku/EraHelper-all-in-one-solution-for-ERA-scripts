@@ -1,0 +1,103 @@
+﻿.mvu-workspace {
+  --mvu-bg: #eef2f7;
+  --mvu-panel: #fff;
+  --mvu-soft: #f6f8fb;
+  --mvu-line: #d7dfea;
+  --mvu-control-line: #7c8ca3;
+  --mvu-text: #172338;
+  --mvu-muted: #53637b;
+  --mvu-accent: #4b4de0;
+  --mvu-on-accent: #fff;
+  --mvu-danger: #b42336;
+  --mvu-warning: #925600;
+  --mvu-success: #14734d;
+  --mvu-focus: #6466f1;
+  --panel: var(--mvu-panel);
+  --soft: var(--mvu-soft);
+  --line: var(--mvu-line);
+  --text: var(--mvu-text);
+  --muted: var(--mvu-muted);
+  color-scheme: light;
+  font:
+    14px/1.6 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  &.dark-mode {
+    --mvu-bg: #0c1420;
+    --mvu-panel: #182231;
+    --mvu-soft: #111a28;
+    --mvu-line: #3e4c62;
+    --mvu-control-line: #8393ab;
+    --mvu-text: #e9eef7;
+    --mvu-muted: #b2bfd1;
+    --mvu-accent: #a6a7ff;
+    --mvu-on-accent: #14162e;
+    --mvu-danger: #ffa1ab;
+    --mvu-warning: #efc17b;
+    --mvu-success: #82ddb3;
+    --mvu-focus: #b4b5ff;
+    color-scheme: dark;
+  }
+  &,
+  * {
+    box-sizing: border-box;
+  }
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+  button {
+    min-height: 40px;
+    padding: 8px 12px;
+    border: 1px solid var(--mvu-control-line);
+    border-radius: 8px;
+    color: var(--mvu-text);
+    background: var(--mvu-panel);
+    cursor: pointer;
+  }
+  button:hover {
+    border-color: var(--mvu-accent);
+  }
+  button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+  :focus-visible {
+    outline: 3px solid var(--mvu-focus);
+    outline-offset: 3px;
+  }
+  input:not([type='checkbox']):not([type='radio']):not([type='file']),
+  textarea,
+  select {
+    min-height: 40px;
+    border-radius: 8px;
+    border: 1px solid var(--mvu-control-line);
+    color: var(--mvu-text);
+    background: var(--mvu-panel);
+    padding: 8px 10px;
+    max-width: 100%;
+  }
+  textarea {
+    line-height: 1.6;
+  }
+  @media (pointer: coarse) {
+    button,
+    select,
+    input:not([type='checkbox']):not([type='radio']) {
+      min-height: 44px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation: none !important;
+      transition: none !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

@@ -1,0 +1,51 @@
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE || 'C:/Users/xiaohao/AppData/Local/npm-cache/_npx/e41f203b7505f1fb/node_modules/playwright');
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+(async()=>{
+  const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
+  const page=await browser.newPage({viewport:{width:1200,height:900}});
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('file:///'+path.join(__dirname,'index.html').replaceAll('\\','/'));
+  await page.waitForFunction(()=>window.ready);
+  await page.evaluate(async()=>{
+    const config=JSON.parse(JSON.stringify(window.test.tasks.settings));
+    const names=['微信主动聊天','商店技能生成','商店道具生成','任务生成','编辑变量'];
+    config.tasks=names.map((name,index)=>({...structuredClone(config.tasks[0]),id:'task-'+index,name,order:index===4?1:0}));
+    config.connections[0].name='配置1（待补全）';config.connections[0].model='REPLACE_WITH_YOUR_MODEL';config.presets[0].name='配置1预设（占位，需要替换）';
+    config.groups=[{id:'five',name:'推荐-额外单任务',comment:'',taskIds:config.tasks.map(t=>t.id)},{id:'card',name:'纯写卡用',comment:'',taskIds:[]},{id:'empty',name:'空',comment:'',taskIds:[]}];
+    config.activeGroupId='five';await window.test.tasks.replaceSettings(config);window.test.ui.darkMode=true;
+  });
+  const tabs=page.getByRole('navigation',{name:'工作台页面'}).getByRole('button');
+  assert.deepEqual((await tabs.allTextContents()).slice(0,2).map(x=>x.trim()),['预设管理','API配置']);
+  const rows=page.locator('.group-option');assert.equal(await rows.count(),3);
+  assert.equal(await page.locator('.group-task-details[open]').count(),0);
+  const metrics=[];
+  for(const [width,height] of [[1200,900],[768,600],[375,812]]){
+    await page.setViewportSize({width,height});
+    metrics.push(await page.evaluate(()=>({viewport:[innerWidth,innerHeight],rows:[...document.querySelectorAll('.group-option')].map(e=>{const r=e.getBoundingClientRect();return {height:r.height,width:r.width,right:r.right};}),pageWidth:document.documentElement.scrollWidth})));
+    const latest=metrics.at(-1);assert(latest.rows.every(r=>r.height<200),'collapsed rows must remain compact with five tasks');assert(latest.pageWidth<=width,'no horizontal overflow');
+    await page.locator('.group-list').screenshot({path:path.join(__dirname,`groups-${width}-collapsed.png`)});
+    const before=(await rows.nth(1).boundingBox()).height;
+    await page.locator('.group-task-details summary').click();
+    assert(await page.locator('.group-task-details li').first().isVisible());
+    assert.equal(await page.locator('.group-task-details li').count(),5);
+    assert.equal((await rows.nth(1).boundingBox()).height,before,'opening first row must not stretch empty rows');
+    if(width===1200)await page.locator('.group-list').screenshot({path:path.join(__dirname,'groups-desktop-expanded.png')});
+    await page.locator('.group-task-details summary').click();
+  }
+  await page.setViewportSize({width:1200,height:900});
+  await rows.nth(1).getByRole('button',{name:'选择此组',exact:true}).click();
+  assert(await rows.nth(1).getByRole('button',{name:'已选择',exact:true}).getAttribute('aria-pressed')==='true');
+  assert.equal(await page.evaluate(()=>window.test.tasks.settings.activeGroupId),'five','selection remains draft until saved');
+  await rows.nth(1).getByRole('button',{name:'上移规则组',exact:true}).click();
+  assert.match(await rows.first().innerText(),/纯写卡用/);
+  await rows.first().getByRole('button',{name:'下移规则组',exact:true}).click();
+  await rows.nth(1).getByRole('button',{name:'复制',exact:true}).click();assert.equal(await rows.count(),4);
+  await rows.nth(1).getByRole('button',{name:'编辑',exact:true}).click();
+  assert(await page.getByRole('heading',{name:'规则组配置',exact:true}).isVisible());
+  assert.equal(await page.locator('[data-config-key="name"]').inputValue(),'纯写卡用');
+  await tabs.first().click();assert(await page.getByRole('button',{name:'+ 新建预设',exact:true}).isVisible());
+  await tabs.nth(1).click();assert(await page.getByRole('button',{name:'+ 新建连接',exact:true}).isVisible());
+  assert.deepEqual(errors,[]);fs.writeFileSync(path.join(__dirname,'group-metrics.json'),JSON.stringify(metrics,null,2));
+  console.log('PASS preset/API ordering; 5-task + 2 empty compact rows at desktop/tablet/mobile; independent expansion; draft selection/edit/copy/reorder');
+  console.log(JSON.stringify(metrics));await browser.close();
+})().catch(e=>{console.error(e);process.exit(1)});

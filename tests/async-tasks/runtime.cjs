@@ -117,7 +117,46 @@ async function main() {
   assert.equal(host.chat[1].mes, 'ORIGINAL\nAPPENDED');
   assert.equal(activeTaskRuns.size, 0);
   await independentRuntimeChecks();
+  await unfinishedRuntimeChecks();
   console.log('PASS: explicit busy and independent event/regular runs, enable/threshold/interval, isolated cancellation, commit-order rollback and reserved rerun lifecycle');
+}
+async function unfinishedRuntimeChecks() {
+  const priorFetch = global.fetch;
+  let allHttp = 0;
+  global.fetch = async (...args) => { allHttp++; return priorFetch(...args); };
+  try {
+    for (const [label, mutate] of [
+      ['API', config => { config.tasks[0].connectionId = ''; }],
+      ['model', config => { config.connections[0].model = ''; }],
+      ['baseUrl', config => { config.connections[0].baseUrl = ''; }],
+      ['preset', config => { config.connections[0].presetId = null; }],
+      ['regex', config => { config.tasks[0].regexRules = [{ id: 'bad', stage: 'response', pattern: '[', flags: '', replacement: '', enabled: true }]; }],
+    ]) {
+      resetChat(`unfinished-${label}`); await configure([task('broken', { eventName: 'bad' }), task('healthy', { eventName: 'good' })]);
+      const config = store.snapshot(); mutate(config); await store.replaceSettings(config); await store.load();
+      allHttp = 0;
+      const failed = await eventRun('bad');
+      assert.equal(failed.status, 'failed', label);
+      assert.equal(failed.tasks[0].error.phase, 'prepare', label);
+      assert(failed.tasks[0].error.message.length > 0);
+      assert.equal(allHttp, 0, `${label}: invalid task must not call any HTTP endpoint`);
+      assert.equal(calls.length, 0);
+      model = async body => success(body.model);
+      assert.equal((await eventRun('good')).status, 'succeeded', `${label}: unselected broken task must not poison a healthy selected task`);
+      const repaired = store.snapshot();
+      repaired.tasks[0].connectionId = 'healthy'; repaired.tasks[0].regexRules = [];
+      await store.replaceSettings(repaired);
+      assert.equal((await eventRun('bad')).status, 'succeeded', `${label}: rebinding and correcting task restores execution`);
+    }
+    resetChat('unfinished-idle'); await configure([task('healthy')]);
+    const config = store.snapshot();
+    config.connections.push({ id: 'idle', name: '', comment: '', baseUrl: '', model: '', secretRef: 'idle', presetId: null });
+    config.presets.push({ id: 'idle', name: '', raw: {} });
+    config.tasks.push(task('idle', { connectionId: '', enabled: false }));
+    await store.replaceSettings(config);
+    assert.equal((await runTaskChain({ messageId: 1, trigger: { kind: 'manual' } })).status, 'succeeded');
+    console.log('PASS: API/model/address/preset/regex task failures produce prepare errors and zero HTTP; idle broken resources do not poison selected healthy tasks; rebinding restores execution');
+  } finally { global.fetch = priorFetch; }
 }
 async function independentRuntimeChecks() {
   model = async body => success(body.model);

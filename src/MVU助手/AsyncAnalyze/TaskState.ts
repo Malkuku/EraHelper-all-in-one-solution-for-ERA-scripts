@@ -1,5 +1,5 @@
 import { MessageIdentity, TimedEffect, TimedState, assertMessage } from './generation/GenerationHost';
-import { withTargetLocks } from './TaskCommit';
+import { withTargetLocks } from '../utils/TargetLocks';
 import { TaskFailure } from './TaskSchema';
 
 type EffectRecord = { value: TimedEffect | null; settledFloor: number; sequence: number; ownerRunId: string };

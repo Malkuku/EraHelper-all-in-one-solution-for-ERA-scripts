@@ -18,6 +18,7 @@ global.getVariables = () => structuredClone(variables);
 global.updateVariablesWith = async update => { variables = await update(structuredClone(variables)); };
 const { useTaskStore } = require(path.join(root, 'stores/TaskStore.ts'));
 const { emptySettings, ConfigSchema, TaskSchema, parseTaskSettings, parseRegexPresets, matchTaskRegex } = require(path.join(root, 'AsyncAnalyze/TaskSchema.ts'));
+const { removeTaskResource } = require(path.join(root, 'AsyncAnalyze/TaskConfiguration.ts'));
 
 async function main() {
   const store = useTaskStore();
@@ -74,17 +75,25 @@ async function main() {
   const beforeInvalid = structuredClone(variables);
   await assert.rejects(store.replaceSettings({ ...config, activeGroupId: 'missing' }));
   await assert.rejects(store.replaceSettings({ ...config, regexPresets: [...config.regexPresets, config.regexPresets[0]] }), /ID 重复/);
-  await assert.rejects(store.replaceSettings({ ...config, regexPresets: [{ ...config.regexPresets[0], pattern: '[' }] }));
-  assert.throws(() => parseRegexPresets([{ name: '坏表达式', regex: '/[/g' }]));
   assert.deepEqual(variables, beforeInvalid, 'invalid configuration cannot partially save');
+  assert.equal(parseRegexPresets([{ name: '坏表达式', regex: '/[/g' }])[0].pattern, '[', 'an unfinished expression can be imported for editing');
 
-  // v2 has one binding per API. Unused APIs may be incomplete; referenced ones may not.
+  // v2 has one binding per API; incomplete referenced resources are editable too.
   const boundTask = TaskSchema.parse({ id: 'bound-task', name: 'bound-task', enabled: true, eventName: '', prompt: '', connectionId: 'connection', candidateBooks: [], scan: {}, regexRules: [], output: { mode: 'return' } });
   assert.equal(Object.hasOwn(boundTask, 'presetId'), false);
   assert.equal(ConfigSchema.parse({ ...config, connections: [{ ...config.connections[0], presetId: null }] }).connections[0].presetId, null);
-  assert.throws(() => ConfigSchema.parse({ ...config, tasks: [boundTask], connections: [{ ...config.connections[0], presetId: null }] }), /尚未绑定预设/);
-  assert.throws(() => ConfigSchema.parse({ ...config, connections: [{ ...config.connections[0], presetId: 'absent' }] }), /绑定预设不存在/);
-  assert.throws(() => ConfigSchema.parse({ ...config, tasks: [{ ...boundTask, connectionId: 'absent' }] }), /API 配置不存在/);
+  assert.equal(ConfigSchema.parse({ ...config, tasks: [boundTask], connections: [{ ...config.connections[0], presetId: null }] }).tasks.length, 1);
+  assert.equal(ConfigSchema.parse({ ...config, connections: [{ ...config.connections[0], presetId: 'absent' }] }).connections[0].presetId, 'absent');
+  assert.equal(ConfigSchema.parse({ ...config, tasks: [{ ...boundTask, connectionId: 'absent' }] }).tasks[0].connectionId, 'absent');
+  const unfinished = structuredClone(config);
+  unfinished.tasks = [{ ...boundTask, name: '', connectionId: '', eventName: 'loop:result', regexRules: [{ id: 'unfinished', stage: 'response', pattern: '[', flags: 'gg', replacement: '', enabled: true }], output: { mode: 'write', writes: [] } }];
+  unfinished.connections = [{ ...config.connections[0], name: '', baseUrl: '', model: '', presetId: null }];
+  unfinished.presets = [{ ...config.presets[0], name: '', raw: { openai_max_context: 0, openai_max_tokens: 0 } }];
+  unfinished.regexPresets = [{ ...config.regexPresets[0], name: '', pattern: '[', flags: 'gg' }];
+  await store.replaceSettings(unfinished); await store.load();
+  assert.deepEqual(store.snapshot(), ConfigSchema.parse(unfinished), 'unfinished resources, bindings, outputs and expressions survive save/reload');
+  await store.replaceSettings(JSON.parse(JSON.stringify(store.snapshot())));
+  assert.deepEqual(store.snapshot(), ConfigSchema.parse(unfinished), 'export/import preserves unfinished state without fake API placeholders');
 
   const legacy = {
     ...config, schemaVersion: 1,
@@ -127,6 +136,42 @@ async function main() {
   assert.throws(() => parseTaskSettings({ ...original, connections: [...original.connections, original.connections[0]] }), /重复/);
   assert.throws(() => parseTaskSettings({ ...original, presets: [...original.presets, original.presets[0]] }), /重复/);
 
+  const six = structuredClone(config);
+  six.tasks = Array.from({ length: 6 }, (_, index) => ({ ...boundTask, id: `consumer-${index}` }));
+  six.groups = [{ id: 'six', name: '六任务组', comment: '', taskIds: six.tasks.map(task => task.id) }]; six.activeGroupId = 'six';
+  six.connections.push({ ...six.connections[0], id: 'shared-secret-consumer' });
+  await store.replaceSettings(six);
+  const afterApi = removeTaskResource(six, 'connection', 'connection');
+  assert.equal(six.connections.length, 2, 'draft resource removal cannot mutate its input');
+  assert.equal(afterApi.tasks.length, 6); assert(afterApi.tasks.every(task => task.connectionId === ''));
+  assert.deepEqual(afterApi.groups[0].taskIds, six.groups[0].taskIds);
+  await store.replaceSettings(afterApi); await store.load();
+  assert.deepEqual(store.snapshot(), afterApi);
+  assert.equal(store.getSecret('reference-A'), 'PLUGIN_SECRET_A', 'deleting an API must preserve a secret still used by another API');
+  const afterPreset = removeTaskResource(six, 'preset', 'preset');
+  assert(afterPreset.connections.every(connection => connection.presetId === null));
+  assert.equal(afterPreset.tasks.length, 6);
+  await store.replaceSettings(JSON.parse(JSON.stringify(afterPreset))); await store.load();
+  assert.deepEqual(store.snapshot(), afterPreset, 'deleted preset and empty binding survive export/import/save/reload');
+  assert.equal(removeTaskResource(six, 'task', six.tasks[0].id).groups[0].taskIds.length, 5);
+  const afterGroup = removeTaskResource(six, 'group', 'six');
+  assert.equal(afterGroup.activeGroupId, null); assert.equal(afterGroup.tasks.length, 6);
+  await store.replaceSettings(removeTaskResource(afterApi, 'connection', 'shared-secret-consumer'));
+  assert.equal(store.getSecret('reference-A'), '', 'last API deletion clears its orphaned local secret after save');
+  assert.deepEqual(variables.unrelated, unrelated, 'resource deletion preserves other module data');
+  store.setSecret('reference-A', 'PLUGIN_SECRET_A');
+  await store.replaceSettings(six);
+  const originalUpdate = global.updateVariablesWith;
+  global.updateVariablesWith = async () => { throw new Error('simulated persist failure'); };
+  try {
+    await assert.rejects(store.replaceSettings(emptySettings()), /simulated persist failure/);
+    assert.equal(store.getSecret('reference-A'), 'PLUGIN_SECRET_A', 'failed persistence cannot clear a still-persisted consumer secret');
+    assert.equal(store.snapshot().tasks.length, 6, 'failed save preserves the committed store snapshot');
+  } finally { global.updateVariablesWith = originalUpdate; }
+  store.setSecret('reference-A', 'PLUGIN_SECRET_A');
+  store.setSecret('reference-B', 'PLUGIN_SECRET_B');
+  store.setSecret('__proto__', 'PROTOTYPE_KEY_SECRET');
+
   scriptId = 'other-script';
   assert.equal(store.getSecret('reference-A'), '', 'secret namespaces must not cross script identity');
   store.setSecret('reference-A', 'OTHER_SCRIPT_SECRET');
@@ -139,6 +184,21 @@ async function main() {
 
   local.set('kat.async-tasks.secrets.v1:config-owner', '{broken');
   assert.throws(() => store.getSecret('reference-B'), /损坏/);
+  await store.replaceSettings(emptySettings());
+  assert.deepEqual(store.snapshot(), emptySettings(), 'broken local secret JSON cannot prevent saving/deleting configuration');
+  assert.match(store.configurationWarning, /配置已保存.*密钥清理未完成/);
+  assert.throws(() => store.getSecret('reference-B'), /损坏/, 'credential retrieval still reports corruption explicitly');
+  local.set('kat.async-tasks.secrets.v1:config-owner', JSON.stringify({ orphan: 'ORPHAN_SECRET' }));
+  const originalSetItem = window.parent.localStorage.setItem;
+  window.parent.localStorage.setItem = () => { throw new Error('storage is full'); };
+  try {
+    await store.replaceSettings(emptySettings());
+    assert.match(store.configurationWarning, /配置已保存.*密钥清理未完成/);
+    assert.deepEqual(variables.async_task_config, emptySettings());
+  } finally { window.parent.localStorage.setItem = originalSetItem; }
+  await store.replaceSettings(emptySettings());
+  assert.equal(store.configurationWarning, '', 'successful cleanup clears the prior cleanup warning');
+  assert.equal(store.getSecret('orphan'), '');
   local.set('kat.async-tasks.secrets.v1:config-owner', JSON.stringify({ secret: 123 }));
   assert.throws(() => store.getSecret('secret'), /损坏/);
   variables = { unrelated, async_task_config: { schemaVersion: 0 } };

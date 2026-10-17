@@ -5,7 +5,7 @@
       <button :disabled="busy" @click="check(true)">获取模型列表</button>
       <button v-if="busy" @click="cancel">取消请求</button>
     </div>
-    <p class="hint">使用当前填写的地址和密钥检查 /models 接口；不发送生成请求。接口不支持模型列表时仍可手填模型。</p>
+    <p class="hint">使用当前草稿检测模型接口；不支持列表时可手填模型。</p>
     <p v-if="status" role="status">{{ status }}</p>
     <p v-if="error" class="error" role="alert">{{ error }}</p>
     <label v-if="models !== null"
@@ -102,11 +102,7 @@ async function check(showModels: boolean) {
 
 <style scoped>
 .connection-check {
-  margin: 16px 0;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--soft);
+  margin: 0;
 }
 .toolbar {
   display: flex;

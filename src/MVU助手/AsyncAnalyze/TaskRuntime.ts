@@ -4,6 +4,7 @@ import { bindMessage, currentChatKey, createGenerationContext, MessageIdentity, 
 import { generateTask } from './generation/TaskGeneration';
 import { commitTask, Journal, releaseJournal, rollbackJournal, validateTaskOutput } from './TaskCommit';
 import { eventNameIsValid, RunResult, TaskConfig, TaskFailure, TaskResult, Trigger, UnrecoveredJournal, KatTaskAPI } from './TaskSchema';
+import { validateTaskReadiness } from './TaskConfiguration';
 import { readTaskHistory, rollbackTaskState, settleTaskState, StateUndo, timedSnapshot, stateSequenceHighWater, StateSaveFailure } from './TaskState';
 
 type Run = { id: string; key: string; identity: MessageIdentity; sequence: number; controller: AbortController; cancelled: boolean; failed: boolean; result: RunResult;
@@ -68,7 +69,7 @@ async function executeTask(run: Run, task: TaskConfig, snapshot: ReturnType<Retu
   let phase: TaskFailure['phase'] = 'prepare';
   try {
     const store = useTaskStore();
-    const connection = snapshot.connections.find(item => item.id === task.connectionId)!;
+    const { connection } = validateTaskReadiness(snapshot, task);
     const history = readTaskHistory(task.id, run.identity);
     const beforeState = timedSnapshot(history);
     let generated: Awaited<ReturnType<typeof createGenerationContext>> | undefined;
@@ -212,7 +213,7 @@ export function initializeTaskRuntime() {
   const registerCustom = () => {
     customCleanup.forEach(stop => stop()); customCleanup = [];
     const group = store.settings.groups.find(item => item.id === store.settings.activeGroupId);
-    const events = new Set((group?.taskIds ?? []).map(id => store.settings.tasks.find(task => task.id === id)?.eventName).filter((name): name is string => !!name));
+    const events = new Set((group?.taskIds ?? []).map(id => store.settings.tasks.find(task => task.id === id)?.eventName).filter((name): name is string => !!name && eventNameIsValid(name)));
     for (const eventName of events) {
       const handler = (requestId?: string) => runTaskChain({ messageId: getLastMessageId(), trigger: { kind: 'event', eventName }, requestId });
       const listener = eventOn(eventName, handler); customCleanup.push(() => listener.stop());

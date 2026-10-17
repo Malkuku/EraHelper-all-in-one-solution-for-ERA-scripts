@@ -1,0 +1,150 @@
+[
+  {
+    "label": "light tree node input",
+    "color": "rgb(30, 41, 59)",
+    "border": "rgb(124, 140, 163)",
+    "background": "rgb(255, 255, 255)",
+    "font": "12px",
+    "height": 40,
+    "textRatio": 14.628718079350334,
+    "borderRatio": 3.4218008191216187
+  },
+  {
+    "label": "light variable selected",
+    "color": "rgb(255, 255, 255)",
+    "border": "rgba(0, 0, 0, 0)",
+    "background": "rgb(75, 77, 224)",
+    "font": "13px",
+    "height": 40.796875,
+    "textRatio": 6.109827309757146,
+    "borderRatio": 3.437085687587905
+  },
+  {
+    "label": "light variable raw",
+    "color": "rgb(23, 35, 56)",
+    "border": "rgb(124, 140, 163)",
+    "background": "rgb(255, 255, 255)",
+    "font": "13px",
+    "height": 340,
+    "textRatio": 15.742729181521746,
+    "borderRatio": 3.4218008191216187
+  },
+  {
+    "label": "light version primary",
+    "color": "rgb(255, 255, 255)",
+    "border": "rgba(0, 0, 0, 0)",
+    "background": "rgb(75, 77, 224)",
+    "font": "13px",
+    "height": 42.796875,
+    "textRatio": 6.109827309757146,
+    "borderRatio": 3.437085687587905
+  },
+  {
+    "label": "light version select",
+    "color": "rgb(23, 35, 56)",
+    "border": "rgb(124, 140, 163)",
+    "background": "rgb(255, 255, 255)",
+    "font": "13px",
+    "height": 40,
+    "textRatio": 15.742729181521746,
+    "borderRatio": 3.4218008191216187
+  },
+  {
+    "label": "light modal primary",
+    "color": "rgb(255, 255, 255)",
+    "border": "rgba(0, 0, 0, 0)",
+    "background": "rgb(75, 77, 224)",
+    "font": "14px",
+    "height": 44,
+    "textRatio": 6.109827309757146,
+    "borderRatio": 3.437085687587905
+  },
+  {
+    "label": "light modal body",
+    "color": "rgb(83, 99, 123)",
+    "border": "rgb(83, 99, 123)",
+    "background": "rgb(255, 255, 255)",
+    "font": "14px",
+    "height": 44.78125,
+    "textRatio": 6.107228732141742,
+    "borderRatio": 6.107228732141742
+  },
+  {
+    "label": "dark tree node input",
+    "color": "rgb(226, 232, 240)",
+    "border": "rgb(131, 147, 171)",
+    "background": "rgb(55, 65, 81)",
+    "font": "12px",
+    "height": 40,
+    "textRatio": 8.361056917373743,
+    "borderRatio": 3.3015939222061093
+  },
+  {
+    "label": "dark variable selected",
+    "color": "rgb(20, 22, 46)",
+    "border": "rgba(0, 0, 0, 0)",
+    "background": "rgb(166, 167, 255)",
+    "font": "13px",
+    "height": 40.796875,
+    "textRatio": 8.102375104887468,
+    "borderRatio": 9.592884821501066
+  },
+  {
+    "label": "dark variable raw",
+    "color": "rgb(233, 238, 247)",
+    "border": "rgb(131, 147, 171)",
+    "background": "rgb(24, 34, 49)",
+    "font": "13px",
+    "height": 340,
+    "textRatio": 13.748195749443195,
+    "borderRatio": 5.126985657099243
+  },
+  {
+    "label": "dark version primary",
+    "color": "rgb(20, 22, 46)",
+    "border": "rgba(0, 0, 0, 0)",
+    "background": "rgb(166, 167, 255)",
+    "font": "13px",
+    "height": 42.796875,
+    "textRatio": 8.102375104887468,
+    "borderRatio": 9.592884821501066
+  },
+  {
+    "label": "dark version select",
+    "color": "rgb(233, 238, 247)",
+    "border": "rgb(131, 147, 171)",
+    "background": "rgb(24, 34, 49)",
+    "font": "13px",
+    "height": 40,
+    "textRatio": 13.748195749443195,
+    "borderRatio": 5.126985657099243
+  },
+  {
+    "label": "dark modal primary",
+    "color": "rgb(20, 22, 46)",
+    "border": "rgba(0, 0, 0, 0)",
+    "background": "rgb(166, 167, 255)",
+    "font": "14px",
+    "height": 44,
+    "textRatio": 8.102375104887468,
+    "borderRatio": 9.592884821501066
+  },
+  {
+    "label": "dark modal body",
+    "color": "rgb(178, 191, 209)",
+    "border": "rgb(178, 191, 209)",
+    "background": "rgb(24, 34, 49)",
+    "font": "14px",
+    "height": 44.78125,
+    "textRatio": 8.586900016991786,
+    "borderRatio": 8.586900016991786
+  },
+  {
+    "touchNavHeights": [
+      44,
+      44,
+      44,
+      44
+    ]
+  }
+]

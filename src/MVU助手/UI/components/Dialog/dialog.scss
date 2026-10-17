@@ -1,0 +1,123 @@
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  background: rgb(15 23 42 / 55%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+  color: var(--mvu-text);
+  font:
+    14px/1.6 system-ui,
+    sans-serif;
+}
+.modal-container,
+.modal-content {
+  width: min(480px, 100%);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--mvu-panel);
+  border: 1px solid var(--mvu-line);
+  border-radius: 14px;
+  box-shadow: 0 20px 70px rgb(0 0 0 / 25%);
+  overflow: hidden;
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--mvu-line);
+  flex-shrink: 0;
+}
+h3 {
+  font: inherit;
+  font-size: 17px;
+  font-weight: 650;
+  margin: 0;
+  color: var(--mvu-text);
+}
+button {
+  font: inherit;
+  border: 1px solid var(--mvu-control-line);
+  border-radius: 8px;
+  min-height: 44px;
+  padding: 8px 16px;
+  background: var(--mvu-panel);
+  color: var(--mvu-text);
+  cursor: pointer;
+}
+button:hover {
+  border-color: var(--mvu-accent);
+}
+.close-btn,
+.modal-close {
+  width: 44px;
+  padding: 0;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+.modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  min-height: 0;
+}
+.modal-message,
+.modal-body p {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--mvu-muted);
+}
+.modal-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 16px;
+  padding: 10px 12px;
+  font: inherit;
+  background: var(--mvu-soft);
+  color: var(--mvu-text);
+  border: 1px solid var(--mvu-control-line);
+  border-radius: 8px;
+}
+.modal-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--mvu-line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  background: var(--mvu-soft);
+  flex-shrink: 0;
+}
+.btn.primary {
+  background: var(--mvu-accent);
+  color: var(--mvu-on-accent);
+  border-color: transparent;
+}
+:focus-visible {
+  outline: 3px solid var(--mvu-accent);
+  outline-offset: 3px;
+}
+.modal-fade-enter-active,
+.modal-fade-leave-active,
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.15s;
+}
+.modal-fade-enter-from,
+.modal-fade-leave-to,
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}

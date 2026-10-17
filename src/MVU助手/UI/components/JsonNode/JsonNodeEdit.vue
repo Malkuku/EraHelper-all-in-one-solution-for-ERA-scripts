@@ -2,9 +2,9 @@
   <div class="json-node" :class="{ 'dark-mode': uiStore.darkMode }" :style="{ marginLeft: `${node.depth * 20}px` }">
     <div class="line" :class="{ 'is-editing': isEditing }">
       <!-- 折叠/展开箭头 -->
-      <span v-if="!node.isLeaf" class="arrow" :class="{ expanded: node.expanded }" @click="emit('toggleExpand', node)">
+      <button v-if="!node.isLeaf" type="button" class="arrow" :class="{ expanded: node.expanded }" :aria-expanded="node.expanded" :aria-label="`${node.expanded ? '收起' : '展开'} ${node.path}`" @click="emit('toggleExpand', node)">
         ▶
-      </span>
+      </button>
       <span v-else class="space" />
 
       <!-- Key -->
@@ -12,7 +12,7 @@
 
       <!-- 编辑器 -->
       <div v-if="isEditing" class="editor-container">
-        <select v-model="editType" class="edit-select">
+        <select v-model="editType" class="edit-select" :aria-label="`${node.path} 的值类型`" @keydown.esc.stop.prevent="cancel">
           <option value="string">String</option>
           <option value="number">Number</option>
           <option value="boolean">Boolean</option>
@@ -25,8 +25,9 @@
           v-model="editValue"
           type="text"
           class="edit-input"
+          :aria-label="`${node.path} 的字符串值`"
           @keydown.enter="save"
-          @keydown.esc="cancel"
+          @keydown.esc.stop.prevent="cancel"
         />
         <input
           v-else-if="editType === 'number'"
@@ -34,24 +35,26 @@
           v-model.number="editValue"
           type="number"
           class="edit-input"
+          :aria-label="`${node.path} 的数字值`"
           @keydown.enter="save"
-          @keydown.esc="cancel"
+          @keydown.esc.stop.prevent="cancel"
         />
         <select
           v-else-if="editType === 'boolean'"
           ref="inputRef"
           v-model="editValue"
           class="edit-input"
+          :aria-label="`${node.path} 的布尔值`"
           @keydown.enter="save"
-          @keydown.esc="cancel"
+          @keydown.esc.stop.prevent="cancel"
         >
           <option :value="true">true</option>
           <option :value="false">false</option>
         </select>
         <span v-else class="null-value">null</span>
 
-        <button class="btn-action save" title="保存" @click="save">✓</button>
-        <button class="btn-action cancel" title="取消" @click="cancel">✗</button>
+        <button type="button" class="btn-action save" :aria-label="`将 ${node.path} 的编辑应用到草稿`" title="应用到草稿" @click="save">✓</button>
+        <button type="button" class="btn-action cancel" :aria-label="`取消编辑 ${node.path}`" title="取消编辑" @click="cancel">✗</button>
       </div>
 
       <!-- 值 / 折叠预览 -->
@@ -68,14 +71,16 @@
       <div v-if="!isEditing" class="actions">
         <button
           v-if="!node.isLeaf"
+          type="button"
           class="btn-action"
+          :aria-label="`为 ${node.path} 添加子节点`"
           title="添加子节点"
           @click="emit('addChild', { path: node.path, isObject: !Array.isArray(node.value) })"
         >
           +
         </button>
-        <button class="btn-action" title="编辑值" @click="startEdit">✎</button>
-        <button class="btn-action danger" title="删除节点" @click="emit('removeNode', node.path)">🗑</button>
+        <button v-if="node.isLeaf" ref="editButtonRef" type="button" class="btn-action" :aria-label="`编辑 ${node.path}`" title="编辑值" @click="startEdit">✎</button>
+        <button type="button" class="btn-action danger" :aria-label="`删除 ${node.path}`" title="删除节点" @click="emit('removeNode', node.path)">🗑</button>
       </div>
     </div>
 
@@ -118,7 +123,8 @@ const emit = defineEmits<{
   (e: 'removeNode', path: string): void;
 }>();
 
-const inputRef = ref<HTMLInputElement | null>(null);
+const inputRef = ref<HTMLInputElement | HTMLSelectElement | null>(null);
+const editButtonRef = ref<HTMLButtonElement | null>(null);
 const isEditing = computed(() => props.node.path === props.editingNodePath);
 
 const editType = ref('string');
@@ -160,6 +166,7 @@ function onDoubleClick() {
 
 function cancel() {
   emit('cancelEdit');
+  nextTick(() => editButtonRef.value?.focus());
 }
 
 function save() {
@@ -172,13 +179,14 @@ function save() {
   // number 类型由 v-model.number 自动转换
 
   emit('saveEdit', { path: props.node.path, value: finalValue });
+  nextTick(() => editButtonRef.value?.focus());
 }
 
 watch(isEditing, isNowEditing => {
   if (isNowEditing) {
     nextTick(() => {
       inputRef.value?.focus();
-      inputRef.value?.select();
+      if (inputRef.value?.tagName === 'INPUT') (inputRef.value as HTMLInputElement).select();
     });
   }
 });
@@ -207,10 +215,15 @@ watch(isEditing, isNowEditing => {
 
 .arrow {
   cursor: pointer;
-  width: 16px;
+  width: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: 1px solid var(--mvu-control-line, #7c8ca3);
+  background: var(--mvu-panel, white);
   text-align: center;
   font-size: 10px;
-  color: #94a3b8;
+  color: var(--mvu-muted, #53637b);
   transition: transform 0.2s;
   &.expanded {
     transform: rotate(90deg);
@@ -229,7 +242,7 @@ watch(isEditing, isNowEditing => {
 .value {
   cursor: pointer;
   &.type-string {
-    color: #059669;
+    color: var(--mvu-success, #14734d);
   }
   &.type-number {
     color: #dc2626;
@@ -244,7 +257,7 @@ watch(isEditing, isNowEditing => {
 }
 
 .preview {
-  color: #94a3b8;
+  color: var(--mvu-muted, #53637b);
   font-style: italic;
 }
 
@@ -258,7 +271,7 @@ watch(isEditing, isNowEditing => {
 .edit-input {
   padding: 2px 6px;
   font-size: 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--mvu-control-line, #7c8ca3);
   border-radius: 4px;
   background-color: #fff !important;
   color: #1e293b !important;
@@ -279,6 +292,8 @@ watch(isEditing, isNowEditing => {
   opacity: 0; // 默认隐藏
   transition: opacity 0.2s;
 }
+.line:focus-within .actions { opacity: 1; }
+@media (pointer: coarse) { .actions { opacity: 1; } }
 
 .btn-action {
   border: none;
@@ -301,7 +316,7 @@ watch(isEditing, isNowEditing => {
     color: #ef4444;
   }
   &.save {
-    color: #10b981;
+    color: var(--mvu-success, #14734d);
   }
   &.cancel {
     color: #ef4444;
@@ -322,7 +337,7 @@ watch(isEditing, isNowEditing => {
   }
 
   .arrow {
-    color: #94a3b8;
+    color: var(--mvu-muted, #53637b);
 
     &.expanded {
       color: #cbd5e1;
@@ -356,7 +371,7 @@ watch(isEditing, isNowEditing => {
   .edit-input {
     background-color: #374151 !important;
     color: #e2e8f0 !important;
-    border-color: #4b5563;
+    border-color: var(--mvu-control-line, #8393ab);
   }
 
   .edit-select option {

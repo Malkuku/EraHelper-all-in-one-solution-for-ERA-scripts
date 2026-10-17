@@ -43,8 +43,8 @@ const tokenFetch = async (url, init) => {
 };
 async function main() {
   assert.equal(TaskSchema.parse({ ...task('A'), historyDepth: 0, scan: { depth: 0 } }).historyDepth, 0);
-  assert.throws(() => TaskSchema.parse({ ...task('A'), eventName: 'loop:result' }));
-  assert.throws(() => ConfigSchema.parse({ ...settings, connections: [{ ...settings.connections[0], baseUrl: 'https://user:password@host.invalid' }] }));
+  assert.equal(TaskSchema.parse({ ...task('A'), eventName: 'loop:result' }).eventName, 'loop:result', 'unfinished event is editable; execution owns validity');
+  assert.equal(ConfigSchema.parse({ ...settings, connections: [{ ...settings.connections[0], baseUrl: 'https://user:password@host.invalid' }] }).connections[0].baseUrl, 'https://user:password@host.invalid');
   let pending = [];
   const sent = [];
   global.fetch = async (input, init) => {
@@ -100,8 +100,47 @@ async function main() {
   const renderer = new TaskTemplate(c); await renderer.initialize();
   assert.equal(await renderer.render('<%= getpreset("main") %>'), 'PRESET_A');
   await independentGenerationChecks();
+  await editableConfigurationChecks();
   await generationErrorChecks();
   console.log('PASS: generation boundary and independent isolation, cancellation, positions, template phases, budgets and native preservation checks');
+}
+
+async function editableConfigurationChecks() {
+  const priorFetch = global.fetch;
+  const currentIdentity = { chatKey: JSON.stringify(['chat-1', '', 'Char.png']), chatId: 'chat-1', messageId: 0, swipeId: 0, raw: host.chat[0] };
+  let httpCalls = 0;
+  global.fetch = async () => { httpCalls++; throw new Error('unfinished configuration must fail before HTTP'); };
+  const cases = [
+    ['missing API', value => { value.tasks[0].connectionId = ''; }],
+    ['dangling API', value => { value.tasks[0].connectionId = 'absent'; }],
+    ['empty model', value => { value.connections[0].model = ''; }],
+    ['empty address', value => { value.connections[0].baseUrl = ''; }],
+    ['invalid address', value => { value.connections[0].baseUrl = 'bad-address'; }],
+    ['embedded URL credentials', value => { value.connections[0].baseUrl = 'https://user:password@host.invalid'; }],
+    ['missing preset', value => { value.connections[0].presetId = null; }],
+    ['dangling preset', value => { value.connections[0].presetId = 'absent'; }],
+    ['unfinished preset budget', value => { value.presets[0].raw.openai_max_context = 0; }],
+    ['invalid task regex', value => { value.tasks[0].regexRules = [{ id: 'bad', stage: 'response', pattern: '[', flags: '', replacement: '', enabled: true }]; }],
+    ['invalid regex flags', value => { value.tasks[0].regexRules = [{ id: 'bad', stage: 'prompt', pattern: 'x', flags: 'gg', replacement: '', enabled: true }]; }],
+    ['invalid candidate regex', value => { value.tasks[0].candidateBooks[0].nameRegexes = [{ pattern: '[', flags: '' }]; }],
+    ['invalid extraction regex', value => { value.tasks[0].output = { mode: 'write', writes: [{ id: 'write', target: { kind: 'message' }, extract: [{ pattern: '[', flags: '' }], operation: { kind: 'append' } }] }; }],
+    ['unfinished output', value => { value.tasks[0].output = { mode: 'write', writes: [] }; }],
+  ];
+  try {
+    for (const [label, mutate] of cases) {
+      const value = structuredClone(settings); mutate(value);
+      const editable = ConfigSchema.parse(value);
+      await assert.rejects(() => createGenerationContext(label, editable.tasks[0], editable, currentIdentity, new AbortController(), '', { sticky: {}, cooldown: {} }), error => error.phase === 'prepare' && typeof error.code === 'string' && error.message.length > 0, label);
+      assert.equal(httpCalls, 0, `${label}: zero HTTP includes tokenizer requests`);
+    }
+    const value = structuredClone(settings);
+    value.tasks.push(TaskSchema.parse({ ...task('unused'), connectionId: '', regexRules: [{ id: 'bad', stage: 'response', pattern: '[', flags: 'gg', replacement: '', enabled: true }] }));
+    value.connections.push({ id: 'unused', name: '', comment: '', baseUrl: '', model: '', presetId: null, secretRef: 'unused' });
+    value.presets.push({ id: 'unused', name: '', raw: {} });
+    const context = await createGenerationContext('unrelated', value.tasks[0], ConfigSchema.parse(value), currentIdentity, new AbortController(), '', { sticky: {}, cooldown: {} });
+    assert.equal(context.connection.model, 'A', 'idle unfinished resources cannot block a healthy task');
+    console.log('PASS: 14 unfinished configuration cases save structurally but fail prepare before any HTTP; idle broken resources do not block healthy preparation');
+  } finally { global.fetch = priorFetch; }
 }
 
 // Independently derived from A1-A5: reuse the canonical runner and add missing failure/position assertions.

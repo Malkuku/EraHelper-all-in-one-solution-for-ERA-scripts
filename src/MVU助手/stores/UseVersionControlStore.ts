@@ -1,332 +1,186 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
-import { useEraEditStore } from './EraEditStore';
-import { eraLogger } from '../utils/MvuHelperLogger';
-import _ from 'lodash';
-import { WorldInfoUtil } from '@/Utils/WorldInfoUtil';
-import { MvuUtil } from '@/Utils/MvuUtil';
+import { ref, shallowRef } from 'vue';
+import { cloneDeep, get, isEqual, isPlainObject } from 'lodash';
+import { captureEditTarget, assertEditBaseline, saveEditTarget, type MvuEditTarget } from '../utils/MvuEditTarget';
 
-// 类型定义
-interface UpdateBlock {
-  version: number;
-  type: 'del' | 'edit';
-  content: any;
-}
-
+interface UpdateBlock { version: number; type: 'del' | 'edit'; content: Record<string, any> }
+export interface VersionChange { path: string[]; kind: 'added' | 'deleted' | 'updated'; before?: unknown; after?: unknown }
 interface VersionDiff {
-  added: Record<string, any>;
-  deleted: Record<string, any>;
-  updated: Record<string, any>;
   finalData: Record<string, any>;
-  diff?: {
-    added: Record<string, any>;
-    deleted: Record<string, any>;
-    updated: Record<string, any>;
-  }
+  changes: VersionChange[];
+  target: MvuEditTarget;
+  source: { bookName: string; loreName: string; content: string };
+  fromVersion: number;
+  toVersion: number;
 }
-
-interface VersionSettings {
-  enable: boolean;
-  lore_name: string;
-}
+const describe = (cause: unknown) => cause instanceof Error ? cause.message : String(cause);
 
 // eslint-disable-next-line pinia/prefer-use-store-naming-convention
 export const UseVersionControlStore = defineStore('EraVersionControl', () => {
-  const eraEditStore = useEraEditStore();
-
-  // 持久化配置
-  const settings = ref<VersionSettings>({
-    enable: false,
-    lore_name: ''
-  });
-
-  const currentVersion = ref<number>(0);
-  const targetVersion = ref<number>(0);
+  const settings = ref({ enable: false, lore_name: '' });
+  const settingsError = ref('');
+  const settingsOperation = ref<'read' | 'save'>('read');
+  const currentVersion = ref(0);
+  const targetVersion = ref(0);
   const availableUpdates = ref<UpdateBlock[]>([]);
   const updateLogs = ref<string[]>([]);
+  const checkError = ref('');
+  const previewDiff = shallowRef<VersionDiff | null>(null);
+  let source: VersionDiff['source'] | null = null;
 
-  // 预览数据
-  const previewDiff = ref<VersionDiff | null>(null);
-
-  // --- 持久化逻辑 ---
-
-  const loadSettings = async () => {
+  async function loadSettings() {
+    settingsOperation.value = 'read';
+    settingsError.value = '';
     try {
-      const variables = getVariables({ type: 'script', script_id: getScriptId() });
-      const rule = variables.era_data_rule?.version_control;
-
-      if (rule) {
-        settings.value = {
-          enable: rule.enable ?? false,
-          lore_name: rule.lore_name || ''
-        };
-      }
-      eraLogger.log('版本控制配置已加载:', settings.value);
-    } catch (e) {
-      eraLogger.error('加载版本控制配置失败:', e);
+      const rule = getVariables({ type: 'script', script_id: getScriptId() }).era_data_rule?.version_control;
+      settings.value = { enable: rule?.enable ?? false, lore_name: rule?.lore_name || '' };
+    } catch (cause) {
+      settingsError.value = `无法读取版本设置：${describe(cause)}。请重试。`;
     }
-  };
-
-  const saveSettings = async () => {
+  }
+  async function saveSettings() {
+    settingsOperation.value = 'save';
+    settingsError.value = '';
     try {
-      const saveContent = JSON.parse(JSON.stringify(settings.value));
-      updateVariablesWith(
-        vars => {
-          const existing = vars.era_data_rule || {};
-          return {
-            ...vars,
-            era_data_rule: {
-              ...existing,
-              version_control: saveContent
-            }
-          };
-        },
-        { type: 'script', script_id: getScriptId() }
-      );
-      eraLogger.log('版本控制配置已保存');
-    } catch (e) {
-      eraLogger.error('保存版本控制配置失败:', e);
+      const saved = cloneDeep(settings.value);
+      await updateVariablesWith(vars => ({ ...vars, era_data_rule: { ...vars.era_data_rule, version_control: saved } }),
+        { type: 'script', script_id: getScriptId() });
+    } catch (cause) {
+      settingsError.value = `版本设置保存失败：${describe(cause)}。请重试。`;
+      throw new Error(settingsError.value);
     }
-  };
-
-  // --- 核心逻辑 ---
-
-  const fetchCurrentVersion = async () => {
-    const data = await eraEditStore.getStatData();
-    const ver = _.get(data, 'system.当前版本');
-
-    if (ver === undefined || ver === null) {
-      currentVersion.value = 0;
-    } else {
-      currentVersion.value = Number(ver);
-    }
+  }
+  function versionOf(data: Record<string, any>) {
+    const raw = get(data, 'system.当前版本');
+    const version = raw === undefined || raw === null ? 0 : Number(raw);
+    if (!Number.isFinite(version)) throw new Error('当前数据的 system.当前版本 不是有效数值，无法判断更新范围。');
+    return version;
+  }
+  async function fetchCurrentVersion() {
+    currentVersion.value = versionOf((await captureEditTarget()).baseline);
     return currentVersion.value;
-  };
-
-  const parseUpdateRules = async (bookName: string, loreName: string) => {
-    if (!bookName || !loreName) return;
-
-    const content = await WorldInfoUtil.getWorldBookLoreContent(bookName, loreName);
-    if (!content) {
-      eraLogger.error('未找到版本更新条目');
-      availableUpdates.value = [];
-      targetVersion.value = currentVersion.value;
-      return;
-    }
-
-    const regex = /<(del|edit)\|v="([^"]+)">([\s\S]*?)<\/\1>/g;
-    const matches = [...content.matchAll(regex)];
-
-    const updates: UpdateBlock[] = [];
-
-    for (const match of matches) {
-      try {
-        const type = match[1] as 'del' | 'edit';
-        const version = parseFloat(match[2]);
-        const jsonStr = match[3];
-        const jsonContent = JSON.parse(jsonStr);
-
-        updates.push({
-          version,
-          type,
-          content: jsonContent
-        });
-      } catch (e) {
-        eraLogger.error(`解析版本 ${match[2]} 失败:`, e);
-      }
-    }
-
-    availableUpdates.value = updates.sort((a, b) => a.version - b.version);
-
-    if (availableUpdates.value.length > 0) {
-      targetVersion.value = availableUpdates.value[availableUpdates.value.length - 1].version;
-    } else {
-      targetVersion.value = currentVersion.value;
-    }
-  };
-
-  const checkAndNotify = async (bookName: string) => {
-    if (!settings.value.enable || !settings.value.lore_name || !bookName) return;
-
-    await fetchCurrentVersion();
-    await parseUpdateRules(bookName, settings.value.lore_name);
-
-    if (targetVersion.value > currentVersion.value) {
-      const msg = `发现新版本 v${targetVersion.value} (当前: v${currentVersion.value})，请前往ERA助手版本更新页面查看。`;
-      eraLogger.info(msg);
-      toastr.success(msg, '版本更新');
-    }
-  };
-
-  // --- Diff 计算逻辑 ---
-
-  const applyDelete = (target: any, rule: any) => {
-    if (!target || typeof target !== 'object') return;
-    for (const key in rule) {
-      if (key === '$all') {
-        const subRule = rule['$all'];
-        for (const targetKey in target) {
-          applyDelete(target[targetKey], subRule);
-        }
-      } else if (rule[key] && Object.keys(rule[key]).length > 0) {
-        if (target[key]) applyDelete(target[key], rule[key]);
-      } else {
-        delete target[key];
-      }
-    }
-  };
-
-  const applyEdit = (target: any, rule: any) => {
-    // 确保 target 和 rule 都是对象
-    if (!target || typeof target !== 'object' || !rule || typeof rule !== 'object') return;
-
-    for (const key in rule) {
-      if (key === '$all') {
-        const subRule = rule['$all'];
-        // 遍历 target 中的所有 key，将 subRule 应用到每一个子对象上
-        for (const targetKey in target) {
-          // 确保子节点是对象才能继续深度编辑
-          if (target[targetKey] && typeof target[targetKey] === 'object') {
-            applyEdit(target[targetKey], subRule);
-          }
-        }
-      } else {
-        const srcValue = rule[key];
-
-        // 如果 rule 中的值是纯对象，则进行深度递归合并
-        if (_.isPlainObject(srcValue)) {
-          // 如果 target 中没有这个 key，或者它不是一个纯对象，则初始化为空对象
-          if (!target[key] || !_.isPlainObject(target[key])) {
-            target[key] = {};
-          }
-          applyEdit(target[key], srcValue);
-        } else {
-          // 如果是数组或基本数据类型（字符串、数字、布尔等），直接覆盖
-          // 这保留了你原代码中“数组实现覆盖而非合并”的逻辑
-          target[key] = srcValue;
-        }
-      }
-    }
-  };
-
-  /**
-   * 深度比较两个对象，生成 added, deleted, updated
-   * 修正了删除逻辑：删除时赋值为 null 而不是 oldVal，防止 DeleteByObject 错误递归
-   */
-  const compareObjects = (oldObj: any, newObj: any) => {
-    const added: any = {};
-    const deleted: any = {};
-    const updated: any = {};
-
-    const allKeys = new Set([...Object.keys(oldObj || {}), ...Object.keys(newObj || {})]);
-
-    for (const key of allKeys) {
-      const oldVal = oldObj ? oldObj[key] : undefined;
-      const newVal = newObj ? newObj[key] : undefined;
-
-      // 1. 存在于旧的，不存在于新的 -> 删除
-      if (oldVal !== undefined && newVal === undefined) {
-        // 【修正点】这里必须赋值为 null (或者不为对象的真值)，
-        // 告诉 DeleteByObject 这是一个叶子节点，直接删除该 Key。
-        // 如果赋值为 oldVal 且 oldVal 是对象，DeleteByObject 会递归进去删除子属性，导致父对象残留。
-        deleted[key] = null;
-      }
-      // 2. 不存在于旧的，存在于新的 -> 新增
-      else if (oldVal === undefined && newVal !== undefined) {
-        added[key] = newVal;
-      }
-      // 3. 两者都存在 -> 比较
-      else if (oldVal !== undefined && newVal !== undefined) {
-        // 如果是纯对象，递归比较
-        if (_.isPlainObject(oldVal) && _.isPlainObject(newVal)) {
-          const subDiff = compareObjects(oldVal, newVal);
-
-          if (!_.isEmpty(subDiff.added)) added[key] = subDiff.added;
-          if (!_.isEmpty(subDiff.deleted)) deleted[key] = subDiff.deleted;
-          if (!_.isEmpty(subDiff.updated)) updated[key] = subDiff.updated;
-        }
-        // 否则直接比较值
-        else if (!_.isEqual(oldVal, newVal)) {
-          updated[key] = newVal;
-        }
-      }
-    }
-
-    return { added, deleted, updated };
-  };
-
-  const calculateUpdate = async () => {
-    updateLogs.value = [];
-    const originalData = await eraEditStore.getStatData();
-    const workingData = _.cloneDeep(originalData);
-
-    const pendingUpdates = availableUpdates.value.filter(u => u.version > currentVersion.value);
-
-    if (pendingUpdates.length === 0) {
-      updateLogs.value.push("当前已是最新版本，无需更新。");
-      previewDiff.value = null;
-      return;
-    }
-
-    // 1. 应用所有更新到 workingData
-    for (const update of pendingUpdates) {
-      updateLogs.value.push(`应用版本 v${update.version} [${update.type}]...`);
-      if (update.type === 'del') {
-        applyDelete(workingData, update.content);
-      } else {
-        applyEdit(workingData, update.content);
-      }
-    }
-
-    if (!workingData.system) workingData.system = {};
-    workingData.system['当前版本'] = targetVersion.value;
-
-    // 2. 对比 originalData 和 workingData 生成 Diff
-    updateLogs.value.push("正在计算差异...");
-    const diffResult = compareObjects(originalData, workingData);
-
-    previewDiff.value = {
-      added: diffResult.added,
-      deleted: diffResult.deleted,
-      updated: diffResult.updated,
-      finalData: workingData,
-      diff: diffResult
-    };
-
-    updateLogs.value.push(`计算完成。目标版本: ${targetVersion.value}`);
-  };
-
-  const executeFullUpdate = async () => {
-    if (!previewDiff.value) return;
-
-    // 直接提取计算好的完整最终数据
-    const { finalData } = previewDiff.value;
-    eraLogger.log('开始执行全量覆盖更新...');
-
+  }
+  async function readSource(bookName: string, loreName: string) {
+    if (!bookName || !loreName) throw new Error('请选择包含版本记录的世界书条目。');
+    const entries = (await getWorldbook(bookName)).filter(entry => entry.name === loreName);
+    if (entries.length !== 1) throw new Error(entries.length ? '版本记录存在重名条目，请先在世界书中改为唯一名称。' : '找不到版本记录条目，请刷新来源后重新选择。');
+    if (!entries[0].content.trim()) throw new Error('版本记录条目为空，无法检查更新。');
+    return entries[0].content;
+  }
+  async function parseUpdateRules(bookName: string, loreName: string) {
+    checkError.value = '';
+    availableUpdates.value = [];
+    source = null;
     try {
-      await MvuUtil.updateMvuDataByObj(finalData);
-      currentVersion.value = targetVersion.value;
-      previewDiff.value = null;
-      toastr.success(`已成功更新至版本 v${targetVersion.value}`);
-
-    } catch (e) {
-      eraLogger.error('更新过程中发生错误:', e);
-      toastr.error('更新失败，请查看控制台日志');
+      const content = await readSource(bookName, loreName);
+      const regex = /<(del|edit)\|v="([^"]+)">([\s\S]*?)<\/\1>/g;
+      const matches = [...content.matchAll(regex)];
+      if (!matches.length) throw new Error('条目中没有有效更新块，应使用 <edit|v="版本号">JSON</edit> 或 del 格式。');
+      if (/<(?:del|edit)\|/.test(content.replace(regex, ''))) throw new Error('存在格式损坏或未闭合的更新块，请修正条目后重试。');
+      const parsed = matches.map(match => {
+        const version = Number(match[2]);
+        if (!match[2].trim() || !Number.isFinite(version)) throw new Error(`版本号“${match[2]}”无效。`);
+        let block: unknown;
+        try { block = JSON.parse(match[3]); } catch (cause) { throw new Error(`版本 ${match[2]} 的 JSON 损坏：${describe(cause)}`); }
+        if (!isPlainObject(block)) throw new Error(`版本 ${match[2]} 的更新内容必须是 JSON 对象。`);
+        return { version, type: match[1] as 'del' | 'edit', content: block as Record<string, any> };
+      }).sort((a, b) => a.version - b.version);
+      availableUpdates.value = parsed;
+      targetVersion.value = Math.max(currentVersion.value, ...parsed.map(block => block.version));
+      source = { bookName, loreName, content };
+    } catch (cause) {
+      checkError.value = `检查失败：${describe(cause)}`;
+      updateLogs.value = [checkError.value];
+      throw new Error(checkError.value);
     }
-  };
-
-  return {
-    settings,
-    currentVersion,
-    targetVersion,
-    updateLogs,
-    previewDiff,
-    loadSettings,
-    saveSettings,
-    fetchCurrentVersion,
-    parseUpdateRules,
-    calculateUpdate,
-    executeFullUpdate,
-    checkAndNotify
-  };
+  }
+  async function checkAndNotify(bookName: string) {
+    if (!settings.value.enable || !settings.value.lore_name || !bookName) return;
+    try {
+      await fetchCurrentVersion();
+      await parseUpdateRules(bookName, settings.value.lore_name);
+      if (targetVersion.value > currentVersion.value) toastr.info(`发现变量更新 v${targetVersion.value}，请前往 MVU 助手的变量更新页面查看。`);
+    } catch (cause) {
+      checkError.value = describe(cause);
+      toastr.error(checkError.value, '变量更新检查失败');
+    }
+  }
+  function applyDelete(target: any, rule: any) {
+    if (!target || typeof target !== 'object' || !rule || typeof rule !== 'object') return;
+    for (const key of Object.keys(rule)) {
+      if (key === '$all') Object.keys(target).forEach(child => applyDelete(target[child], rule[key]));
+      else if (rule[key] && Object.keys(rule[key]).length > 0) {
+        if (Object.hasOwn(target, key) && target[key]) applyDelete(target[key], rule[key]);
+      } else delete target[key];
+    }
+  }
+  function applyEdit(target: any, rule: any) {
+    if (!target || typeof target !== 'object' || !isPlainObject(rule)) return;
+    for (const key of Object.keys(rule)) {
+      // JSON may contain these names; defining them must not mutate an object's prototype.
+      if (key === '$all') Object.keys(target).forEach(child => { if (target[child] && typeof target[child] === 'object') applyEdit(target[child], rule[key]); });
+      else if (isPlainObject(rule[key])) {
+        if (!Object.hasOwn(target, key) || !isPlainObject(target[key])) Object.defineProperty(target, key, { value: {}, enumerable: true, configurable: true, writable: true });
+        applyEdit(target[key], rule[key]);
+      } else Object.defineProperty(target, key, { value: cloneDeep(rule[key]), enumerable: true, configurable: true, writable: true });
+    }
+  }
+  function changesOf(before: Record<string, any>, after: Record<string, any>, path: string[] = []): VersionChange[] {
+    const changes: VersionChange[] = [];
+    for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
+      const nextPath = [...path, key];
+      if (!Object.hasOwn(before, key)) changes.push({ path: nextPath, kind: 'added', after: cloneDeep(after[key]) });
+      else if (!Object.hasOwn(after, key)) changes.push({ path: nextPath, kind: 'deleted', before: cloneDeep(before[key]) });
+      else if (isPlainObject(before[key]) && isPlainObject(after[key])) changes.push(...changesOf(before[key], after[key], nextPath));
+      else if (!isEqual(before[key], after[key])) changes.push({ path: nextPath, kind: 'updated', before: cloneDeep(before[key]), after: cloneDeep(after[key]) });
+    }
+    return changes;
+  }
+  async function calculateUpdate(boundTarget?: MvuEditTarget) {
+    if (!source || checkError.value) throw new Error('请先成功检查版本记录。');
+    const checkedSource = source;
+    const blocks = cloneDeep(availableUpdates.value);
+    const target = boundTarget ?? await captureEditTarget();
+    assertEditBaseline(target);
+    if (checkedSource !== source) throw new Error('检查来源已变化，请重新检查更新。');
+    const fromVersion = versionOf(target.baseline);
+    currentVersion.value = fromVersion;
+    const pending = blocks.filter(block => block.version > fromVersion);
+    updateLogs.value = [];
+    if (!pending.length) {
+      targetVersion.value = fromVersion;
+      previewDiff.value = null;
+      updateLogs.value = ['检查完成，当前已是最新版本。'];
+      return;
+    }
+    const finalData = cloneDeep(target.baseline);
+    for (const update of pending) {
+      updateLogs.value.push(`应用 v${update.version} · ${update.type === 'del' ? '删除' : '合并'}`);
+      if (update.type === 'del') applyDelete(finalData, update.content);
+      else applyEdit(finalData, update.content);
+    }
+    const toVersion = pending[pending.length - 1].version;
+    if (!isPlainObject(finalData.system)) finalData.system = {};
+    finalData.system['当前版本'] = toVersion;
+    targetVersion.value = toVersion;
+    previewDiff.value = { finalData, changes: changesOf(target.baseline, finalData), target, source: { ...checkedSource }, fromVersion, toVersion };
+  }
+  async function executeFullUpdate() {
+    const preview = previewDiff.value;
+    if (!preview) throw new Error('没有可执行的预览，请先检查更新。');
+    if (checkError.value) throw new Error('版本来源检查失败，请成功重新检查后再更新。');
+    await waitGlobalInitialized('Mvu');
+    assertEditBaseline(preview.target);
+    const content = await readSource(preview.source.bookName, preview.source.loreName);
+    assertEditBaseline(preview.target);
+    if (content !== preview.source.content) throw new Error('版本记录已变化，旧预览已停止执行。请重新检查更新。');
+    const savedTarget = await saveEditTarget(preview.target, preview.finalData);
+    currentVersion.value = preview.toVersion;
+    targetVersion.value = preview.toVersion;
+    previewDiff.value = null;
+    updateLogs.value = [`已成功更新至 v${preview.toVersion}。`];
+    return savedTarget;
+  }
+  return { settings, settingsError, settingsOperation, currentVersion, targetVersion, updateLogs, checkError, previewDiff,
+    loadSettings, saveSettings, fetchCurrentVersion, parseUpdateRules, calculateUpdate, executeFullUpdate, checkAndNotify };
 });
