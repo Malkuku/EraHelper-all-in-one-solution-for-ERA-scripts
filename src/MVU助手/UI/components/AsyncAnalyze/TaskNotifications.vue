@@ -8,8 +8,16 @@
       aria-label="任务状态通知"
       popover="manual"
     >
-      <section v-for="notice in taskNotices.values()" :key="notice.runId" :class="notice.level">
-        <details class="notice-details">
+      <section
+        v-for="notice in taskNotices.values()"
+        :key="notice.runId"
+        :class="notice.level"
+        @mouseenter="hoveredRunId = notice.runId"
+        @mouseleave="hoveredRunId = null"
+        @focusin="focusedRunId = notice.runId"
+        @focusout="leaveFocus"
+      >
+        <details class="notice-details" @toggle="toggleDetails(notice.runId, $event)">
           <summary class="notice-heading">
             <strong role="status" aria-live="polite"
               ><span v-if="notice.running" class="spinner" aria-hidden="true" />{{ notice.title }}</strong
@@ -34,12 +42,37 @@
   </Teleport>
 </template>
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, watchEffect } from 'vue';
 import { taskNotices } from '../../../AsyncAnalyze/TaskDiagnostics';
 import { cancelTaskRun } from '../../../AsyncAnalyze/TaskRuntime';
 import RunLog from './RunLog.vue';
 const anchor = ref<HTMLElement | null>(null);
 const panel = ref<HTMLElement | null>(null);
+const hoveredRunId = ref<string | null>(null);
+const focusedRunId = ref<string | null>(null);
+const expanded = ref(new Set<string>());
+function toggleDetails(runId: string, event: Event) {
+  if ((event.target as HTMLDetailsElement).open) expanded.value.add(runId);
+  else expanded.value.delete(runId);
+}
+function leaveFocus(event: FocusEvent) {
+  if (!(event.currentTarget as HTMLElement).contains(event.relatedTarget as Node | null)) focusedRunId.value = null;
+}
+watchEffect(onCleanup => {
+  const timers: ReturnType<typeof setTimeout>[] = [];
+  for (const notice of taskNotices.values()) {
+    if (
+      notice.running ||
+      notice.level !== 'success' ||
+      expanded.value.has(notice.runId) ||
+      hoveredRunId.value === notice.runId ||
+      focusedRunId.value === notice.runId
+    )
+      continue;
+    timers.push(setTimeout(() => taskNotices.delete(notice.runId), 3000));
+  }
+  onCleanup(() => timers.forEach(clearTimeout));
+});
 watch(
   panel,
   element => {
@@ -51,7 +84,8 @@ watch(
 <style scoped>
 .mvu-task-notifications {
   position: fixed;
-  inset: auto 16px 16px auto;
+  inset: 16px auto auto 50%;
+  transform: translateX(-50%);
   margin: 0;
   width: min(420px, calc(100vw - 32px));
   max-height: calc(100dvh - 32px);
