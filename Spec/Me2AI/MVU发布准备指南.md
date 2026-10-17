@@ -33,11 +33,13 @@ pnpm release:prepare
 
 ## GitHub 手动准备
 
-工作流文件为 `.github/workflows/prepare-mvu-release.yaml`。GitHub 要求手动工作流先存在于默认分支；目前默认分支为 `master-erahelper`，仅推送当前功能分支不会自动提供运行入口。需后续单独将工作流及所需调整接入默认分支，不要为此直接强制推送或替换默认分支。
+工作流文件为 `.github/workflows/prepare-mvu-release.yaml`，已通过[最小接入 PR #1](https://github.com/Malkuku/EraHelper-all-in-one-solution-for-ERA-scripts/pull/1) 接入默认分支 `master-erahelper`。默认分支仅增加工作流并取消旧自动标签，不包含2.0业务源码。
 
 接入后，在 GitHub 仓库 Actions 中选择 `Prepare MVU release candidate`，保留工作流所在的默认分支，在 `source_ref` 填写要打包的源码分支、标签或完整提交号（默认 `feature-erahelper-mvu`），再点击 Run workflow。源码必须包含发布工具、版本资料和测试；默认分支仅提供运行入口，不会因此变成2.0源码。
 
 流程会运行测试、生产构建和打包，完成后可在本次运行的 Artifacts 下载版本对应的候选包。包名中的 SHA 来自实际检出的源码，与候选 release.json 的 sourceSha 一致。Artifact 是本次 Actions 的下载文件，不是永久版本链接或 CDN 来源。
+
+[首次成功运行与候选下载](https://github.com/Malkuku/EraHelper-all-in-one-solution-for-ERA-scripts/actions/runs/39038446997) 已完成云端验证；本次源码为 `f95b14b3bbb92e0513457ba2f04e9e322eefd849`，包内无未提交修改，文件摘要已核对。
 
 ## 核对和现场测试
 
