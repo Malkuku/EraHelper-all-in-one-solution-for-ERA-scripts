@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useUiStore } from '@/MVU助手/stores/UIStore';
+import release from '../../release.json';
 
 const uiStore = useUiStore();
 
 // 当前版本号
-const currentVersion = ref('v2.0.0');
+const currentVersion = `v${release.version}`;
 
 // 作者信息
 const author = ref({
@@ -16,18 +17,9 @@ const author = ref({
 // 版本更新历史记录
 const versionHistory = ref([
   {
-    version: 'v2.0.0',
-    date: '2026-10-17',
-    changes: [
-      '重构独立任务生成：任务独立组装提示词，同组任务可并发执行，不切换酒馆主聊天的预设与连接',
-      'API 配置绑定预设，支持多个链接分别保存地址、模型与本地密钥，并提供连接检测与模型选择',
-      '重整任务工作台，支持保存未完成配置、解除资源引用、世界书选择与正则预览',
-      '完善事件触发、单任务测试与结果广播，提供可复制的前端联动规则',
-      '新增常驻任务状态通知与过程日志，运行记录展示请求错误、数据写入影响及回滚残留',
-      '增强变量编辑的草稿保留、导入导出、目标校验及并发提交保护',
-      '统一浅色与深色主题，调整窄屏布局、字段提示及键盘交互',
-      '移除角色数据版本更新，角色卡自行负责数据迁移；助手脚本自更新方案待定',
-    ],
+    version: currentVersion,
+    date: release.date,
+    changes: release.changes,
   },
   {
     version: 'v1.1.0',

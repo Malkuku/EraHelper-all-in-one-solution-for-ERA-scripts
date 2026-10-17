@@ -1,0 +1,51 @@
+name: Prepare MVU release candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: '要验证并打包的源码分支、标签或完整提交号'
+        required: true
+        type: string
+        default: feature-erahelper-mvu
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref }}
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4.1.0
+        with:
+          version: 11
+      - run: pnpm install --frozen-lockfile
+      - name: Verify deterministic contracts
+        run: |
+          node tests/async-tasks/generation.cjs
+          node tests/async-tasks/commit.cjs
+          node tests/async-tasks/runtime.cjs
+          node tests/async-tasks/configuration.cjs
+          node tests/mvu-editing.cjs
+          pnpm test:release
+      - name: Prepare candidate
+        run: pnpm release:prepare
+      - name: Read candidate identity
+        id: candidate
+        run:
+          node --input-type=module -e "import fs from 'node:fs'; const {version, sourceSha} =
+          JSON.parse(fs.readFileSync('dist/mvu-release/release.json', 'utf8'));
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, 'version=' + version + '\nsource_sha=' + sourceSha + '\n');"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mvu-${{ steps.candidate.outputs.version }}-candidate-${{ steps.candidate.outputs.source_sha }}
+          path: dist/mvu-release/
+          if-no-files-found: error

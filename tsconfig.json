@@ -20,6 +20,7 @@
     },
     "moduleDetection": "auto",
     "moduleResolution": "bundler",
+    "resolveJsonModule": true,
     "allowUmdGlobalAccess": true,
     "allowSyntheticDefaultImports": true,
     "strictBindCallApply": true,
