@@ -81,7 +81,7 @@ async function main() {
   assert.equal(store.getSecret('reference-B'), 'PLUGIN_SECRET_B', 'inactive link credentials survive save/reload');
   const v2 = { ...structuredClone(config), schemaVersion: 2, connections: config.connections.map(({ activeLinkId, links, ...api }) => ({ ...api, baseUrl: links[0].baseUrl, model: links[0].model, secretRef: links[0].secretRef })) };
   const upgradedV2 = parseTaskSettings(v2);
-  assert.equal(upgradedV2.schemaVersion, 4);
+  assert.equal(upgradedV2.schemaVersion, 5);
   assert.equal(upgradedV2.connections[0].links[0].secretRef, 'reference-A');
   assert.equal(upgradedV2.connections[0].activeLinkId, upgradedV2.connections[0].links[0].id);
   assert.equal(Object.hasOwn(upgradedV2.connections[0], 'model'), false);
@@ -90,7 +90,7 @@ async function main() {
   for (const mode of ['return', 'event_result']) {
     const v3 = { ...structuredClone(config), schemaVersion: 3, tasks: [{ ...historicalTask, output: { mode } }] };
     const migratedOutput = parseTaskSettings(v3);
-    assert.equal(migratedOutput.schemaVersion, 4);
+    assert.equal(migratedOutput.schemaVersion, 5);
     assert.deepEqual(migratedOutput.tasks[0].output, { writes: [] }, 'old mistaken modes require explicit user selection');
     assert.equal(v3.tasks[0].output.mode, mode, 'migration never mutates source');
   }
@@ -105,6 +105,13 @@ async function main() {
   const oldWrite = { id: 'message', target: { kind: 'message' }, extract: [], operation: { kind: 'append' } };
   const migratedWrite = parseTaskSettings({ ...structuredClone(config), schemaVersion: 3, tasks: [{ ...historicalTask, output: { mode: 'write', writes: [oldWrite] } }] });
   assert.deepEqual(migratedWrite.tasks[0].output, { writes: [oldWrite] });
+  const v4Selection = {
+    ...structuredClone(config), schemaVersion: 4,
+    tasks: [{ ...historicalTask, candidateBooks: [{ bookName: 'book', entryUids: [3, 7], nameRegexes: [] }] }],
+  };
+  const upgradedSelection = parseTaskSettings(v4Selection);
+  assert.equal(upgradedSelection.schemaVersion, 5);
+  assert.deepEqual(upgradedSelection.tasks[0].candidateBooks[0], { bookName: 'book', entryNames: [], nameRegexes: [] }, 'v4 UID selections are dropped; names have to be chosen again');
   const switched = structuredClone(config);
   switched.connections[0].activeLinkId = 'backup';
   await store.replaceSettings(switched); await store.load();
@@ -157,7 +164,7 @@ async function main() {
   await store.load();
   assert.equal(store.configurationError, '');
   const migrated = store.snapshot();
-  assert.equal(migrated.schemaVersion, 4);
+  assert.equal(migrated.schemaVersion, 5);
   assert.equal(migrated.connections.length, 3, 'one API used by two presets must split, retaining unused API');
   assert.equal(new Set(migrated.connections.map(connection => connection.id)).size, 3, 'split IDs cannot collide with existing APIs');
   assert.equal(migrated.connections.find(connection => connection.name === '未使用 API').presetId, null);
@@ -175,7 +182,7 @@ async function main() {
   assert.deepEqual(legacy, original, 'loading migration cannot mutate its input');
   await store.replaceSettings(migrated); await store.load();
   assert.deepEqual(store.snapshot(), migrated, 'v2 binding and upgraded task routing survive persistence/reload');
-  assert.equal(variables.async_task_config.schemaVersion, 4);
+  assert.equal(variables.async_task_config.schemaVersion, 5);
   assert.deepEqual(parseTaskSettings(original), migrated, 'repeated v1 imports preserve deterministic routing');
   assert.throws(() => parseTaskSettings({ ...original, tasks: [{ ...original.tasks[0], presetId: 'absent' }] }), /预设不存在/);
   assert.throws(() => parseTaskSettings({ ...original, tasks: [...original.tasks, { ...original.tasks[0], id: 'dangling', connectionId: 'connection:preset:other-preset:1' }] }), /API.*不存在|连接.*不存在/, 'a dangling v1 reference cannot be captured by a generated split ID');
@@ -251,6 +258,6 @@ async function main() {
   await store.load();
   assert(store.configurationError.includes('无效'));
   assert.deepEqual(variables.unrelated, unrelated);
-  console.log('PASS: v4 output migration, multiple-link credential retention, v1/v2 pair-preserving migration/reload and dangling/duplicate rejection, reusable regex library, scoped plaintext cleanup, secret references/namespaces and explicit corruption errors');
+  console.log('PASS: v3 output and v4 version-only migration, multiple-link credential retention, v1/v2 pair-preserving migration/reload and dangling/duplicate rejection, reusable regex library, scoped plaintext cleanup, secret references/namespaces and explicit corruption errors');
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

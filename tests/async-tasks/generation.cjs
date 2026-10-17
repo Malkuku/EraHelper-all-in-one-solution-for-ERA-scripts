@@ -26,7 +26,7 @@ function preset(label) { return { openai_max_context: 10000, openai_max_tokens: 
   prompt_order: [{ character_id: 100001, order: ['main', 'worldInfoBefore', 'charDescription', 'chatHistory'].map(identifier => ({ identifier, enabled: true })) }],
   extensions: { preserved: { anything: true } } }; }
 function task(label) { return TaskSchema.parse({ id: label, name: label, enabled: true, eventName: 'fixture', historyDepth: 2, prompt: `TASK_${label}`, connectionId: label,
-  candidateBooks: [{ bookName: label, entryUids: [1], nameRegexes: [] }], scan: {}, regexRules: [], output: { writes: [{ id: 'broadcast', target: { kind: 'event' }, extract: [] }] } }); }
+  candidateBooks: [{ bookName: label, entryNames: [label], nameRegexes: [] }], scan: {}, regexRules: [], output: { writes: [{ id: 'broadcast', target: { kind: 'event' }, extract: [] }] } }); }
 function entry(label, override = {}) { return { uid: 1, world: label, comment: label, content: `WORLD_${label}`, key: [], keysecondary: [], disable: true,
   constant: true, selective: true, selectiveLogic: 0, order: 100, position: 0, decorators: [], group: '', probability: 100, useProbability: true,
   hash: 1, ...override }; }
@@ -34,6 +34,7 @@ const host = { chat: [{ mes: 'SHARED_HISTORY', name: 'Player', is_user: true }],
   name1: 'Player', name2: 'Char', chatMetadata: {}, getCurrentChatId: () => 'chat-1', getRequestHeaders: () => ({ 'Content-Type': 'application/json', 'X-CSRF-TOKEN': 'fixture' }), substituteParams: text => text,
   loadWorldInfo: async label => ({ entries: { 1: entry(label) } }) };
 global.window = { parent: { location: { origin: 'https://host.invalid' }, SillyTavern: { getContext: () => host } } };
+global.formatAsTavernRegexedString = text => text; // host regexes pass input through unless a test overrides them
 const identity = { chatKey: JSON.stringify(['chat-1', '', 'Char.png']), chatId: 'chat-1', messageId: 0, swipeId: 0, raw: host.chat[0] };
 const settings = emptySettings();
 for (const label of ['A', 'B']) { settings.tasks.push(task(label)); settings.connections.push({ id: label, name: label, comment: '', activeLinkId: label, links: [{ id: label, name: label, baseUrl: `https://${label}.invalid/v1`, model: label, secretRef: label }], presetId: label }); settings.presets.push({ id: label, name: label, raw: preset(label) }); }
@@ -198,8 +199,9 @@ async function tavernRegexInputChecks() {
       // The native API owns global/preset/character selection, enablement and ordering.
       return `${text}|GLOBAL|CURRENT_PRESET|CHARACTER`;
     };
-    const disabled = await build(task('A'));
-    assert.equal(disabled.task.useTavernRegex, false, 'existing task configurations default off');
+    assert.equal(TaskSchema.parse({ ...task('A'), useTavernRegex: undefined }).useTavernRegex, true, 'tavern regexes apply by default');
+    const disabled = await build({ ...task('A'), useTavernRegex: false });
+    assert.equal(disabled.task.useTavernRegex, false, 'explicit opt-out skips host regexes');
     assert.equal(calls.length, 0, 'disabled option never invokes host regexes');
     assert.deepEqual(disabled.history.map(item => item.content), ['USER_RAW', 'AI_RAW']);
     const enabled = TaskSchema.parse({ ...task('A'), useTavernRegex: true, regexRules: [
@@ -331,16 +333,16 @@ async function independentGenerationChecks() {
     // Assert actual roles and anchors, rather than merely searching the complete payload string.
     host.chat = [{ mes: 'H_OLD', name: 'Player', is_user: true }, { mes: 'H_NEW', name: 'Char', is_user: false }];
     const fixtures = [
-      entry('A', { uid: 1, content: 'WI_BEFORE', position: 0 }),
-      entry('A', { uid: 2, content: 'WI_AFTER', position: 1 }),
-      entry('A', { uid: 3, content: 'WI_DEPTH', position: 4, depth: 1, role: 2 }),
-      entry('A', { uid: 4, content: 'WI_NOTE_BEFORE', position: 2 }),
-      entry('A', { uid: 5, content: 'WI_NOTE_AFTER', position: 3 }),
-      entry('A', { uid: 6, content: 'WI_EXAMPLE', position: 5 }),
-      entry('A', { uid: 7, content: 'WI_OUTLET', position: 7, outletName: 'local' }),
+      entry('A', { uid: 1, comment: 'WI_BEFORE', content: 'WI_BEFORE', position: 0 }),
+      entry('A', { uid: 2, comment: 'WI_AFTER', content: 'WI_AFTER', position: 1 }),
+      entry('A', { uid: 3, comment: 'WI_DEPTH', content: 'WI_DEPTH', position: 4, depth: 1, role: 2 }),
+      entry('A', { uid: 4, comment: 'WI_NOTE_BEFORE', content: 'WI_NOTE_BEFORE', position: 2 }),
+      entry('A', { uid: 5, comment: 'WI_NOTE_AFTER', content: 'WI_NOTE_AFTER', position: 3 }),
+      entry('A', { uid: 6, comment: 'WI_EXAMPLE', content: 'WI_EXAMPLE', position: 5 }),
+      entry('A', { uid: 7, comment: 'WI_OUTLET', content: 'WI_OUTLET', position: 7, outletName: 'local' }),
     ];
     host.loadWorldInfo = async () => ({ entries: Object.fromEntries(fixtures.map(value => [value.uid, value])) });
-    const positioned = await makeContext({ historyDepth: 2, candidateBooks: [{ bookName: 'A', entryUids: fixtures.map(value => value.uid), nameRegexes: [] }] });
+    const positioned = await makeContext({ historyDepth: 2, candidateBooks: [{ bookName: 'A', entryNames: fixtures.map(value => value.comment), nameRegexes: [] }] });
     positioned.preset.prompts.push({ identifier: 'worldInfoAfter', name: 'after', role: 'system', marker: true },
       { identifier: 'dialogueExamples', name: 'examples', role: 'assistant', marker: true },
       { identifier: 'personaDescription', name: 'persona', role: 'system', content: 'AUTOMATIC_PERSONA_MUST_NOT_APPEAR', marker: true });
@@ -354,6 +356,10 @@ async function independentGenerationChecks() {
     ], 'depth/role/examples/history/after anchors and excluded automatic sources');
     assert(!JSON.stringify(positioned.messages).includes('WI_NOTE'), 'no invented author-note injection anchor');
     assert(!JSON.stringify(positioned.messages).includes('WI_OUTLET'), 'outlets are task-local lookup data, not automatic prompt injection');
+
+    // Candidate selection is keyed on the entry name, so a rename drops the entry.
+    const renamed = await makeContext({ candidateBooks: [{ bookName: 'A', entryNames: ['WI_BEFORE（旧名）'], nameRegexes: [] }] });
+    assert.equal(renamed.candidates.length, 0, 'exact name selection ignores renamed or missing entries');
 
     // Fixed upstream openai.js populationInjectionPrompts (06bde939, lines 810-874)
     // groups same-depth messages by order and role, then reverses the reverse-chronological pool.
@@ -402,7 +408,7 @@ async function independentGenerationChecks() {
       entry('A', { uid: 2, comment: '[GENERATE:AFTER]', content: '|AFTER' }),
       entry('A', { uid: 3, comment: 'pool-excluded', content: 'OUTSIDE_AUTOMATIC' })];
     host.loadWorldInfo = async () => ({ entries: Object.fromEntries(phaseEntries.map(value => [value.uid, value])) });
-    const phased = await makeContext({ candidateBooks: [{ bookName: 'A', entryUids: [1, 2], nameRegexes: [] }] });
+    const phased = await makeContext({ candidateBooks: [{ bookName: 'A', entryNames: ['[GENERATE:BEFORE]', '[GENERATE:AFTER]'], nameRegexes: [] }] });
     const phases = [];
     global.fetch = async (input, init) => { if (new URL(input).pathname.endsWith('/generate')) phases.push('HTTP'); return immediateFetch(input, init); };
     await generateTask(phased);
@@ -437,7 +443,7 @@ async function independentGenerationChecks() {
     }
     host.loadWorldInfo = async () => ({ entries: Object.fromEntries(fixtures.map(value => [value.uid, value])) });
     for (const [prompt, expected] of [['<%= outlet %>', 'WI_OUTLET'], ['<%= partitions %>', 'WI_NOTE_BEFORE|WI_NOTE_AFTER']]) {
-      const explicit = await makeContext({ prompt, candidateBooks: [{ bookName: 'A', entryUids: [4, 5, 7], nameRegexes: [] }] });
+      const explicit = await makeContext({ prompt, candidateBooks: [{ bookName: 'A', entryNames: ['WI_NOTE_BEFORE', 'WI_NOTE_AFTER', 'WI_OUTLET'], nameRegexes: [] }] });
       await generateTask(explicit);
       assert.equal(explicit.messages.at(-1).content, expected);
     }
@@ -495,7 +501,7 @@ async function independentGenerationChecks() {
       },
     };
     host.loadWorldInfo = async () => ({ entries: { 1: entry('A', { comment: '[Preprocessing]', key: ['<%= first_key %>', '<%= second_key %>'] }) } });
-    const preprocessing = await makeContext();
+    const preprocessing = await makeContext({ candidateBooks: [{ bookName: 'A', entryNames: ['[Preprocessing]'], nameRegexes: [] }] });
     const preprocessRenderer = new TaskTemplate(preprocessing);
     await preprocessRenderer.initialize();
     assert.deepEqual((await preprocessRenderer.preprocess())[0].key, ['H_NEW', '[Preprocessing]'], 'parallel keyword evaluation must retain its world_info context across awaits');
@@ -507,7 +513,7 @@ async function independentGenerationChecks() {
       1: entry('A', { uid: 1, comment: '[GENERATE:BEFORE] high', content: 'LATE|', order: 200 }),
       2: entry('A', { uid: 2, comment: '[GENERATE:BEFORE] low', content: 'EARLY|', order: 100 }),
     } });
-    const specialOrder = await makeContext({ candidateBooks: [{ bookName: 'A', entryUids: [1, 2], nameRegexes: [] }] });
+    const specialOrder = await makeContext({ candidateBooks: [{ bookName: 'A', entryNames: ['[GENERATE:BEFORE] high', '[GENERATE:BEFORE] low'], nameRegexes: [] }] });
     await generateTask(specialOrder);
     assert.equal(specialOrder.messages[0].content, 'EARLY|LATE|PRESET_A', 'template special-entry order follows the extension sorter');
 
@@ -516,7 +522,7 @@ async function independentGenerationChecks() {
       2: entry('A', { uid: 2, comment: '[GENERATE:AFTER]', constant: false, key: ['TASK_A'], content: '@@dont_activate\nSUPPRESSED' }),
       3: entry('A', { uid: 3, comment: '[GENERATE:BEFORE]', vectorized: true, content: 'VECTOR_EXCLUDED' }),
     } });
-    const specialActivation = await makeContext({ candidateBooks: [{ bookName: 'A', entryUids: [1, 2, 3], nameRegexes: [] }] });
+    const specialActivation = await makeContext({ candidateBooks: [{ bookName: 'A', entryNames: ['[GENERATE:BEFORE]', '[GENERATE:AFTER]'], nameRegexes: [] }] });
     await generateTask(specialActivation);
     assert.equal(specialActivation.messages[0].content, 'ACTIVATED|PRESET_A');
     assert.equal(specialActivation.messages.at(-1).content, 'TASK_A');

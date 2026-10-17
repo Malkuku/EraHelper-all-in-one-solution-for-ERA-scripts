@@ -707,7 +707,7 @@
                   <section v-show="taskTab === 'worldbook'">
                     <h4>
                       任务世界书候选池<Tooltip
-                        content="仅在这里选定的世界书条目参与本任务扫描。UID 勾选与名称正则取并集，候选条目仍须满足扫描触发条件。"
+                        content="仅在这里选定的世界书条目参与本任务扫描。按条目名称勾选，与名称正则取并集；候选条目仍须满足扫描触发条件。"
                       />
                     </h4>
                     <div class="list-editor">
@@ -721,13 +721,12 @@
                           @click="selectedBook = index"
                         >
                           {{ book.bookName || '请选择世界书'
-                          }}<small>{{ book.entryUids.length }} 项勾选 · {{ book.nameRegexes.length }} 条名称正则</small>
+                          }}<small>{{ book.entryNames.length }} 个名称 · {{ book.nameRegexes.length }} 条名称正则</small>
                         </button>
                       </aside>
                       <div class="list-content">
                         <p class="hint">
-                          仅扫描显式选择的条目。UID
-                          和名称正则取并集；两者都为空则不会选择条目。候选副本强制启用后仍需按扫描规则触发。
+                          仅扫描显式选择的条目。条目名称和名称正则取并集；两者都为空则不会选择条目。同名条目会一并选中，未命名条目需先在酒馆中命名。候选副本强制启用后仍需按扫描规则触发。
                         </p>
                         <div
                           v-for="(book, bookIndex) in selectedBooks"
@@ -736,10 +735,10 @@
                         >
                           <WorldbookPicker
                             v-model:book-name="book.bookName"
-                            v-model:entry-uids="book.entryUids"
+                            v-model:entry-names="book.entryNames"
                             :name-regexes="book.nameRegexes"
                           />
-                          <h4>名称正则（与勾选条目取并集）</h4>
+                          <h4>名称正则（与勾选的条目名称取并集）</h4>
                           <div v-for="(regex, index) in book.nameRegexes" :key="index" class="regex-row">
                             <RegexField
                               v-model="book.nameRegexes[index]"
@@ -1150,7 +1149,7 @@ function duplicateGroup(group: TaskSettings['groups'][number]) {
   selectedGroup.value = copy.id;
 }
 function addCandidateBook() {
-  task.value!.candidateBooks.push({ bookName: '', entryUids: [], nameRegexes: [] });
+  task.value!.candidateBooks.push({ bookName: '', entryNames: [], nameRegexes: [] });
   selectedBook.value = task.value!.candidateBooks.length - 1;
 }
 const regexSeed = ref<RegexSpec & { replacement?: string }>();
@@ -1352,8 +1351,8 @@ const fieldLabels: Record<string, string> = {
   candidateBooks: '世界书候选',
   bookName: '世界书名称',
   entryName: '条目名称',
+  entryNames: '勾选条目',
   entryUid: '条目编号',
-  entryUids: '勾选条目',
   nameRegexes: '名称正则',
   regexRules: '任务正则',
   output: '结果处理',
@@ -1698,7 +1697,7 @@ function addTask() {
     eventName: '',
     order: 0,
     historyDepth: 2,
-    useTavernRegex: false,
+    useTavernRegex: true,
     triggerInterval: 1,
     retryCount: 0,
     prompt: '',

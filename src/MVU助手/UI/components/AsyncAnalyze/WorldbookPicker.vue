@@ -29,11 +29,11 @@
     <p v-if="error" class="error" role="alert">读取失败：{{ error }}。已选数据保留，可重试。</p>
     <template v-if="bookName">
       <div class="selected-entries" aria-label="已选世界书条目">
-        <span class="selection-label">{{ single ? '目标条目' : `已选条目（${entryUids.length}）` }}</span>
-        <div v-if="selectedUids.length" class="selection-tags">
-          <span v-for="uid in selectedUids" :key="uid" class="selection-tag">
-            {{ entryLabel(uid) }}
-            <button type="button" :aria-label="`移除 ${entryLabel(uid)}`" @click="removeSelected(uid)">×</button>
+        <span class="selection-label">{{ single ? '目标条目' : `已选条目（${selectedNames.length}）` }}</span>
+        <div v-if="selectedNames.length" class="selection-tags">
+          <span v-for="name in selectedNames" :key="name" class="selection-tag">
+            {{ name }}
+            <button type="button" :aria-label="`移除 ${name}`" @click="removeSelected(name)">×</button>
           </span>
         </div>
         <span v-else class="hint">{{ single ? entryName || '未选择目标条目' : '尚未选择条目' }}</span>
@@ -41,6 +41,12 @@
           {{ pickerOpen ? '收起条目选择 ▴' : '选择条目 ▾' }}
         </button>
       </div>
+      <p v-if="missingNames.length" class="hint warning" role="status">
+        以下已选名称在当前世界书中未找到（可能已重命名或删除）：{{ missingNames.join('、') }}。
+        <button type="button" @click="emit('update:entryNames', props.entryNames.filter(name => !missingNames.includes(name)))">
+          移除未找到的名称
+        </button>
+      </p>
       <div v-show="pickerOpen" class="entry-panel">
         <div class="picker-toolbar">
           <label
@@ -49,28 +55,33 @@
                 content="按名称或内容筛选列表，不会取消已选条目。勾选搜索结果仅增加当前可见条目。" /></span
             ><input v-model="entrySearch" aria-label="搜索条目" placeholder="搜索条目名称或内容"
           /></label>
-          <span v-if="!single">已勾选 {{ entryUids.length }} 项</span>
+          <span v-if="!single">已勾选 {{ props.entryNames.length }} 项</span>
           <button v-if="!single" type="button" :disabled="!!error || loading" @click="selectVisible">
             勾选搜索结果
           </button>
-          <button v-if="!single" type="button" @click="$emit('update:entryUids', [])">清空勾选</button>
+          <button v-if="!single" type="button" @click="emit('update:entryNames', [])">清空勾选</button>
         </div>
         <div class="entry-list">
           <div
             v-for="entry in filteredEntries"
             :key="entry.uid"
             class="entry-row"
-            :class="{ 'is-selected': selectedUids.includes(entry.uid) }"
+            :class="{ 'is-selected': single ? entryUid === entry.uid : props.entryNames.includes(entry.name) }"
           >
             <label class="entry-choice">
               <input
                 :type="single ? 'radio' : 'checkbox'"
-                :checked="single ? entryUid === entry.uid : entryUids.includes(entry.uid)"
+                :disabled="!single && !entry.name.trim()"
+                :checked="single ? entryUid === entry.uid : props.entryNames.includes(entry.name)"
                 @change="choose(entry)"
               />
               <span
                 ><strong>{{ entry.name || '未命名条目' }}</strong
-                ><small v-if="matchedByRegex(entry.name)">名称正则命中</small></span
+                ><small v-if="matchedByRegex(entry.name)">名称正则命中</small>
+                <small v-if="!entry.name.trim()">未命名条目无法按名称选择，请先在酒馆中填写条目名称</small>
+                <small v-else-if="!single && nameCount(entry.name) > 1"
+                  >另有 {{ nameCount(entry.name) - 1 }} 个同名条目，勾选会一并选中</small
+                ></span
               >
             </label>
             <details @click.stop>
@@ -81,11 +92,8 @@
           <p v-if="!loading && !error && !filteredEntries.length" class="hint">没有匹配的条目。</p>
         </div>
       </div>
-      <p v-if="unavailableUids.length" class="hint">
-        有 {{ unavailableUids.length }} 个已选条目暂时无法读取，选择已保留。
-      </p>
       <template v-if="single">
-        <button type="button" @click="$emit('update:entryUid', undefined)">使用新建条目名称</button>
+        <button type="button" @click="useNewName">使用新建条目名称</button>
         <label
           ><span class="field-label"
             >条目名称 / 新建名称<Tooltip
@@ -93,7 +101,7 @@
           ><input
             aria-label="条目名称 / 新建名称"
             :value="entryName"
-            @input="$emit('update:entryName', ($event.target as HTMLInputElement).value)"
+            @input="emit('update:entryName', ($event.target as HTMLInputElement).value)"
         /></label>
       </template>
     </template>
@@ -106,17 +114,17 @@ import type { RegexSpec } from '@/MVU助手/AsyncAnalyze/TaskSchema';
 const props = withDefaults(
   defineProps<{
     bookName: string;
-    entryUids?: number[];
+    entryNames?: string[];
     nameRegexes?: RegexSpec[];
     single?: boolean;
     entryUid?: number;
     entryName?: string;
   }>(),
-  { entryUids: () => [], nameRegexes: () => [], entryName: '', entryUid: undefined },
+  { entryNames: () => [], nameRegexes: () => [], entryName: '', entryUid: undefined },
 );
 const emit = defineEmits<{
   'update:bookName': [value: string];
-  'update:entryUids': [value: number[]];
+  'update:entryNames': [value: string[]];
   'update:entryUid': [value: number | undefined];
   'update:entryName': [value: string];
 }>();
@@ -127,20 +135,31 @@ const bookSearch = ref(''),
   error = ref(''),
   loading = ref(false);
 const pickerOpen = ref(false);
-const selectedUids = computed(() =>
-  props.single ? (props.entryUid === undefined ? [] : [props.entryUid]) : props.entryUids,
+const selectedNames = computed(() =>
+  props.single ? (props.entryName ? [props.entryName] : []) : props.entryNames,
 );
-function entryLabel(uid: number) {
-  const entry = entries.value.find(entry => entry.uid === uid);
-  return entry ? entry.name || '未命名条目' : '未能读取的条目';
-}
-function removeSelected(uid: number) {
-  if (props.single) emit('update:entryUid', undefined);
-  else
+/** 已选名称在本世界书中找不到的项；单选用"新建条目名称"时不算缺失。 */
+const missingNames = computed(() =>
+  props.single ? [] : props.entryNames.filter(name => !entries.value.some(entry => entry.name === name)),
+);
+const nameCounts = computed(() => {
+  const counts = new Map<string, number>();
+  for (const entry of entries.value) counts.set(entry.name, (counts.get(entry.name) ?? 0) + 1);
+  return counts;
+});
+const nameCount = (name: string) => nameCounts.value.get(name) ?? 0;
+function removeSelected(name: string) {
+  if (props.single) {
+    emit('update:entryUid', undefined);
+    emit('update:entryName', '');
+  } else
     emit(
-      'update:entryUids',
-      props.entryUids.filter(value => value !== uid),
+      'update:entryNames',
+      props.entryNames.filter(value => value !== name),
     );
+}
+function useNewName() {
+  emit('update:entryUid', undefined);
 }
 let request = 0;
 const filteredNames = computed(() =>
@@ -149,11 +168,6 @@ const filteredNames = computed(() =>
 const filteredEntries = computed(() =>
   entries.value.filter(entry =>
     `${entry.name} ${entry.content}`.toLowerCase().includes(entrySearch.value.toLowerCase()),
-  ),
-);
-const unavailableUids = computed(() =>
-  (props.single ? (props.entryUid === undefined ? [] : [props.entryUid]) : props.entryUids).filter(
-    uid => !entries.value.some(entry => entry.uid === uid),
   ),
 );
 function matchedByRegex(name: string) {
@@ -187,7 +201,7 @@ function changeBook(name: string) {
   // A user's explicit book change creates a new identity; a read failure never changes it.
   entries.value = [];
   emit('update:bookName', name);
-  emit('update:entryUids', []);
+  emit('update:entryNames', []);
   emit('update:entryUid', undefined);
   emit('update:entryName', '');
 }
@@ -196,16 +210,22 @@ function choose(entry: WorldbookEntry) {
     emit('update:entryUid', entry.uid);
     emit('update:entryName', entry.name);
     pickerOpen.value = false;
-  } else
-    emit(
-      'update:entryUids',
-      props.entryUids.includes(entry.uid)
-        ? props.entryUids.filter(uid => uid !== entry.uid)
-        : [...props.entryUids, entry.uid],
-    );
+    return;
+  }
+  // 名称是扫描候选的唯一标识；未命名条目没有可持久化的名称，不能勾选。
+  if (!entry.name.trim()) return;
+  emit(
+    'update:entryNames',
+    props.entryNames.includes(entry.name)
+      ? props.entryNames.filter(name => name !== entry.name)
+      : [...props.entryNames, entry.name],
+  );
 }
 function selectVisible() {
-  emit('update:entryUids', [...new Set([...props.entryUids, ...filteredEntries.value.map(entry => entry.uid)])]);
+  emit(
+    'update:entryNames',
+    [...new Set([...props.entryNames, ...filteredEntries.value.map(entry => entry.name).filter(name => name.trim())])],
+  );
 }
 watch(
   () => props.bookName,
@@ -322,5 +342,8 @@ pre {
 .hint {
   font-size: 12px;
   color: var(--muted, #6b7280);
+}
+.hint.warning {
+  color: #b45309;
 }
 </style>

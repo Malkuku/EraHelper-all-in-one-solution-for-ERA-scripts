@@ -71,9 +71,10 @@ export const TaskSchema = z.object({
   id: z.string().min(1), name: z.string(), comment: z.string().default(''), enabled: z.boolean(),
   eventName: z.string(), order: z.number().int().default(0),
   historyDepth: integer.default(2), triggerInterval: integer.min(1).default(1), retryCount: integer.default(0),
-  useTavernRegex: z.boolean().default(false),
+  useTavernRegex: z.boolean().default(true),
   prompt: z.string(), connectionId: z.string(),
-  candidateBooks: z.array(z.object({ bookName: z.string(), entryUids: z.array(integer), nameRegexes: z.array(RegexSpecSchema) })),
+  /** 扫描候选按条目名称选择；同名条目会一并进入候选池。 */
+  candidateBooks: z.array(z.object({ bookName: z.string(), entryNames: z.array(z.string()).default([]), nameRegexes: z.array(RegexSpecSchema) })),
   scan: ScanSchema,
   regexRules: z.array(RegexSpecSchema.safeExtend({
     id: z.string().min(1), stage: z.enum(['history', 'worldinfo', 'prompt', 'response']), replacement: z.string(), enabled: z.boolean(),
@@ -89,7 +90,7 @@ export type TaskConfig = z.infer<typeof TaskSchema>;
 export const ApiLinkSchema = z.object({ id: z.string().min(1), name: z.string(), baseUrl: z.string(), model: z.string(), secretRef: z.string().min(1) });
 export type ApiLink = z.infer<typeof ApiLinkSchema>;
 export const ConfigSchema = z.object({
-  schemaVersion: z.literal(4), activeGroupId: z.string().nullable(), automatic: z.object({ minReceivedChars: integer.default(300) }),
+  schemaVersion: z.literal(5), activeGroupId: z.string().nullable(), automatic: z.object({ minReceivedChars: integer.default(300) }),
   groups: z.array(z.object({ id: z.string().min(1), name: z.string(), comment: z.string(), taskIds: z.array(z.string()) })),
   tasks: z.array(TaskSchema),
   regexPresets: z.array(RegexPresetSchema).default([]),
@@ -117,11 +118,11 @@ export const ConfigSchema = z.object({
   }
 });
 export type TaskSettings = z.infer<typeof ConfigSchema>;
-export const emptySettings = (): TaskSettings => ({ schemaVersion: 4, activeGroupId: null, automatic: { minReceivedChars: 300 }, groups: [], tasks: [], connections: [], presets: [], regexPresets: [] });
-/** Upgrade persisted v1/v2/v3 at this sole boundary; v4 is the internal model. */
+export const emptySettings = (): TaskSettings => ({ schemaVersion: 5, activeGroupId: null, automatic: { minReceivedChars: 300 }, groups: [], tasks: [], connections: [], presets: [], regexPresets: [] });
+/** Upgrade persisted v1–v4 at this sole boundary; v5 is the internal model. */
 export function parseTaskSettings(value: unknown): TaskSettings {
   const version = value && typeof value === 'object' ? (value as { schemaVersion?: unknown }).schemaVersion : undefined;
-  const upgradeOutputs = (config: Record<string, unknown>) => ConfigSchema.parse({ ...config, schemaVersion: 4,
+  const upgradeOutputs = (config: Record<string, unknown>) => ConfigSchema.parse({ ...config, schemaVersion: 5,
     tasks: z.array(z.object({ output: z.discriminatedUnion('mode', [
       z.object({ mode: z.literal('return') }), z.object({ mode: z.literal('event_result') }),
       z.object({ mode: z.literal('write'), writes: z.array(WriteSchema) }),
@@ -137,6 +138,8 @@ export function parseTaskSettings(value: unknown): TaskSettings {
     })) });
   };
   if (version === 2) return upgradeLinks(value as Record<string, unknown>);
+  // v4 的候选条目选择按 UID 保存，改按名称后不迁移，旧字段在解析时被丢弃。
+  if (version === 4) return ConfigSchema.parse({ ...(value as Record<string, unknown>), schemaVersion: 5 });
   if (version !== 1) return ConfigSchema.parse(value);
   const old = z.object({
     schemaVersion: z.literal(1), tasks: z.array(z.object({ connectionId: z.string(), presetId: z.string().min(1) }).passthrough()),

@@ -46,7 +46,7 @@ const help = computed(() => {
   if (props.purpose === 'target')
     return syntax + '在目标正文或世界书内容中匹配待替换片段，用响应提取结果替换；g 表示替换全部匹配。';
   if (props.purpose === 'task') return syntax + '在所选处理阶段中匹配文本，并按替换文本执行 JavaScript 正则替换。';
-  return syntax + '按条目名称匹配，与勾选的 UID 取并集；任意名称正则命中即可成为候选，之后仍须满足扫描触发条件。';
+  return syntax + '按条目名称匹配，与勾选的条目名称取并集；任意名称正则命中即可成为候选，之后仍须满足扫描触发条件。';
 });
 const expression = ref(formatRegexInput(model.value));
 watch(expression, value => Object.assign(model.value, parseRegexInput(value)), { flush: 'sync' });

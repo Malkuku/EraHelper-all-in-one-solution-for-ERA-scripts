@@ -14,6 +14,7 @@ const secrets = new Map();
 const host = { chat: [], characterId: '0', characters: [{ avatar: 'Char.png', data: {} }], chatMetadata: {}, name1: 'Player', name2: 'Char',
   getCurrentChatId: () => chatId, getRequestHeaders: () => ({ 'Content-Type': 'application/json' }), substituteParams: text => text, loadWorldInfo: async () => ({ entries: {} }) };
 global.window = { parent: { location: { origin: 'https://host.invalid' }, SillyTavern: { getContext: () => host }, localStorage: { getItem: key => secrets.get(key) ?? null, setItem: (key, value) => secrets.set(key, value) } } };
+global.formatAsTavernRegexedString = text => text; // host regexes pass input through unless a test overrides them
 global.getScriptId = () => 'runtime-script';
 global.getVariables = options => structuredClone(options.type === 'script' ? scriptVariables : chatVariables);
 let onStateSaved = async () => {};

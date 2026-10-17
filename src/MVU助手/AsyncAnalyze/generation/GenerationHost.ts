@@ -53,13 +53,20 @@ export async function collectCandidates(task: TaskConfig): Promise<RawEntry[]> {
   const entries = new Map<string, RawEntry>();
   for (const selection of task.candidateBooks) {
     for (const raw of await readNativeBook(selection.bookName)) {
-      if (!selection.entryUids.includes(raw.uid) && !selection.nameRegexes.some(regex => new RegExp(regex.pattern, regex.flags).test(raw.comment))) continue;
+      if (!entrySelected(selection, raw)) continue;
       const entry = { ...raw, disable: false, decorators: [] as string[], content: applyTaskRegex(raw.content, task, 'worldinfo') };
       entry.hash = entryHash(entry);
       entries.set(`${entry.world}.${entry.uid}`, entry);
     }
   }
   return [...entries.values()].sort((a, b) => b.order - a.order);
+}
+/** 名称勾选或名称正则命中；同名条目会一并成为候选。 */
+function entrySelected(selection: TaskConfig['candidateBooks'][number], raw: RawEntry): boolean {
+  return (
+    selection.entryNames.includes(raw.comment) ||
+    selection.nameRegexes.some(regex => new RegExp(regex.pattern, regex.flags).test(raw.comment))
+  );
 }
 export class TokenCounter {
   private cache = new Map<string, Promise<number>>();
