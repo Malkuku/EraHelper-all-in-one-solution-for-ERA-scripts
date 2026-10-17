@@ -1,190 +1,57 @@
-<template>
-  <div :class="{ 'dark-mode': uiStore.darkMode }" class="main-container">
-    <!-- 顶部导航栏 -->
-    <div class="page-tabs">
-      <router-link
-        to="/AsyncAnalyze/Selection"
-        class="tab-button"
-        active-class="active"
-      >
-        规则组选择
-      </router-link>
-
-      <router-link
-        to="/AsyncAnalyze/ApiConfig"
-        class="tab-button"
-        active-class="active"
-      >
-        API配置
-      </router-link>
-
-      <router-link
-        to="/AsyncAnalyze/Editor"
-        class="tab-button"
-        active-class="active"
-      >
-        规则组配置
-      </router-link>
-
-
-      <router-link
-        to="/AsyncAnalyze/TaskPool"
-        class="tab-button"
-        active-class="active"
-      >
-        规则编辑
-      </router-link>
-
-      <a
-        class="tab-button"
-        :class="{ active: showRegexTester }"
-        @click.prevent="showRegexTester = true"
-      >
-        正则测试
-      </a>
-
-      <router-link
-        to="/AsyncAnalyze/Settings"
-        class="tab-button"
-        active-class="active"
-      >
-        额外功能
-      </router-link>
-    </div>
-
-    <!-- 子路由渲染区域 -->
-    <div class="content-area">
-      <router-view v-slot="{ Component }">
-        <keep-alive>
-          <component :is="Component" />
-        </keep-alive>
-      </router-view>
-    </div>
-
-    <!-- 底部通用操作栏 -->
-    <div class="footer">
-      <button class="btn" @click="uiStore.showUI = false">关闭</button>
-    </div>
-
-    <RegexTester
-      v-if="showRegexTester"
-      @close="showRegexTester = false"
-    />
+﻿<template>
+  <div class="task-page" :class="{ 'dark-mode': uiStore.darkMode }">
+    <TaskManager :settings="store.settings" :save-settings="store.replaceSettings" :set-secret="store.setSecret"
+      :delete-secret="store.deleteSecret" :configuration-error="store.configurationError" />
+    <section class="runs">
+      <div class="actions"><button @click="runCurrent">运行当前楼层任务</button><button @click="rerunCurrentTasks">回滚后重新计算</button><button @click="clearResults">清空结果显示</button></div>
+      <p v-if="activeTaskRuns.size" role="status">运行中的任务链：{{ activeTaskRuns.size }}</p>
+      <div v-for="run in activeTaskRuns.values()" :key="run.id" class="run">
+        <span>{{ run.result.trigger.eventName || '常规链' }} · 楼层 {{ run.identity.messageId }} · {{ run.id }}</span>
+        <button @click="cancelTaskRun(run.id)">取消此运行</button>
+      </div>
+      <details v-for="result in [...taskRunResults].reverse()" :key="result.runId" class="run">
+        <summary>{{ result.trigger.eventName || '常规链' }} · {{ labels[result.status] }} · 楼层 {{ result.messageId }}</summary>
+        <p>请求：{{ result.requestId }} · 运行：{{ result.runId }}</p>
+        <p v-if="result.reason">{{ result.reason }}</p>
+        <p v-if="result.activeRunId">占用运行：{{ result.activeRunId }}</p>
+        <p v-for="(warning, index) in result.warnings" :key="index" class="warning">{{ warning.message }}</p>
+        <p v-if="result.rollback.status !== 'not_needed'">回滚：{{ labels[result.rollback.status] || result.rollback.status }}</p>
+        <p v-for="(error, index) in result.rollback.errors" :key="index" class="error">{{ error }}</p>
+        <details v-for="task in result.tasks" :key="task.taskId">
+          <summary>{{ task.taskName }} · {{ labels[task.status] }} · 尝试 {{ task.attempts }} 次</summary>
+          <p v-if="task.reason">{{ task.reason.message }}<span v-if="task.reason.currentFloor !== undefined">（本次 {{ task.reason.currentFloor }}，上次 {{ task.reason.lastSuccessfulFloor }}）</span></p>
+          <p v-if="task.error" class="error">{{ task.error.phase }} / {{ task.error.code }}：{{ task.error.message }}</p>
+          <p v-for="write in task.writes" :key="write.writeId">{{ write.target || write.writeId }}：{{ labels[write.status] }} {{ write.error }}</p>
+          <pre v-if="task.text">{{ task.text }}</pre>
+        </details>
+      </details>
+    </section>
+    <details><summary>界面偏好</summary><Settings /></details>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { useUiStore } from '@/MVU助手/stores/UIStore';
-import { useAsyncAnalyzeStore } from '@/MVU助手/stores/AsyncAnalyzeStore';
-import RegexTester from '@/MVU助手/UI/components/AsyncAnalyze/RegexTester.vue';
+import { useUiStore } from '../../stores/UIStore';
+import { useTaskStore } from '../../stores/TaskStore';
+import { activeTaskRuns, taskRunResults, runTaskChain, rerunCurrentTasks, cancelTaskRun } from '../../AsyncAnalyze/TaskRuntime';
+import TaskManager from '../components/AsyncAnalyze/TaskManager.vue';
+import Settings from '../components/AsyncAnalyze/Settings.vue';
 
+const store = useTaskStore();
 const uiStore = useUiStore();
-const asyncAnalyzeStore = useAsyncAnalyzeStore();
-
-const showRegexTester = ref(false);
-
-onMounted(async () => {
-  await asyncAnalyzeStore.getModelSettings();
-  // 确保加载时也读取 UI 设置（包括 hideToast）
-  await uiStore.getModeSetting();
-});
+const labels: Record<string, string> = { succeeded: '成功', partial: '部分完成', failed: '失败', cancelled: '已取消', busy: '忙碌', skipped: '已跳过',
+  rolled_back: '已回滚', rollback_failed: '回滚失败', committed: '已提交', completed: '已完成' };
+const runCurrent = () => runTaskChain({ messageId: getLastMessageId(), trigger: { kind: 'manual' } });
+const clearResults = () => { taskRunResults.value = []; };
 </script>
 
-<style scoped lang="scss">
-/* 样式保持不变，或者你可以根据需要微调 */
-.main-container {
-  padding: 10px;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-}
-
-.title {
-  margin: 8px 0 16px;
-  font-size: 18px;
-  font-weight: 600;
-  color: #111827;
-}
-
-.page-tabs {
-  display: flex;
-  margin-bottom: 20px;
-  border-bottom: 1px solid #e5e7eb;
-  /* 如果标签太多，允许换行或滚动 */
-  flex-wrap: wrap;
-}
-
-.tab-button {
-  padding: 10px 20px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: 14px;
-  color: #6b7280;
-  border-bottom: 2px solid transparent;
-  text-decoration: none;
-  transition: all 0.2s;
-
-  &:hover {
-    color: #111827;
-    background-color: rgba(0,0,0,0.02);
-  }
-
-  &.active {
-    color: #6366f1;
-    border-bottom: 2px solid #6366f1;
-    font-weight: 500;
-  }
-}
-
-.content-area {
-  flex: 1;
-  overflow-y: auto;
-  padding-bottom: 20px;
-}
-
-.footer {
-  display: flex;
-  justify-content: flex-end;
-  padding-top: 10px;
-  border-top: 1px solid #e5e7eb;
-}
-
-.btn {
-  padding: 6px 16px;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-  background: #f3f4f6;
-  color: #111827;
-  transition: background 0.2s;
-
-  &:hover {
-    background: #e5e7eb;
-  }
-}
-
-/* Dark Mode Support */
-.dark-mode {
-  .title { color: #e2e8f0; }
-
-  .page-tabs { border-bottom-color: #4b5563; }
-
-  .tab-button {
-    color: #9ca3af;
-    &:hover { color: #e2e8f0; background-color: rgba(255,255,255,0.05); }
-    &.active { color: #818cf8; border-bottom-color: #818cf8; }
-  }
-
-  .footer { border-top-color: #4b5563; }
-
-  .btn {
-    background: #4b5563;
-    color: #e2e8f0;
-    &:hover { background: #6b7280; }
-  }
-}
+<style scoped>
+.task-page { padding: 10px; color: #111827; }
+.runs { margin-top: 20px; border-top: 1px solid #cbd5e1; padding-top: 12px; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.run { border: 1px solid #cbd5e1; border-radius: 6px; margin: 10px 0; padding: 10px; overflow-wrap: anywhere; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+button { padding: 6px 10px; border: 1px solid #94a3b8; border-radius: 5px; cursor: pointer; }
+.error { color: #dc2626; }.warning { color: #a16207; }
+.dark-mode { color: #e2e8f0; }.dark-mode .run { border-color: #64748b; }
 </style>

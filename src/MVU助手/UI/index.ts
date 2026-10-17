@@ -4,13 +4,10 @@ import { useUiStore } from '../stores/UIStore';
 import { createMountPoint, destroyMountPoint, deteleportStyle, teleportStyle } from '../utils/dom';
 import App from './App.vue';
 
-import { KatEvents } from '@/Constants/KatEvent';
-import { initWatcher } from '@/MVU助手/AsyncAnalyze/AsyncAnalyzeEvents';
-import { handleLoresFilter } from '@/MVU助手/AsyncAnalyze/AsyncAnalyzeFilter';
-import { handleMessageReceived, handleMessageSent, reSendEraUpdate } from '@/MVU助手/AsyncAnalyze/AsyncAnalyzeService';
+import { initializeTaskRuntime, disposeTaskRuntime } from '@/MVU助手/AsyncAnalyze/TaskRuntime';
 import { UseVersionControlStore } from '@/MVU助手/stores/UseVersionControlStore';
 import { MvuUtil } from '@/Utils/MvuUtil';
-import { useAsyncAnalyzeStore } from '../stores/AsyncAnalyzeStore';
+import { useTaskStore } from '../stores/TaskStore';
 import { useEraEditStore } from '../stores/EraEditStore';
 import { eraLogger } from '../utils/MvuHelperLogger';
 import { router } from './router/router';
@@ -45,6 +42,7 @@ function unmountVueApp() {
 
 function unloadUI() {
   eraLogger.log('unloadUI', 'UI 脚本开始卸载');
+  disposeTaskRuntime();
   unmountVueApp();
   deteleportStyle();
   if (mountPoint) {
@@ -81,9 +79,9 @@ $(async () => {
   // 获取 store 实例并暴露到 window，以便外部函数调用
   eraLogger.debug('initialize', '正在初始化 store 实例');
   (window as any).UiStore = useUiStore(pinia);
-  (window as any).AsyncAnalyzeStore = useAsyncAnalyzeStore(pinia);
-  useAsyncAnalyzeStore().getModelSettings();
-  initWatcher();
+  await useTaskStore(pinia).load();
+  await useUiStore(pinia).getModeSetting();
+  initializeTaskRuntime();
   (window as any).EraEditStore = useEraEditStore(pinia);
   await UseVersionControlStore().loadSettings();
   const currentBookName = getCharWorldbookNames('current').primary;
@@ -110,10 +108,6 @@ $(async () => {
   window.addEventListener('pagehide', unloadUI); // 再添加新的
 
   // 监听事件
-  eventOn(tavern_events.WORLDINFO_ENTRIES_LOADED, handleLoresFilter);
-  eventOn(tavern_events.MESSAGE_RECEIVED, handleMessageReceived);
-  eventOn(tavern_events.MESSAGE_SENT, handleMessageSent);
-  eventOn(KatEvents.kat_resend_mvu_update, reSendEraUpdate);
   eventOn(tavern_events.MESSAGE_SWIPED,MvuUtil.backUpMvuData);
 
   // 监听 `GENERATE_AFTER_DATA` 事件，在提示词发送前处理 ERA 宏

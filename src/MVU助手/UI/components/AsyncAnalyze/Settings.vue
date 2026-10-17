@@ -5,7 +5,7 @@
 
       <div class="setting-item">
         <div class="label">
-          <span>隐藏预设切换提示</span>
+          <span>隐藏普通提示</span>
           <small>隐藏 SillyTavern 右上角的蓝色 Info 弹窗</small>
         </div>
         <label class="switch">

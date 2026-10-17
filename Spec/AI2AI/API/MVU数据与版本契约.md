@@ -4,6 +4,8 @@
 
 `EraEditStore.getStatData()` 从最后一条消息的变量读取 `stat_data`。`saveEraEdit()` 调用 `MvuUtil.updateMvuDataByObj()`；后者获取当前消息的 MVU 数据，将其 `stat_data` 设为传入对象，再调用 `Mvu.replaceMvuData` 写入最后一条消息并发出 `mag_variable_update_ended`。消息文本更新由 `Mvu.parseMessage` 解析后写入。这里记录代码调用链；变量保护规则由宿主 MVU 实现决定。
 
+以上是变量编辑与版本更新的调用边界。独立任务由 `TaskCommit` 绑定准入时的消息与 swipe，不调用该 last-message helper；先用最新 MVU 数据纯解析，再持久化文本和 MVU，按实际变更路径记录所有权与补偿。宿主 setter 已落地后 reject 或保存后身份变化，须补偿或保留可查询的未恢复 Journal/StateUndo，不能跨聊天写回。精确路径、数组与会话日志边界由 [分步任务契约](./分步任务目标契约.md) 统一规定，不在本页复制任务 schema。
+
 ## 版本规则
 
 版本设置保存在当前脚本变量的 `era_data_rule.version_control`，目前字段为 `enable` 和 `lore_name`。`era_data_rule` 是保留下来的持久化键名，不表示已移除的 EraDataRule 规则引擎仍在运行。当前版本读取自 `stat_data.system.当前版本`，缺失时按 0 处理。

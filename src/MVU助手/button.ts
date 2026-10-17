@@ -2,7 +2,7 @@
  * 注册酒馆助手按钮
  */
 import { useUiStore } from './stores/UIStore';
-import { reSendEraUpdate } from '@/MVU助手/AsyncAnalyze/AsyncAnalyzeService';
+import { rerunCurrentTasks } from '@/MVU助手/AsyncAnalyze/TaskRuntime';
 
 $(() => {
   replaceScriptButtons([
@@ -16,6 +16,6 @@ $(() => {
   });
 
   eventOn(getButtonEvent('🍬重算分步任务'), async () => {
-    await reSendEraUpdate();
+    await rerunCurrentTasks();
   });
 });

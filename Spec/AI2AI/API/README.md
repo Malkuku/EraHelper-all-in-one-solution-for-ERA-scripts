@@ -1,6 +1,8 @@
-# API 与数据契约索引
+﻿# API 与数据契约索引
 
-- [分步分析契约](./分步分析契约.md)：脚本变量配置、任务触发、事件、结果合并与备份状态。对应 `src/MVU助手/AsyncAnalyze/` 和 `stores/AsyncAnalyzeStore.ts`。
-- [MVU 数据与版本契约](./MVU数据与版本契约.md)：MVU 变量写入、版本规则格式与持久化位置。对应 `src/Utils/MvuUtil.ts`、`stores/EraEditStore.ts` 和 `stores/UseVersionControlStore.ts`。
+- [分步分析契约](./分步分析契约.md)：当前运行入口、权威责任与生命周期导航，对应 TaskRuntime/TaskStore；不再描述旧服务事实。
+- [分步任务契约](./分步任务目标契约.md)：独立生成的详细配置 schema、KatTaskAPI、事件、结果、提交/回滚与宿主支持矩阵。G0 已冻结，生产入口已切换，宿主集成仍待验收。
+- [MVU 数据与版本契约](./MVU数据与版本契约.md)：无关变量编辑、版本规则与持久化，仍对应 MvuUtil/EraEditStore/UseVersionControlStore；任务提交另外绑定明确楼层。
+- [独立任务配置指南](../../Me2AI/独立任务配置指南.md)：破坏性更新后的重新配置、预设与密钥、事件 API 操作。
 
-本目录记录当前代码可证实的边界。外部宿主接口的完整定义仍以 `@types` 和实际宿主实现为准。
+共享前端 API 类型位于 `@types/iframe/exported.kat-task.d.ts`，指向 TaskSchema 的唯一类型定义。宿主接口完整定义仍以 @types 与实际宿主实现为准；固定源码调查不替代运行验收。

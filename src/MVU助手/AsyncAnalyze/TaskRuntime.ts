@@ -1,0 +1,241 @@
+import { ref, shallowReactive, watch } from 'vue';
+import { useTaskStore } from '../stores/TaskStore';
+import { bindMessage, currentChatKey, createGenerationContext, MessageIdentity, assertMessage } from './generation/GenerationHost';
+import { generateTask } from './generation/TaskGeneration';
+import { commitTask, Journal, releaseJournal, rollbackJournal, validateTaskOutput } from './TaskCommit';
+import { eventNameIsValid, RunResult, TaskConfig, TaskFailure, TaskResult, Trigger, UnrecoveredJournal, KatTaskAPI } from './TaskSchema';
+import { readTaskHistory, rollbackTaskState, settleTaskState, StateUndo, timedSnapshot, stateSequenceHighWater, StateSaveFailure } from './TaskState';
+
+type Run = { id: string; key: string; identity: MessageIdentity; sequence: number; controller: AbortController; cancelled: boolean; failed: boolean; result: RunResult;
+  completed: { journal: Journal; state: StateUndo; result: TaskResult }[] };
+export const activeTaskRuns = shallowReactive(new Map<string, Run>());
+export const taskRunResults = ref<RunResult[]>([]);
+const latestChains = new Map<string, Run>();
+const busy = new Map<string, string>();
+const unrecovered = new Map<string, { run: Run; taskId: string; journal?: Journal; stateUndo?: StateUndo; errors: string[] }>();
+function retainUnrecovered(run: Run, taskId: string, journal: Journal | undefined, stateUndo: StateUndo | undefined, errors: string[]) {
+  const key = JSON.stringify([run.id, taskId]);
+  const previous = unrecovered.get(key);
+  unrecovered.set(key, { run, taskId, journal: journal?.edits.length ? journal : previous?.journal,
+    stateUndo: stateUndo ?? previous?.stateUndo, errors: [...(previous?.errors ?? []), ...errors] });
+}
+export function getUnrecoveredJournals(): UnrecoveredJournal[] {
+  return [...unrecovered.values()].map(record => ({
+    runId: record.run.id, taskId: record.taskId, chatId: record.run.identity.chatId, messageId: record.run.identity.messageId, swipeId: record.run.identity.swipeId,
+    operations: (record.journal?.edits ?? []).map(edit => {
+      const { identity, ...operation } = edit;
+      return structuredClone({ ...operation, identity: { chatKey: identity.chatKey, chatId: identity.chatId, messageId: identity.messageId, swipeId: identity.swipeId } });
+    }),
+    ...(record.stateUndo ? { stateUndo: structuredClone(record.stateUndo) } : {}), errors: [...record.errors],
+  }));
+}
+let sequence = 0;
+let cleanup: (() => void)[] = [];
+let customCleanup: (() => void)[] = [];
+const uid = () => crypto.randomUUID();
+function errorOf(error: unknown, phase: TaskFailure['phase'] = 'prepare') {
+  return error instanceof TaskFailure ? { code: error.code, message: error.message, phase: error.phase } : { code: 'task_error', message: error instanceof Error ? error.message : String(error), phase };
+}
+function resultFor(requestId: string, runId: string, trigger: Trigger, messageId: number): RunResult {
+  return { version: 1, requestId, runId, trigger, messageId, chatId: '', status: 'failed', tasks: [], warnings: [], rollback: { status: 'not_needed', errors: [] } };
+}
+async function publish(result: RunResult) {
+  const published = structuredClone(result);
+  taskRunResults.value = [...taskRunResults.value.filter(item => item.runId !== published.runId), published];
+  try { await eventEmit(published.trigger.kind === 'event' ? `${published.trigger.eventName}:result` : 'kat_task_chain:result', structuredClone(published)); }
+  catch { published.warnings.push({ code: 'result_listener_failed', message: '结果已保留，但结果频道的监听器执行失败' }); }
+  return structuredClone(published);
+}
+export function cancelTaskRun(runId: string): boolean {
+  const run = activeTaskRuns.get(runId);
+  if (!run) return false;
+  run.cancelled = true; run.controller.abort('cancelled'); return true;
+}
+async function undoRun(run: Run) {
+  const errors: string[] = [...run.result.rollback.errors];
+  for (const completed of [...run.completed].sort((a, b) => (b.journal.commitOrder ?? 0) - (a.journal.commitOrder ?? 0))) {
+    const failures = await rollbackJournal(completed.journal, run.result.warnings);
+    let stateFailure = false;
+    try { await rollbackTaskState(completed.state, run.identity); } catch (error) { stateFailure = true; failures.push(String(error)); }
+    if (failures.length) retainUnrecovered(run, completed.result.taskId, completed.journal, stateFailure ? completed.state : undefined, failures);
+    completed.result.status = failures.length ? 'rollback_failed' : 'rolled_back';
+    errors.push(...failures);
+  }
+  run.result.rollback = { status: errors.length ? (run.completed.some(item => item.result.status === 'rolled_back') ? 'partial' : 'failed') : 'completed', errors };
+}
+async function executeTask(run: Run, task: TaskConfig, snapshot: ReturnType<ReturnType<typeof useTaskStore>['snapshot']>, result: TaskResult) {
+  const journal: Journal = { runId: run.id, edits: [] };
+  let phase: TaskFailure['phase'] = 'prepare';
+  try {
+    const store = useTaskStore();
+    const connection = snapshot.connections.find(item => item.id === task.connectionId)!;
+    const history = readTaskHistory(task.id, run.identity);
+    const beforeState = timedSnapshot(history);
+    let generated: Awaited<ReturnType<typeof createGenerationContext>> | undefined;
+    let text = '';
+    for (let attempt = 0; attempt <= task.retryCount; attempt++) {
+      result.attempts = attempt + 1;
+      run.controller.signal.throwIfAborted();
+      const controller = new AbortController();
+      const abort = () => controller.abort(run.controller.signal.reason);
+      run.controller.signal.addEventListener('abort', abort, { once: true });
+      try {
+        phase = 'prepare';
+        generated = await createGenerationContext(run.id, task, snapshot, run.identity, controller, store.getSecret(connection.secretRef), beforeState);
+        phase = 'request';
+        text = await generateTask(generated);
+        phase = 'extract';
+        validateTaskOutput(task, text);
+        break;
+      } catch (error) {
+        if (run.controller.signal.aborted || attempt === task.retryCount) throw error;
+      } finally { run.controller.signal.removeEventListener('abort', abort); }
+    }
+    result.text = text;
+    phase = 'commit';
+    await commitTask(task, text, run.identity, journal, result, run.result, run.controller.signal);
+    assertMessage(run.identity, run.controller.signal);
+    const state = await settleTaskState(task.id, run.identity, beforeState, generated!.timedState, run.id, run.sequence);
+    run.completed.push({ journal, state, result });
+    result.status = 'succeeded';
+  } catch (error) {
+    const cancelled = run.controller.signal.aborted;
+    result.status = cancelled ? 'cancelled' : 'failed';
+    result.error = cancelled ? { code: 'cancelled', message: '所属运行已取消或失败', phase } : errorOf(error, phase);
+    if (error instanceof TaskFailure && error.rollbackErrors.length) {
+      result.status = 'rollback_failed';
+      run.result.rollback = { status: 'failed', errors: [...run.result.rollback.errors, ...error.rollbackErrors] };
+      retainUnrecovered(run, task.id, undefined, error instanceof StateSaveFailure ? error.undo : undefined, error.rollbackErrors);
+    }
+    for (const write of result.writes) if (write.status === 'failed') write.error = result.error.message;
+    if (!cancelled && run.result.trigger.kind !== 'event') { run.failed = true; run.controller.abort('task_failed'); }
+    if (journal.edits.length) {
+      const errors = await rollbackJournal(journal, run.result.warnings);
+      if (errors.length) {
+        result.status = 'rollback_failed'; run.result.rollback = { status: 'failed', errors: [...run.result.rollback.errors, ...errors] };
+        retainUnrecovered(run, task.id, journal, undefined, errors);
+      }
+    }
+  }
+}
+export async function runTaskChain(options: { messageId: number; trigger: Trigger; requestId?: string }, resetPrevious = false): Promise<RunResult> {
+  const requestId = typeof options.requestId === 'string' ? options.requestId : uid();
+  const runId = uid();
+  const result = resultFor(requestId, runId, options.trigger, options.messageId);
+  let run: Run | undefined;
+  try {
+    if ((options.requestId !== undefined && typeof options.requestId !== 'string')
+      || !Number.isInteger(options.messageId) || options.messageId < 0
+      || (options.trigger.kind === 'event' && (typeof options.trigger.eventName !== 'string' || !options.trigger.eventName || !eventNameIsValid(options.trigger.eventName)))) {
+      throw new TaskFailure('invalid_request', '请求关联 ID、事件名或消息楼层无效', 'prepare');
+    }
+    const identity = bindMessage(options.messageId);
+    result.chatId = identity.chatId;
+    const key = JSON.stringify(options.trigger.kind === 'event'
+      ? [getScriptId(), identity.chatKey, 'event', options.trigger.eventName]
+      : [getScriptId(), identity.chatKey, 'regular']);
+    const occupying = busy.get(key);
+    if (occupying) { result.status = 'busy'; result.reason = 'already_running'; result.activeRunId = occupying; return await publish(result); }
+    const store = useTaskStore();
+    if (store.configurationError) throw new TaskFailure('unsupported_config', store.configurationError, 'prepare');
+    const snapshot = store.snapshot();
+    const group = snapshot.groups.find(item => item.id === snapshot.activeGroupId);
+    sequence = Math.max(sequence, stateSequenceHighWater(identity)) + 1;
+    run = { id: runId, key, identity, sequence, controller: new AbortController(), cancelled: false, failed: false, result, completed: [] };
+    busy.set(key, runId); activeTaskRuns.set(runId, run);
+    if (resetPrevious) {
+      const previous = latestChains.get(identity.chatKey);
+      if (previous && previous.identity.raw === identity.raw && previous.identity.swipeId === identity.swipeId) {
+        await undoRun(previous);
+        assertMessage(identity, run.controller.signal);
+        if (previous.result.rollback.errors.length) {
+          result.rollback = structuredClone(previous.result.rollback);
+          throw new TaskFailure('rollback_failed', '重新计算前回滚失败，未启动新的生成', 'rollback');
+        }
+        latestChains.delete(identity.chatKey);
+      } else if ((group?.taskIds ?? []).some(id => {
+        const task = snapshot.tasks.find(item => item.id === id)!;
+        return task.enabled && task.order >= 0 && readTaskHistory(id, identity).lastSuccessfulFloor === identity.messageId;
+      })) {
+        throw new TaskFailure('rollback_unavailable', '当前楼层已有成功历史，但本会话没有可用的回滚日志；未恢复原数据或重新生成。', 'rollback');
+      }
+    }
+    const tasks = (group?.taskIds ?? []).map(id => snapshot.tasks.find(task => task.id === id)!);
+    const selected = tasks.filter(task => options.trigger.kind === 'event' ? task.eventName === options.trigger.eventName
+      : options.trigger.kind === 'sent' ? task.order < 0 : task.order >= 0);
+    const ready: { task: TaskConfig; result: TaskResult }[] = [];
+    for (const task of selected) {
+      const taskResult: TaskResult = { taskId: task.id, taskName: task.name, status: 'skipped', attempts: 0, writes: [] };
+      result.tasks.push(taskResult);
+      const history = readTaskHistory(task.id, identity);
+      let reason: TaskResult['reason'];
+      if (!task.enabled) reason = { code: 'disabled', message: '任务已禁用' };
+      else if ((options.trigger.kind === 'sent' || options.trigger.kind === 'received') && options.messageId === 0) reason = { code: 'initial_floor', message: '自动常规入口不执行第 0 楼' };
+      else if (options.trigger.kind === 'received' && identity.raw.mes.length < snapshot.automatic.minReceivedChars) reason = { code: 'short_message', message: `正文少于配置阈值 ${snapshot.automatic.minReceivedChars}` };
+      else if (options.trigger.kind !== 'event' && history.lastSuccessfulFloor !== undefined && options.messageId - history.lastSuccessfulFloor < task.triggerInterval) reason = { code: 'interval_not_reached', message: '未达到楼层间隔', currentFloor: options.messageId, lastSuccessfulFloor: history.lastSuccessfulFloor };
+      if (reason) taskResult.reason = reason; else ready.push({ task, result: taskResult });
+    }
+    const orders = [...new Set(ready.map(item => item.task.order))].sort((a, b) => a - b);
+    for (const order of orders) {
+      if (run.controller.signal.aborted) break;
+      await Promise.all(ready.filter(item => item.task.order === order).map(item => executeTask(run!, item.task, snapshot, item.result)));
+    }
+    for (const item of ready) if (item.result.attempts === 0) item.result.reason = { code: 'run_stopped', message: '所属运行已失败或取消，任务未开始' };
+    if (run.cancelled || run.failed) {
+      if (options.trigger.kind !== 'event') await undoRun(run);
+      result.status = run.cancelled ? 'cancelled' : 'failed';
+    } else {
+      const succeeded = result.tasks.filter(task => task.status === 'succeeded').length;
+      const failed = result.tasks.filter(task => ['failed', 'rollback_failed'].includes(task.status)).length;
+      result.status = failed ? (succeeded ? 'partial' : 'failed') : succeeded ? 'succeeded' : 'skipped';
+      if (!result.tasks.length) result.reason = 'no_matching_tasks';
+    }
+    if (options.trigger.kind !== 'event' && result.status === 'succeeded') {
+      const previous = latestChains.get(identity.chatKey);
+      previous?.completed.forEach(item => releaseJournal(item.journal));
+      latestChains.set(identity.chatKey, run);
+    } else if (options.trigger.kind === 'event') run.completed.forEach(item => releaseJournal(item.journal));
+  } catch (error) {
+    result.status = run?.cancelled ? 'cancelled' : 'failed';
+    result.reason = errorOf(error).message;
+    if (run?.completed.length && options.trigger.kind !== 'event') await undoRun(run);
+  } finally {
+    if (run) { if (busy.get(run.key) === run.id) busy.delete(run.key); activeTaskRuns.delete(run.id); }
+  }
+  return publish(result);
+}
+export async function rerunCurrentTasks() {
+  return runTaskChain({ messageId: getLastMessageId(), trigger: { kind: 'manual' } }, true);
+}
+export function initializeTaskRuntime() {
+  const store = useTaskStore();
+  const registerCustom = () => {
+    customCleanup.forEach(stop => stop()); customCleanup = [];
+    const group = store.settings.groups.find(item => item.id === store.settings.activeGroupId);
+    const events = new Set((group?.taskIds ?? []).map(id => store.settings.tasks.find(task => task.id === id)?.eventName).filter((name): name is string => !!name));
+    for (const eventName of events) {
+      const handler = (requestId?: string) => runTaskChain({ messageId: getLastMessageId(), trigger: { kind: 'event', eventName }, requestId });
+      const listener = eventOn(eventName, handler); customCleanup.push(() => listener.stop());
+    }
+  };
+  registerCustom();
+  cleanup.push(watch(() => store.settings, registerCustom, { deep: true }));
+  cleanup.push(eventOn(tavern_events.MESSAGE_SENT, messageId => runTaskChain({ messageId, trigger: { kind: 'sent' } })).stop);
+  cleanup.push(eventOn(tavern_events.MESSAGE_RECEIVED, messageId => runTaskChain({ messageId, trigger: { kind: 'received' } })).stop);
+  cleanup.push(eventOn('kat_task_chain:rerun', rerunCurrentTasks).stop);
+  cleanup.push(eventOn('kat_task_run:cancel', cancelTaskRun).stop);
+  cleanup.push(eventOn(tavern_events.CHAT_CHANGED, () => {
+    const key = currentChatKey();
+    for (const run of activeTaskRuns.values()) if (run.identity.chatKey !== key) cancelTaskRun(run.id);
+  }).stop);
+  const api: KatTaskAPI = { version: 1, getConfig: store.snapshot, setConfig: store.replaceSettings, setSecret: store.setSecret, deleteSecret: store.deleteSecret,
+    run: (options: { messageId: number; eventName?: string; requestId?: string }) => runTaskChain({ messageId: options.messageId, requestId: options.requestId, trigger: options.eventName !== undefined ? { kind: 'event', eventName: options.eventName } : { kind: 'manual' } }),
+    cancel: cancelTaskRun, getActiveRuns: () => [...activeTaskRuns.values()].map(run => ({ runId: run.id, requestId: run.result.requestId, trigger: structuredClone(run.result.trigger), chatId: run.identity.chatId, messageId: run.identity.messageId })),
+    getUnrecoveredJournals };
+  (window as any).KatTaskAPI = api;
+  initializeGlobal('KatTaskAPI', api);
+}
+export function disposeTaskRuntime() {
+  for (const run of activeTaskRuns.values()) cancelTaskRun(run.id);
+  customCleanup.forEach(stop => stop()); cleanup.forEach(stop => stop()); customCleanup = []; cleanup = [];
+}
