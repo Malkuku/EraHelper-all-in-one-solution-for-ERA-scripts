@@ -12,10 +12,15 @@
     <p v-if="status" role="status">{{ status }}</p>
     <p v-if="error" class="error" role="alert">{{ error }}</p>
     <label v-if="models !== null"
-      >可用模型（{{ models.length }} 个）<Tooltip
-        content="选择模型会更新当前 API 草稿，保存配置后供引用此 API 的任务使用。"
-      />
-      <select :value="connection.model" @change="$emit('select', ($event.target as HTMLSelectElement).value)">
+      ><span class="field-label"
+        >可用模型（{{ models.length }} 个）<Tooltip
+          content="选择模型会更新当前 API 草稿，保存配置后供引用此 API 的任务使用。"
+      /></span>
+      <select
+        :aria-label="`可用模型（${models.length} 个）`"
+        :value="connection.model"
+        @change="$emit('select', ($event.target as HTMLSelectElement).value)"
+      >
         <option value="" disabled>请选择模型，也可在上方手填</option>
         <option v-if="connection.model && !models.includes(connection.model)" :value="connection.model">
           {{ connection.model }}（当前手填）

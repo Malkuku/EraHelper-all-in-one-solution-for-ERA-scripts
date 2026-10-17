@@ -1,5 +1,9 @@
 # 本轮完整 App 浏览器验收脚手架
 
+运行结果整理后，`runs.cjs` 已按当前层级重写：手动工具收起，最新任务明细展开、历史收起，全文与技术诊断均按需展开；错误、目标和残留直接可见。保留原有取消、清空显示不撤销数据和手动候选检查，增加完整诊断复制、键盘与1200/768/375截图（`runs-organized-*`）。事件联动 fixture 的 `diagnostics.cjs` / `events.cjs` 同步通过展开手动工具进入实际运行入口，失败响应改验按需展开；旧“默认展开全文/响应”记录不再代表当前展示规则。
+
+`field-help-worldbook.cjs` 是字段提示与世界书截图反馈的定向复现入口，先运行 `build.cjs`。覆盖图标与标题同行、浮层贴近触发点、hover/焦点/点击/Escape、跨 iframe 渲染到父文档、1200/550/375 布局、已选名称常驻且不展示 UID、搜索追加与逐项移除、内容预览不改变勾选、读取失败保留选择。截图以 `field-help-*` / `worldbook-selection-*` 命名；该环境证据不是实际酒馆验收。
+
 2026-10-17 工作台减负与自由删除后，`configuration.cjs`、`dialogs.cjs`、`first-use.cjs` 已按新交互和宽松编辑契约改写并正式验收。当前工作台的可重放命令为先 `build.cjs`，再这三个入口；使用同一生产 App fixture。前轮 `group-layout.cjs`、`behavior.cjs`、`geometry.cjs` 的工作台 selector 和旧布局断言只对应当时历史界面，不代表本轮通过。新的工作台截图/测量与验收结论见 [本轮验收](../../../2026-10-17-工作台减负与自由删除验收.md)。其余未受影响页面的历史证据仍按原记录解释。
 
 此目录保存2026-10-17独立验收可执行证据。它实际编译生产App、router及页面，宿主/worldbook/MVU/model-list使用模拟接口。长期确定性主入口是根目录 `tests/mvu-editing.cjs` 和 `tests/async-tasks/`；本目录不复制业务算法。

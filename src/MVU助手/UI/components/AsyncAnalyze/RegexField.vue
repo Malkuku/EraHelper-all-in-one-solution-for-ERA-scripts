@@ -2,8 +2,10 @@
   <div class="regex-field">
     <div class="regex-inputs">
       <label
-        >{{ label || '正则表达式' }}<Tooltip :content="help" /><input
+        ><span class="field-label">{{ label || '正则表达式' }}<Tooltip :content="help" /></span
+        ><input
           v-model="expression"
+          :aria-label="label || '正则表达式'"
           class="code-font"
           placeholder="输入正则表达式，或 /表达式/gi"
       /></label>

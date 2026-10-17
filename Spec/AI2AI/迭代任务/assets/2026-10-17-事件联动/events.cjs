@@ -9,6 +9,7 @@ const path = require('node:path');
   await page.goto('file:///' + path.join(__dirname, 'index.html').replaceAll('\\', '/'));
   await page.waitForFunction(() => window.ready);
   await page.getByRole('button', { name: '运行结果', exact: true }).click();
+  await page.locator('.controls-summary').click();
   await page.evaluate(async () => {
     const w = window, config = w.test.tasks.snapshot(), base = config.tasks[0];
     config.presets[0].raw.prompts = [{ identifier: 'chatHistory', name: 'history', role: 'system', marker: true }];

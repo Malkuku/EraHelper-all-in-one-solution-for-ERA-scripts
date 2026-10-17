@@ -58,10 +58,9 @@
               <button class="primary" @click="addGroup">+ 新建规则组</button>
             </div>
             <label class="active-group-control"
-              >活动规则组<Tooltip content="常规链和事件入口使用当前活动规则组内关联的任务。" /><select
-                v-model="draft.activeGroupId"
-                aria-label="活动规则组"
-              >
+              ><span class="field-label"
+                >活动规则组<Tooltip content="常规链和事件入口使用当前活动规则组内关联的任务。" /></span
+              ><select v-model="draft.activeGroupId" aria-label="活动规则组">
                 <option :value="null">不启用规则组</option>
                 <option v-for="item in draft.groups" :key="item.id" :value="item.id">
                   {{ item.name || '未命名规则组' }}
@@ -85,13 +84,12 @@
                 <template v-if="group"
                   ><div class="fields">
                     <label
-                      >名称<Tooltip content="规则组的显示名称，便于按场景选择活动组。" /><input
-                        v-model="group.name"
-                        data-config-key="name" /></label
+                      ><span class="field-label"
+                        >名称<Tooltip content="规则组的显示名称，便于按场景选择活动组。" /></span
+                      ><input v-model="group.name" aria-label="名称" data-config-key="name" /></label
                     ><label
-                      >备注<Tooltip content="描述此规则组的用途和使用条件。" /><input
-                        v-model="group.comment"
-                        data-config-key="comment"
+                      ><span class="field-label">备注<Tooltip content="描述此规则组的用途和使用条件。" /></span
+                      ><input v-model="group.comment" aria-label="备注" data-config-key="comment"
                     /></label>
                   </div>
                   <div class="toolbar">
@@ -215,36 +213,48 @@
                     <h4>连接配置</h4>
                     <div class="fields">
                       <label
-                        >名称<Tooltip content="任务通过 API 配置 ID 关联连接，修改显示名称不会断开关联。" /><input
+                        ><span class="field-label"
+                          >名称<Tooltip content="任务通过 API 配置 ID 关联连接，修改显示名称不会断开关联。" /></span
+                        ><input
                           v-model="connection.name"
+                          aria-label="名称"
                           data-config-key="name"
                           placeholder="为这套 API 起个名字"
                       /></label>
                       <label
-                        >备注<Tooltip content="记录 API 用途、模型特点或服务说明。" /><input
+                        ><span class="field-label">备注<Tooltip content="记录 API 用途、模型特点或服务说明。" /></span
+                        ><input
                           v-model="connection.comment"
+                          aria-label="备注"
                           data-config-key="comment"
                           placeholder="可选"
                       /></label>
                       <label
-                        >API 根地址<Tooltip
-                          content="填写兼容 OpenAI 的 API 根地址，如 https://example.com/v1，不要填写完整 chat/completions 或 models 路径。" /><input
+                        ><span class="field-label"
+                          >API 根地址<Tooltip
+                            content="填写兼容 OpenAI 的 API 根地址，如 https://example.com/v1，不要填写完整 chat/completions 或 models 路径。" /></span
+                        ><input
                           v-model="connection.baseUrl"
+                          aria-label="API 根地址"
                           data-config-key="baseUrl"
                           type="url"
                           placeholder="https://example.com/v1"
                       /></label>
                       <label
-                        >模型<Tooltip
-                          content="填写服务提供的模型 ID，可手动输入，也可从下方获取的模型列表选择。" /><input
+                        ><span class="field-label"
+                          >模型<Tooltip
+                            content="填写服务提供的模型 ID，可手动输入，也可从下方获取的模型列表选择。" /></span
+                        ><input
                           v-model="connection.model"
+                          aria-label="模型"
                           data-config-key="model"
                           placeholder="输入模型名称，或在下方获取"
                       /></label>
                       <label
-                        >绑定预设<Tooltip
-                          content="选择此 API 的任务共用这里绑定的原生预设副本，包括提示词和采样参数。"
-                        /><select v-model="connection.presetId" data-config-key="presetId">
+                        ><span class="field-label"
+                          >绑定预设<Tooltip
+                            content="选择此 API 的任务共用这里绑定的原生预设副本，包括提示词和采样参数。" /></span
+                        ><select v-model="connection.presetId" aria-label="绑定预设" data-config-key="presetId">
                           <option :value="null">暂不绑定</option>
                           <option v-for="item in draft.presets" :key="item.id" :value="item.id">
                             {{ item.name || '未命名预设' }}
@@ -267,9 +277,12 @@
                   <section class="form-section">
                     <h4>本地密钥</h4>
                     <label
-                      >更新密钥<Tooltip
-                        content="密钥仅存本地，不随配置导出。留空保留已存密钥；删除时点击清空已存密钥并保存。" /><input
+                      ><span class="field-label"
+                        >更新密钥<Tooltip
+                          content="密钥仅存本地，不随配置导出。留空保留已存密钥；删除时点击清空已存密钥并保存。" /></span
+                      ><input
                         v-model="secrets[connection.secretRef]"
+                        aria-label="更新密钥"
                         type="password"
                         autocomplete="new-password"
                         placeholder="留空保留已存密钥"
@@ -363,9 +376,9 @@
               <div class="list-content">
                 <div v-if="preset" class="preset-editor">
                   <label
-                    >预设名称<Tooltip content="插件独立预设副本的名称，API 通过 ID 绑定，改名不会解除绑定。" /><input
-                      v-model="preset.name"
-                      data-config-key="name"
+                    ><span class="field-label"
+                      >预设名称<Tooltip content="插件独立预设副本的名称，API 通过 ID 绑定，改名不会解除绑定。" /></span
+                    ><input v-model="preset.name" aria-label="预设名称" data-config-key="name"
                   /></label>
                   <div class="toolbar">
                     <button @click="duplicatePreset">复制预设</button
@@ -378,8 +391,10 @@
                         ['openai_max_context', 'openai_max_tokens'].includes(item.key),
                       )"
                       :key="field.key"
-                      >{{ field.label }}<Tooltip :content="samplingHelp[field.key]" /><input
+                      ><span class="field-label">{{ field.label }}<Tooltip :content="samplingHelp[field.key]" /></span
+                      ><input
                         v-model.number="preset.raw[field.key]"
+                        :aria-label="field.label"
                         :data-config-key="field.key"
                         type="number"
                         :step="field.step"
@@ -393,8 +408,10 @@
                           item => !['openai_max_context', 'openai_max_tokens'].includes(item.key),
                         )"
                         :key="field.key"
-                        >{{ field.label }}<Tooltip :content="samplingHelp[field.key]" /><input
+                        ><span class="field-label">{{ field.label }}<Tooltip :content="samplingHelp[field.key]" /></span
+                        ><input
                           v-model.number="preset.raw[field.key]"
+                          :aria-label="field.label"
                           :data-config-key="field.key"
                           type="number"
                           :step="field.step"
@@ -428,12 +445,14 @@
                     </div>
                     <div class="fields">
                       <label
-                        >名称<Tooltip content="提示词条目的显示名称，原生标识用于占位符和顺序关联。" /><input
-                          v-model="prompt.name" /></label
+                        ><span class="field-label"
+                          >名称<Tooltip content="提示词条目的显示名称，原生标识用于占位符和顺序关联。" /></span
+                        ><input v-model="prompt.name" aria-label="名称" /></label
                       ><label
-                        >角色<Tooltip
-                          content="以 system、user 或 assistant 身份发送这段提示词，按模型支持的角色选择。"
-                        /><select v-model="prompt.role">
+                        ><span class="field-label"
+                          >角色<Tooltip
+                            content="以 system、user 或 assistant 身份发送这段提示词，按模型支持的角色选择。" /></span
+                        ><select v-model="prompt.role" aria-label="角色">
                           <option value="system">system</option>
                           <option value="user">user</option>
                           <option value="assistant">assistant</option>
@@ -442,30 +461,32 @@
                     </div>
                     <p class="hint">标识：{{ prompt.identifier }}{{ prompt.marker ? '（原生占位符）' : '' }}</p>
                     <label
-                      >内容<Tooltip content="提示词正文，支持宏或模板。原生占位符由对应内容源展开。" /><textarea
-                        v-model="prompt.content"
-                        rows="5"
-                      />
+                      ><span class="field-label"
+                        >内容<Tooltip content="提示词正文，支持宏或模板。原生占位符由对应内容源展开。" /></span
+                      ><textarea v-model="prompt.content" aria-label="内容" rows="5" />
                     </label>
                     <details>
                       <summary>原生注入位置</summary>
                       <div class="fields">
                         <label
-                          >位置<Tooltip content="相对顺序按预设列表组装，聊天深度按指定位置注入聊天历史。" /><select
-                            v-model.number="prompt.injection_position"
-                          >
+                          ><span class="field-label"
+                            >位置<Tooltip content="相对顺序按预设列表组装，聊天深度按指定位置注入聊天历史。" /></span
+                          ><select v-model.number="prompt.injection_position" aria-label="位置">
                             <option :value="0">相对顺序</option>
                             <option :value="1">聊天深度</option>
                           </select></label
                         ><label
-                          >深度<Tooltip content="从聊天历史末端计算的注入深度，0 表示历史末端。" /><input
+                          ><span class="field-label"
+                            >深度<Tooltip content="从聊天历史末端计算的注入深度，0 表示历史末端。" /></span
+                          ><input
                             v-model.number="prompt.injection_depth"
+                            aria-label="深度"
                             type="number"
                             min="0" /></label
                         ><label
-                          >注入顺序<Tooltip content="控制相同聊天深度下提示词的排列顺序。" /><input
-                            v-model.number="prompt.injection_order"
-                            type="number"
+                          ><span class="field-label"
+                            >注入顺序<Tooltip content="控制相同聊天深度下提示词的排列顺序。" /></span
+                          ><input v-model.number="prompt.injection_order" aria-label="注入顺序" type="number"
                         /></label>
                       </div>
                     </details>
@@ -571,19 +592,20 @@
                     </div>
                     <div class="fields">
                       <label
-                        >名称<Tooltip
-                          content="用于识别和选择任务；规则组通过任务 ID 关联，修改名称不会断开关联。" /><input
-                          v-model="task.name"
-                          data-config-key="name" /></label
+                        ><span class="field-label"
+                          >名称<Tooltip
+                            content="用于识别和选择任务；规则组通过任务 ID 关联，修改名称不会断开关联。" /></span
+                        ><input v-model="task.name" aria-label="名称" data-config-key="name" /></label
                       ><label
-                        >备注<Tooltip content="记录任务的用途和使用说明，供自己或配置使用者查看。" /><input
-                          v-model="task.comment"
-                          data-config-key="comment"
+                        ><span class="field-label"
+                          >备注<Tooltip content="记录任务的用途和使用说明，供自己或配置使用者查看。" /></span
+                        ><input v-model="task.comment" aria-label="备注" data-config-key="comment"
                       /></label>
                       <label
-                        >API 配置<Tooltip
-                          content="选择此任务使用的 API；模型和原生预设由该 API 配置统一绑定。未选择时可以保存草稿，运行前必须补齐。"
-                        /><select v-model="task.connectionId" data-config-key="connectionId">
+                        ><span class="field-label"
+                          >API 配置<Tooltip
+                            content="选择此任务使用的 API；模型和原生预设由该 API 配置统一绑定。未选择时可以保存草稿，运行前必须补齐。" /></span
+                        ><select v-model="task.connectionId" aria-label="API 配置" data-config-key="connectionId">
                           <option value="">请选择 API 配置</option>
                           <option v-for="item in draft.connections" :key="item.id" :value="item.id">
                             {{ item.name || '未命名 API' }}
@@ -593,9 +615,10 @@
                     </div>
 
                     <label
-                      >任务提示词<Tooltip
-                        content="发送给 AI 的任务要求，与绑定预设、选定的聊天历史和触发的世界书内容一起组装请求。"
-                      /><textarea v-model="task.prompt" data-config-key="prompt" rows="8" />
+                      ><span class="field-label"
+                        >任务提示词<Tooltip
+                          content="发送给 AI 的任务要求，与绑定预设、选定的聊天历史和触发的世界书内容一起组装请求。" /></span
+                      ><textarea v-model="task.prompt" aria-label="任务提示词" data-config-key="prompt" rows="8" />
                     </label>
                     <details>
                       <summary>触发与高级参数</summary>
@@ -604,36 +627,48 @@
                       </p>
                       <div class="fields">
                         <label
-                          >附加事件名<Tooltip
-                            content="监听额外的自定义事件。事件匹配忽略“参加常规链”开关；要配置只由事件运行的任务，请关闭该开关。事件入口仍检查楼层间隔。" /><input
-                            v-model="task.eventName"
-                            data-config-key="eventName" /></label
+                          ><span class="field-label"
+                            >附加事件名<Tooltip
+                              content="监听额外的自定义事件。事件匹配忽略“参加常规链”开关；要配置只由事件运行的任务，请关闭该开关。事件入口仍检查楼层间隔。" /></span
+                          ><input v-model="task.eventName" aria-label="附加事件名" data-config-key="eventName" /></label
                         ><label
-                          >执行顺序<Tooltip
-                            content="数值越小越先运行，同一顺序可并发。常规链中负数在正文发送前运行并等待完成，0 和正数在收到正文后运行。" /><input
+                          ><span class="field-label"
+                            >执行顺序<Tooltip
+                              content="数值越小越先运行，同一顺序可并发。常规链中负数在正文发送前运行并等待完成，0 和正数在收到正文后运行。" /></span
+                          ><input
                             v-model.number="task.order"
+                            aria-label="执行顺序"
                             data-config-key="order"
                             type="number"
                             step="1"
                         /></label>
                         <label
-                          >历史消息条数<Tooltip
-                            content="AI 可读取的最近聊天消息条数；0 表示不提供聊天历史。世界书扫描也只能使用本任务提供的历史。" /><input
+                          ><span class="field-label"
+                            >历史消息条数<Tooltip
+                              content="AI 可读取的最近聊天消息条数；0 表示不提供聊天历史。世界书扫描也只能使用本任务提供的历史。" /></span
+                          ><input
                             v-model.number="task.historyDepth"
+                            aria-label="历史消息条数"
                             data-config-key="historyDepth"
                             type="number"
                             min="0" /></label
                         ><label
-                          >触发楼层间隔<Tooltip
-                            content="当前楼层减去上次成功触发楼层，差值达到间隔才运行；尚无记录时以上次楼层 0 计算。仅间隔大于 1 时检查，1 表示不限制。常规和事件触发均适用；单任务测试绕过此检查。" /><input
+                          ><span class="field-label"
+                            >触发楼层间隔<Tooltip
+                              content="当前楼层减去上次成功触发楼层，差值达到间隔才运行；尚无记录时以上次楼层 0 计算。仅间隔大于 1 时检查，1 表示不限制。常规和事件触发均适用；单任务测试绕过此检查。" /></span
+                          ><input
                             v-model.number="task.triggerInterval"
+                            aria-label="触发楼层间隔"
                             data-config-key="triggerInterval"
                             type="number"
                             min="1" /></label
                         ><label
-                          >失败重试次数<Tooltip
-                            content="AI 请求或处理失败后额外重试的次数；0 表示只尝试一次。取消和写入冲突不会自动重试，避免重复覆盖。" /><input
+                          ><span class="field-label"
+                            >失败重试次数<Tooltip
+                              content="AI 请求或处理失败后额外重试的次数；0 表示只尝试一次。取消和写入冲突不会自动重试，避免重复覆盖。" /></span
+                          ><input
                             v-model.number="task.retryCount"
+                            aria-label="失败重试次数"
                             data-config-key="retryCount"
                             type="number"
                             min="0"
@@ -712,8 +747,10 @@
                       <summary>世界书扫描参数</summary>
                       <div class="fields">
                         <label v-for="field in scanNumbers" :key="field.key"
-                          >{{ field.label }}<Tooltip :content="scanHelp[field.key]" /><input
+                          ><span class="field-label">{{ field.label }}<Tooltip :content="scanHelp[field.key]" /></span
+                          ><input
                             v-model.number="task.scan[field.key]"
+                            :aria-label="field.label"
                             :data-config-key="field.key"
                             type="number"
                             :min="0"
@@ -743,9 +780,10 @@
                       </div>
                       <div class="fields">
                         <label
-                          >阶段<Tooltip
-                            content="选择处理的位置：聊天历史、扫描后的世界书、组装后的请求消息，或模型响应。不同阶段作用于对应文本。"
-                          /><select v-model="regex.stage">
+                          ><span class="field-label"
+                            >阶段<Tooltip
+                              content="选择处理的位置：聊天历史、扫描后的世界书、组装后的请求消息，或模型响应。不同阶段作用于对应文本。" /></span
+                          ><select v-model="regex.stage" aria-label="阶段">
                             <option value="history">历史</option>
                             <option value="worldinfo">世界书</option>
                             <option value="prompt">请求消息</option>
@@ -759,18 +797,21 @@
                         />
                       </div>
                       <label
-                        >替换文本<Tooltip
-                          content="将当前阶段中正则匹配的片段替换成此文本；支持 JavaScript 替换语法，如 $1 引用第一个捕获组。"
-                        /><textarea v-model="regex.replacement" rows="2" />
+                        ><span class="field-label"
+                          >替换文本<Tooltip
+                            content="将当前阶段中正则匹配的片段替换成此文本；支持 JavaScript 替换语法，如 $1 引用第一个捕获组。" /></span
+                        ><textarea v-model="regex.replacement" aria-label="替换文本" rows="2" />
                       </label>
                     </div>
                   </section>
                   <section v-show="taskTab === 'output'">
                     <h4>结果处理</h4>
                     <label
-                      >输出方式<Tooltip
-                        content="仅返回保留运行结果；写入目标可更新正文或世界书；事件结果广播将结果发送给监听该事件的其它前端。"
-                      /><select
+                      ><span class="field-label"
+                        >输出方式<Tooltip
+                          content="仅返回保留运行结果；写入目标可更新正文或世界书；事件结果广播将结果发送给监听该事件的其它前端。" /></span
+                      ><select
+                        aria-label="输出方式"
                         :value="task.output.mode"
                         @change="setOutput(($event.target as HTMLSelectElement).value)"
                       >
@@ -789,9 +830,11 @@
                       <div v-for="(write, writeIndex) in task.output.writes" :key="write.id" class="card">
                         <div class="toolbar">
                           <label
-                            >目标<Tooltip
-                              content="当前正文消息写入本轮目标消息；世界书按条目 UID 定位，缺失目标会按配置名称创建并启用条目。"
-                            /><select
+                            ><span class="field-label"
+                              >目标<Tooltip
+                                content="当前正文消息写入本轮目标消息；世界书按条目 UID 定位，缺失目标会按配置名称创建并启用条目。" /></span
+                            ><select
+                              aria-label="目标"
                               :value="write.target.kind"
                               @change="setTarget(write, ($event.target as HTMLSelectElement).value)"
                             >
@@ -821,9 +864,11 @@
                         </div>
                         <button @click="write.extract.push({ pattern: '', flags: '' })">+ 提取正则</button>
                         <label
-                          >写入操作<Tooltip
-                            content="追加会把提取结果写在目标末尾；正则替换会在目标内容中寻找匹配片段，并替换成提取结果。"
-                          /><select
+                          ><span class="field-label"
+                            >写入操作<Tooltip
+                              content="追加会把提取结果写在目标末尾；正则替换会在目标内容中寻找匹配片段，并替换成提取结果。" /></span
+                          ><select
+                            aria-label="写入操作"
                             :value="write.operation.kind"
                             @change="
                               write.operation =
@@ -875,9 +920,12 @@
           <section v-if="tab === 'settings'">
             <h3>额外功能</h3>
             <label
-              >自动常规任务的最少正文字数<Tooltip
-                content="正文接收后自动运行常规链的字数门槛，事件和手动测试不受此门槛限制。" /><input
+              ><span class="field-label"
+                >自动常规任务的最少正文字数<Tooltip
+                  content="正文接收后自动运行常规链的字数门槛，事件和手动测试不受此门槛限制。" /></span
+              ><input
                 v-model.number="draft.automatic.minReceivedChars"
+                aria-label="自动常规任务的最少正文字数"
                 type="number"
                 min="0"
             /></label>

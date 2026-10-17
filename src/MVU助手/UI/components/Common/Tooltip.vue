@@ -24,9 +24,9 @@
         v-if="visible"
         :id="tooltipId"
         ref="floatingRef"
-        class="tooltip-content"
+        class="mvu-field-help"
         role="tooltip"
-        :style="floatingStyles"
+        :style="{ ...floatingStyles, visibility: isPositioned ? 'visible' : 'hidden' }"
       >
         {{ content || '无内容' }}
       </div>
@@ -38,14 +38,16 @@ import { onBeforeUnmount, ref, useId } from 'vue';
 import { useFloating, offset, flip, shift, autoUpdate } from '@floating-ui/vue';
 const props = withDefaults(
   defineProps<{ content?: string; placement?: 'top' | 'bottom' | 'left' | 'right'; delay?: number }>(),
-  { content: '', placement: 'top', delay: 200 },
+  { content: '', placement: 'bottom', delay: 200 },
 );
 const tooltipId = useId();
 const visible = ref(false);
 const referenceRef = ref<HTMLElement | null>(null);
 const floatingRef = ref<HTMLElement | null>(null);
-const { floatingStyles } = useFloating(referenceRef, floatingRef, {
-  placement: props.placement,
+const { floatingStyles, isPositioned } = useFloating(referenceRef, floatingRef, {
+  open: visible,
+  placement: () =>
+    props.placement === 'top' || props.placement === 'bottom' ? `${props.placement}-start` : props.placement,
   strategy: 'fixed',
   whileElementsMounted: autoUpdate,
   middleware: [offset(8), flip({ padding: 8 }), shift({ padding: 8 })],
@@ -68,6 +70,8 @@ onBeforeUnmount(hide);
 <style scoped>
 .tooltip-wrapper {
   display: inline-flex;
+  flex: 0 0 auto;
+  align-self: center;
   vertical-align: middle;
   margin-inline-start: 5px;
 }
@@ -77,6 +81,9 @@ onBeforeUnmount(hide);
   justify-content: center;
   min-width: 24px !important;
   min-height: 24px !important;
+  width: 24px !important;
+  height: 24px !important;
+  margin: 0 !important;
   padding: 3px !important;
   border: 0 !important;
   border-radius: 4px;
@@ -92,7 +99,7 @@ onBeforeUnmount(hide);
   width: 16px;
   height: 16px;
 }
-.tooltip-content {
+.mvu-field-help {
   width: max-content;
   max-width: min(340px, calc(100vw - 16px));
   box-sizing: border-box;

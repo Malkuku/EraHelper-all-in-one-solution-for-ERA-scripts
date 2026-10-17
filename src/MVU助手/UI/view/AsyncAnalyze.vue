@@ -10,64 +10,73 @@
     >
       <template #runs="{ dirty }">
         <section class="runs" aria-label="任务运行记录">
-          <header class="section-header">
-            <div>
-              <h2>运行记录</h2>
-              <p>查看任务结果与数据影响，按需取消或重新计算。</p>
-            </div>
-            <button :disabled="!taskRunResults.length" @click="clearResults">清空显示记录</button>
-          </header>
-          <div class="run-controls">
-            <div class="run-context">
-              <strong>本次目标 · 楼层 {{ target.messageId }}</strong
-              ><span>聊天：{{ target.chatId || '未打开聊天' }}</span>
-              <span>已保存规则组：{{ group ? group.name || '未命名规则组' : '未启用' }}</span>
-              <label
-                >运行范围<select v-model="runMode" aria-label="运行范围">
-                  <option value="regular">常规链（非负顺序）</option>
-                  <option value="event">指定事件</option>
-                  <option value="task">单个任务</option>
-                </select></label
+          <details class="run-controls">
+            <summary class="controls-summary">
+              <strong>手动运行 / 测试</strong>
+              <span class="muted"
+                >楼层 {{ target.messageId }} · {{ group ? group.name || '未命名规则组' : '未启用规则组' }}</span
               >
-              <label v-if="runMode === 'event'"
-                >事件<select v-model="selectedEvent" aria-label="测试事件">
-                  <option value="">请选择事件</option>
-                  <option v-for="name in eventNames" :key="name" :value="name">{{ name }}</option>
-                </select></label
-              >
-              <label v-if="runMode === 'task'"
-                >任务<select v-model="selectedTask" aria-label="测试任务">
-                  <option value="">请选择任务</option>
-                  <option v-for="task in groupTasks" :key="task.id" :value="task.id">
-                    {{ task.name || '未命名任务' }}{{ task.enabled ? '' : '（不参加常规链）'
-                    }}{{ task.eventName ? ' · 事件 ' + task.eventName : '' }}
-                  </option>
-                </select></label
-              >
-              <p v-if="dirty" class="warning">有未保存草稿。本次运行使用已保存配置；请先保存全部配置以使用修改。</p>
-              <p v-if="writeTargets.length">可能写入：{{ writeTargets.join('、') }}。实际写入以运行结果为准。</p>
-              <p v-else>本次候选任务没有写入目标。</p>
-              <p>
-                测试会真实请求模型并执行配置的写入，使用当前楼层。事件按配置检查间隔，关闭常规参与也可触发；单任务测试仅执行所选任务并跳过间隔，普通任务仍检查常规参与开关。
-              </p>
+              <span v-if="dirty" class="warning">有未保存草稿</span>
+            </summary>
+            <div class="controls-body">
+              <div class="run-context">
+                <p class="muted">
+                  聊天：{{ target.chatId || '未打开聊天' }} · 使用已保存配置 · {{ candidateTasks.length }} 个候选任务
+                </p>
+                <div class="run-selectors">
+                  <label
+                    >运行范围<select v-model="runMode" aria-label="运行范围">
+                      <option value="regular">常规链（非负顺序）</option>
+                      <option value="event">指定事件</option>
+                      <option value="task">单个任务</option>
+                    </select></label
+                  >
+                  <label v-if="runMode === 'event'"
+                    >事件<select v-model="selectedEvent" aria-label="测试事件">
+                      <option value="">请选择事件</option>
+                      <option v-for="name in eventNames" :key="name" :value="name">{{ name }}</option>
+                    </select></label
+                  >
+                  <label v-if="runMode === 'task'"
+                    >任务<select v-model="selectedTask" aria-label="测试任务">
+                      <option value="">请选择任务</option>
+                      <option v-for="task in groupTasks" :key="task.id" :value="task.id">
+                        {{ task.name || '未命名任务' }}{{ task.enabled ? '' : '（不参加常规链）'
+                        }}{{ task.eventName ? ' · 事件 ' + task.eventName : '' }}
+                      </option>
+                    </select></label
+                  >
+                </div>
+                <p v-if="dirty" class="warning">有未保存草稿。本次运行使用已保存配置；请先保存全部配置以使用修改。</p>
+                <p v-if="writeTargets.length" class="warning">
+                  实际请求模型，可能影响：{{ writeTargets.join('、') }}。
+                </p>
+                <p v-else class="muted">实际请求模型，本次候选任务没有写入目标。</p>
+              </div>
+              <div class="actions">
+                <button class="primary" :disabled="!canRun || pending" @click="runCurrent">
+                  {{ runMode === 'regular' ? '运行当前楼层任务' : runMode === 'event' ? '测试此事件' : '测试此任务' }}
+                </button>
+                <button v-if="runMode === 'regular'" :disabled="!canRun || pending" @click="rerun">
+                  回滚此链后重新计算</button
+                ><button @click="refreshTarget">刷新目标</button>
+              </div>
+              <p v-if="!canRun" class="warning">请打开聊天，并在活动规则组内选择对应事件、任务或启用常规任务。</p>
+              <details class="run-help">
+                <summary>运行与重新计算说明</summary>
+                <p>
+                  事件按配置检查间隔，关闭常规参与也可触发。单任务测试仅执行所选任务并跳过间隔，普通任务仍检查常规参与开关。
+                </p>
+                <p>
+                  重新计算会先撤销当前楼层上一条常规链的提交。日志仅在本次脚本会话有效；重载后不可恢复旧日志，是否可回滚由任务内核校验。
+                </p>
+              </details>
+              <details class="integration-rules">
+                <summary>其它前端联动规则</summary>
+                <button @click="copyIntegrationRules">一键复制前端联动规则</button>
+                <pre>{{ integrationRules }}</pre>
+              </details>
             </div>
-            <div class="actions">
-              <button class="primary" :disabled="!canRun || pending" @click="runCurrent">
-                {{ runMode === 'regular' ? '运行当前楼层任务' : runMode === 'event' ? '测试此事件' : '测试此任务' }}
-              </button>
-              <button v-if="runMode === 'regular'" :disabled="!canRun || pending" @click="rerun">
-                回滚此链后重新计算</button
-              ><button @click="refreshTarget">刷新目标</button>
-            </div>
-            <p class="muted">
-              重新计算会先撤销当前楼层上一条常规链的提交。日志仅在本次脚本会话有效；重载后不可恢复旧日志，是否可回滚由任务内核校验。
-            </p>
-            <p v-if="!canRun" class="warning">请打开聊天，并在活动规则组内选择对应事件、任务或启用常规任务。</p>
-          </div>
-          <details class="integration-rules">
-            <summary>其它前端联动规则</summary>
-            <button @click="copyIntegrationRules">一键复制前端联动规则</button>
-            <pre>{{ integrationRules }}</pre>
           </details>
           <p v-if="feedback" role="status" class="feedback">{{ feedback }}</p>
           <section v-if="activeTaskRuns.size" class="active-runs" aria-label="正在运行">
@@ -83,85 +92,133 @@
               <p class="muted">取消请求后仍需等待清理与回滚，最终数据状态以完成记录为准。</p>
             </article>
           </section>
+          <header class="history-heading">
+            <h3>
+              运行记录 <span class="muted">{{ taskRunResults.length }} 次</span>
+            </h3>
+            <button class="text-button" :disabled="!taskRunResults.length" @click="clearResults">清空显示记录</button>
+          </header>
           <div v-if="!taskRunResults.length && !activeTaskRuns.size" class="empty-state">
             <strong>暂无运行记录</strong>
             <p>运行任务后，在这里查看文本结果、写入状态和失败原因。清空显示记录不会撤销数据修改。</p>
           </div>
           <article
-            v-for="result in [...taskRunResults].reverse()"
+            v-for="(result, runIndex) in [...taskRunResults].reverse()"
             :key="result.runId"
             class="run-card"
             :class="{ 'needs-attention': needsAttention(result) }"
           >
-            <header class="section-header">
-              <div>
-                <strong>{{ runLabel(result) }} · {{ labels[result.status] }}</strong>
-                <p>楼层 {{ result.messageId }} · {{ result.tasks.length }} 个任务</p>
-              </div>
-              <button @click="copyDiagnostic(result)">复制诊断</button>
+            <header class="result-heading">
+              <span class="status-badge" :class="result.status">{{ labels[result.status] }}</span>
+              <strong>{{ runLabel(result) }}</strong>
+              <span class="muted">楼层 {{ result.messageId }}</span>
             </header>
+            <p class="task-counts muted">{{ taskOverview(result) }}</p>
             <p class="impact" :class="{ error: hasResidue(result) }">{{ dataImpact(result) }}</p>
             <p v-if="result.reason">{{ result.reason }}</p>
-            <p v-for="(warning, index) in result.warnings" :key="'warning' + index" class="warning">
-              {{ warning.message }}
-            </p>
+            <ul
+              v-if="
+                result.tasks.some(task => task.error || task.status === 'failed' || task.status === 'rollback_failed')
+              "
+              class="failure-summary"
+            >
+              <li
+                v-for="task in result.tasks.filter(
+                  task => task.error || task.status === 'failed' || task.status === 'rollback_failed',
+                )"
+                :key="task.taskId"
+              >
+                <strong>{{ task.taskName || '未命名任务' }}</strong
+                >：{{ task.error?.message || task.reason?.message || labels[task.status] }}
+              </li>
+            </ul>
             <div v-if="hasResidue(result)" role="alert" class="recovery">
               <strong>需要检查未恢复的数据或任务状态</strong>
               <p>请先核对下方目标和错误，再处理冲突。避免直接重复写入；复制诊断可保留当前结果。</p>
               <p v-for="(error, index) in result.rollback.errors" :key="index">{{ error }}</p>
             </div>
-            <section v-for="task in result.tasks" :key="task.taskId" class="task-result">
-              <div class="task-result-heading">
-                <strong>{{ task.taskName || '未命名任务' }}</strong
-                ><span>{{ labels[task.status] }} · 尝试 {{ task.attempts }} 次</span>
-              </div>
-              <p v-if="task.reason">
-                {{ task.reason.message
-                }}<span v-if="task.reason.currentFloor !== undefined"
-                  >（本次 {{ task.reason.currentFloor }}，上次触发基线
-                  {{ task.reason.lastTriggerFloor ?? task.reason.lastSuccessfulFloor ?? 0 }}）</span
-                >
-              </p>
-              <p v-if="task.error" class="error">{{ task.error.message }}</p>
-              <div v-if="task.error?.details" class="error-context">
-                <p>API：{{ task.error.details.connectionName || '未命名' }} · 模型：{{ task.error.details.model }}</p>
-                <p>地址：{{ task.error.details.endpoint }}</p>
-                <p>
-                  阶段：{{ phaseLabels[task.error.phase] || task.error.phase }} · 耗时
-                  {{ (task.error.details.elapsedMs / 1000).toFixed(2) }} 秒<span
-                    v-if="task.error.details.httpStatus !== undefined"
-                  >
-                    · HTTP {{ task.error.details.httpStatus }} {{ task.error.details.statusText }}</span
-                  >
-                </p>
-                <p v-if="task.error.details.backendCode || task.error.details.backendType">
-                  后端代码：{{ task.error.details.backendCode || '未提供' }} · 类型：{{
-                    task.error.details.backendType || '未提供'
-                  }}
-                </p>
-              </div>
-              <ul v-if="task.writes.length" class="writes">
+            <ul v-if="result.tasks.some(task => task.writes.length)" class="writes">
+              <template v-for="task in result.tasks" :key="task.taskId">
                 <li v-for="write in task.writes" :key="write.writeId">
-                  {{ write.target || write.writeId }}：{{ labels[write.status] }}
-                  <span v-if="write.error" class="error">{{ write.error }}</span>
+                  <span>{{ write.target || '未命名目标' }}</span>
+                  <span :class="{ error: write.status === 'failed' || write.status === 'rollback_failed' }">{{
+                    labels[write.status]
+                  }}</span>
+                  <p v-if="write.error" class="error">{{ write.error }}</p>
                 </li>
-              </ul>
-              <details v-if="task.text" :open="result.status === 'succeeded' && result.tasks.length === 1">
-                <summary>查看返回文本</summary>
-                <pre>{{ task.text }}</pre>
-              </details>
-              <details v-if="task.error" open>
-                <summary>失败详情</summary>
-                <p>{{ task.error.phase }} / {{ task.error.code }}</p>
-                <pre v-if="task.error.details?.response">{{ task.error.details.response }}</pre>
-                <p v-else>
-                  本阶段未取得后端响应内容。控制台按运行 ID
-                  {{ result.runId }} 查看过程日志；请求和原始输出见控制台的调试级别日志。
+              </template>
+            </ul>
+            <details v-if="result.warnings.length" class="run-warnings">
+              <summary class="warning">运行提醒 · {{ result.warnings.length }} 项</summary>
+              <p v-for="(warning, index) in result.warnings" :key="index" class="warning">{{ warning.message }}</p>
+            </details>
+            <details v-if="result.tasks.length" class="task-details" :open="runIndex === 0">
+              <summary>任务明细 · {{ result.tasks.length }} 项</summary>
+              <section v-for="task in result.tasks" :key="task.taskId" class="task-result">
+                <div class="task-result-heading">
+                  <strong>{{ task.taskName || '未命名任务' }}</strong
+                  ><span
+                    >{{ labels[task.status]
+                    }}<template v-if="task.attempts > 1"> · 尝试 {{ task.attempts }} 次</template></span
+                  >
+                </div>
+                <p
+                  v-if="task.reason && !task.error && task.status !== 'failed' && task.status !== 'rollback_failed'"
+                  class="muted"
+                >
+                  {{ task.reason.message
+                  }}<span v-if="task.reason.currentFloor !== undefined"
+                    >（本次 {{ task.reason.currentFloor }}，上次触发基线
+                    {{ task.reason.lastTriggerFloor ?? task.reason.lastSuccessfulFloor ?? 0 }}）</span
+                  >
                 </p>
-              </details>
-            </section>
+                <details v-if="task.text" class="returned-text">
+                  <summary>
+                    查看返回文本 <span class="muted">{{ task.text.length }} 字符</span>
+                  </summary>
+                  <pre>{{ task.text }}</pre>
+                </details>
+                <details v-if="task.error" class="error-diagnostic">
+                  <summary>
+                    技术详情
+                    <span class="muted"
+                      >{{ phaseLabels[task.error.phase] || task.error.phase
+                      }}<template v-if="task.error.details?.httpStatus !== undefined">
+                        · HTTP {{ task.error.details.httpStatus }}</template
+                      ></span
+                    >
+                  </summary>
+                  <div v-if="task.error?.details" class="error-context">
+                    <p>
+                      API：{{ task.error.details.connectionName || '未命名' }} · 模型：{{ task.error.details.model }}
+                    </p>
+                    <p>地址：{{ task.error.details.endpoint }}</p>
+                    <p>
+                      阶段：{{ phaseLabels[task.error.phase] || task.error.phase }} · 耗时
+                      {{ (task.error.details.elapsedMs / 1000).toFixed(2) }} 秒<span
+                        v-if="task.error.details.httpStatus !== undefined"
+                      >
+                        · HTTP {{ task.error.details.httpStatus }} {{ task.error.details.statusText }}</span
+                      >
+                    </p>
+                    <p v-if="task.error.details.backendCode || task.error.details.backendType">
+                      后端代码：{{ task.error.details.backendCode || '未提供' }} · 类型：{{
+                        task.error.details.backendType || '未提供'
+                      }}
+                    </p>
+                  </div>
+                  <p class="muted">错误代码：{{ task.error.code }}</p>
+                  <pre v-if="task.error.details?.response">{{ task.error.details.response }}</pre>
+                  <p v-else>
+                    本阶段未取得后端响应内容。控制台按运行 ID
+                    {{ result.runId }} 查看过程日志；请求和原始输出见控制台的调试级别日志。
+                  </p>
+                </details>
+              </section>
+            </details>
             <details class="diagnostic">
-              <summary>运行标识与诊断</summary>
+              <summary>运行诊断</summary>
+              <button class="text-button" @click="copyDiagnostic(result)">复制诊断</button>
               <p>聊天：{{ result.chatId }} · 请求：{{ result.requestId }} · 运行：{{ result.runId }}</p>
               <p v-if="result.activeRunId">占用运行：{{ result.activeRunId }}</p>
               <p>回滚：{{ labels[result.rollback.status] || result.rollback.status }}</p>
@@ -329,6 +386,13 @@ function hasResidue(result: RunResult) {
 function needsAttention(result: RunResult) {
   return hasResidue(result) || ['failed', 'partial'].includes(result.status);
 }
+function taskOverview(result: RunResult) {
+  const counts = new Map<string, number>();
+  for (const task of result.tasks) counts.set(task.status, (counts.get(task.status) || 0) + 1);
+  return [`${result.tasks.length} 个任务`, ...[...counts].map(([status, count]) => `${labels[status]} ${count}`)].join(
+    ' · ',
+  );
+}
 function dataImpact(result: RunResult) {
   if (hasResidue(result)) return '存在未恢复的修改或任务状态，请检查受影响目标。';
   if (result.rollback.status === 'completed') return '已撤销本链需要回滚的提交。';
@@ -342,7 +406,7 @@ async function copyDiagnostic(result: RunResult) {
     await navigator.clipboard.writeText(JSON.stringify(result, null, 2));
     feedback.value = '已复制运行诊断。内容包含返回文本与写入目标，请按需分享。';
   } catch {
-    feedback.value = '无法访问剪贴板，请展开运行标识与诊断后手动复制。';
+    feedback.value = '无法访问剪贴板，请展开运行诊断查看信息。';
   }
 }
 </script>
@@ -354,7 +418,7 @@ async function copyDiagnostic(result: RunResult) {
 }
 .runs {
   display: grid;
-  gap: 20px;
+  gap: 12px;
 }
 h2,
 h3,
@@ -390,16 +454,80 @@ p {
 }
 .run-controls,
 .run-card {
-  padding: 20px;
+  padding: 16px 18px;
   border: 1px solid var(--mvu-line, #d5dce6);
   background: var(--mvu-panel, #fff);
   border-radius: 12px;
   min-width: 0;
 }
-.run-controls,
+.controls-body,
 .run-context {
   display: grid;
   gap: 12px;
+}
+.run-controls {
+  padding: 4px 16px;
+  background: var(--mvu-soft);
+}
+.controls-summary {
+  padding: 10px 0;
+}
+.controls-summary > span {
+  margin-inline-start: 10px;
+}
+.controls-body {
+  padding: 8px 0 12px;
+}
+.run-selectors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.run-selectors label {
+  flex: 1 1 220px;
+}
+.history-heading,
+.result-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+.history-heading {
+  justify-content: space-between;
+}
+.history-heading h3 span {
+  margin-inline-start: 6px;
+  font-weight: 400;
+}
+.result-heading > strong {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.status-badge {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border: 1px solid currentColor;
+  border-radius: 5px;
+  font-size: 12px;
+  color: var(--mvu-muted);
+}
+.status-badge.succeeded {
+  color: var(--mvu-success);
+}
+.status-badge.failed {
+  color: var(--mvu-danger);
+}
+.status-badge.partial {
+  color: var(--mvu-warning);
+}
+.runs button.text-button {
+  min-height: 32px;
+  padding: 4px 8px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--mvu-muted);
 }
 .run-context span {
   color: var(--mvu-muted, #58667c);
@@ -442,14 +570,22 @@ summary:focus-visible {
 }
 .run-card {
   display: grid;
-  gap: 12px;
-  margin-top: 12px;
+  gap: 8px;
 }
 .needs-attention {
   border-inline-start: 4px solid var(--mvu-warning, #95600a);
 }
 .impact {
-  font-weight: 600;
+  font-size: 13px;
+}
+.failure-summary {
+  list-style: none;
+  padding: 8px 12px;
+  margin: 0;
+  border-inline-start: 3px solid var(--mvu-danger);
+  background: var(--mvu-soft);
+  color: var(--mvu-danger);
+  overflow-wrap: anywhere;
 }
 .warning {
   color: var(--mvu-warning, #805400);
@@ -466,7 +602,7 @@ summary:focus-visible {
 .task-result {
   display: grid;
   gap: 8px;
-  padding-top: 14px;
+  padding: 10px 0;
   border-top: 1px solid var(--mvu-line, #d5dce6);
 }
 .task-result-heading {
@@ -483,6 +619,28 @@ summary {
   cursor: pointer;
   min-height: 36px;
   padding: 6px 0;
+}
+.task-details > summary,
+.diagnostic > summary,
+.run-warnings > summary {
+  font-size: 13px;
+}
+.task-details > summary {
+  color: var(--mvu-accent);
+}
+.returned-text > summary,
+.error-diagnostic > summary {
+  font-size: 13px;
+  padding: 4px 0;
+  min-height: 30px;
+}
+.returned-text > summary span,
+.error-diagnostic > summary span {
+  margin-inline-start: 6px;
+}
+.error-context {
+  font-size: 13px;
+  color: var(--mvu-muted);
 }
 pre {
   white-space: pre-wrap;
@@ -511,9 +669,29 @@ pre {
   background: var(--mvu-panel, #fff);
 }
 .writes {
-  padding-inline-start: 20px;
+  list-style: none;
+  padding: 0;
   margin: 0;
   overflow-wrap: anywhere;
+}
+.writes li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 6px 0;
+  font-size: 13px;
+}
+.writes li > span:first-child {
+  flex: 1;
+  min-width: min(180px, 100%);
+}
+.writes li > p {
+  flex-basis: 100%;
+}
+.active-runs {
+  display: grid;
+  gap: 8px;
 }
 .diagnostic {
   font-size: 13px;
