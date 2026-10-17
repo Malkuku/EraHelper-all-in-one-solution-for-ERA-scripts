@@ -21,28 +21,61 @@
             <div class="run-context">
               <strong>本次目标 · 楼层 {{ target.messageId }}</strong
               ><span>聊天：{{ target.chatId || '未打开聊天' }}</span>
-              <span>已保存规则组：{{ group ? group.name || '未命名规则组' : '未启用' }} · {{ enabledTasks.length }} 个已启用的非负顺序任务</span>
+              <span>已保存规则组：{{ group ? group.name || '未命名规则组' : '未启用' }}</span>
+              <label
+                >运行范围<select v-model="runMode" aria-label="运行范围">
+                  <option value="regular">常规链（非负顺序）</option>
+                  <option value="event">指定事件</option>
+                  <option value="task">单个任务</option>
+                </select></label
+              >
+              <label v-if="runMode === 'event'"
+                >事件<select v-model="selectedEvent" aria-label="测试事件">
+                  <option value="">请选择事件</option>
+                  <option v-for="name in eventNames" :key="name" :value="name">{{ name }}</option>
+                </select></label
+              >
+              <label v-if="runMode === 'task'"
+                >任务<select v-model="selectedTask" aria-label="测试任务">
+                  <option value="">请选择任务</option>
+                  <option v-for="task in groupTasks" :key="task.id" :value="task.id">
+                    {{ task.name || '未命名任务' }}{{ task.enabled ? '' : '（不参加常规链）'
+                    }}{{ task.eventName ? ' · 事件 ' + task.eventName : '' }}
+                  </option>
+                </select></label
+              >
               <p v-if="dirty" class="warning">有未保存草稿。本次运行使用已保存配置；请先保存全部配置以使用修改。</p>
               <p v-if="writeTargets.length">可能写入：{{ writeTargets.join('、') }}。实际写入以运行结果为准。</p>
-              <p v-else>本次候选任务没有写入目标。负顺序任务在发送消息阶段执行。</p>
+              <p v-else>本次候选任务没有写入目标。</p>
+              <p>
+                测试会真实请求模型并执行配置的写入，使用当前楼层。事件按配置检查间隔，关闭常规参与也可触发；单任务测试仅执行所选任务并跳过间隔，普通任务仍检查常规参与开关。
+              </p>
             </div>
             <div class="actions">
-              <button class="primary" :disabled="!canRun || pending" @click="runCurrent">运行当前楼层任务</button>
-              <button :disabled="!canRun || pending" @click="rerun">回滚此链后重新计算</button
+              <button class="primary" :disabled="!canRun || pending" @click="runCurrent">
+                {{ runMode === 'regular' ? '运行当前楼层任务' : runMode === 'event' ? '测试此事件' : '测试此任务' }}
+              </button>
+              <button v-if="runMode === 'regular'" :disabled="!canRun || pending" @click="rerun">
+                回滚此链后重新计算</button
               ><button @click="refreshTarget">刷新目标</button>
             </div>
             <p class="muted">
               重新计算会先撤销当前楼层上一条常规链的提交。日志仅在本次脚本会话有效；重载后不可恢复旧日志，是否可回滚由任务内核校验。
             </p>
-            <p v-if="!canRun" class="warning">打开聊天，并在活动规则组内启用非负顺序任务后，即可手工运行。</p>
+            <p v-if="!canRun" class="warning">请打开聊天，并在活动规则组内选择对应事件、任务或启用常规任务。</p>
           </div>
+          <details class="integration-rules">
+            <summary>其它前端联动规则</summary>
+            <button @click="copyIntegrationRules">一键复制前端联动规则</button>
+            <pre>{{ integrationRules }}</pre>
+          </details>
           <p v-if="feedback" role="status" class="feedback">{{ feedback }}</p>
           <section v-if="activeTaskRuns.size" class="active-runs" aria-label="正在运行">
             <h3>正在运行 · {{ activeTaskRuns.size }}</h3>
             <article v-for="run in activeTaskRuns.values()" :key="run.id" class="run-card">
               <div class="section-header">
                 <div>
-                  <strong>{{ run.result.trigger.eventName || '常规任务链' }}</strong>
+                  <strong>{{ runLabel(run.result) }}</strong>
                   <p>楼层 {{ run.identity.messageId }} · 正在处理任务</p>
                 </div>
                 <button @click="cancel(run.id)">取消此运行</button>
@@ -62,7 +95,7 @@
           >
             <header class="section-header">
               <div>
-                <strong>{{ result.trigger.eventName || '常规任务链' }} · {{ labels[result.status] }}</strong>
+                <strong>{{ runLabel(result) }} · {{ labels[result.status] }}</strong>
                 <p>楼层 {{ result.messageId }} · {{ result.tasks.length }} 个任务</p>
               </div>
               <button @click="copyDiagnostic(result)">复制诊断</button>
@@ -85,10 +118,28 @@
               <p v-if="task.reason">
                 {{ task.reason.message
                 }}<span v-if="task.reason.currentFloor !== undefined"
-                  >（本次 {{ task.reason.currentFloor }}，上次 {{ task.reason.lastSuccessfulFloor }}）</span
+                  >（本次 {{ task.reason.currentFloor }}，上次触发基线
+                  {{ task.reason.lastTriggerFloor ?? task.reason.lastSuccessfulFloor ?? 0 }}）</span
                 >
               </p>
               <p v-if="task.error" class="error">{{ task.error.message }}</p>
+              <div v-if="task.error?.details" class="error-context">
+                <p>API：{{ task.error.details.connectionName || '未命名' }} · 模型：{{ task.error.details.model }}</p>
+                <p>地址：{{ task.error.details.endpoint }}</p>
+                <p>
+                  阶段：{{ phaseLabels[task.error.phase] || task.error.phase }} · 耗时
+                  {{ (task.error.details.elapsedMs / 1000).toFixed(2) }} 秒<span
+                    v-if="task.error.details.httpStatus !== undefined"
+                  >
+                    · HTTP {{ task.error.details.httpStatus }} {{ task.error.details.statusText }}</span
+                  >
+                </p>
+                <p v-if="task.error.details.backendCode || task.error.details.backendType">
+                  后端代码：{{ task.error.details.backendCode || '未提供' }} · 类型：{{
+                    task.error.details.backendType || '未提供'
+                  }}
+                </p>
+              </div>
               <ul v-if="task.writes.length" class="writes">
                 <li v-for="write in task.writes" :key="write.writeId">
                   {{ write.target || write.writeId }}：{{ labels[write.status] }}
@@ -99,9 +150,14 @@
                 <summary>查看返回文本</summary>
                 <pre>{{ task.text }}</pre>
               </details>
-              <details v-if="task.error">
-                <summary>技术详情</summary>
+              <details v-if="task.error" open>
+                <summary>失败详情</summary>
                 <p>{{ task.error.phase }} / {{ task.error.code }}</p>
+                <pre v-if="task.error.details?.response">{{ task.error.details.response }}</pre>
+                <p v-else>
+                  本阶段未取得后端响应内容。控制台按运行 ID
+                  {{ result.runId }} 查看过程日志；请求和原始输出见控制台的调试级别日志。
+                </p>
               </details>
             </section>
             <details class="diagnostic">
@@ -129,13 +185,23 @@ import {
   rerunCurrentTasks,
   cancelTaskRun,
 } from '../../AsyncAnalyze/TaskRuntime';
-import type { RunResult } from '../../AsyncAnalyze/TaskSchema';
+import type { RunResult, Trigger } from '../../AsyncAnalyze/TaskSchema';
+import { createEventIntegrationRules } from '../../AsyncAnalyze/EventIntegrationRules';
 import { Modal } from '../../utils/modal';
 import TaskManager from '../components/AsyncAnalyze/TaskManager.vue';
 import Settings from '../components/AsyncAnalyze/Settings.vue';
 
 const store = useTaskStore();
 const uiStore = useUiStore();
+const phaseLabels: Record<string, string> = {
+  prepare: '准备配置',
+  scan: '扫描世界书',
+  template: '处理模板',
+  request: '请求模型',
+  extract: '提取响应',
+  commit: '提交结果',
+  rollback: '回滚',
+};
 const labels: Record<string, string> = {
   succeeded: '成功',
   partial: '部分完成',
@@ -153,19 +219,34 @@ const readTarget = () => ({ chatId: SillyTavern.getCurrentChatId() || '', messag
 const target = ref(readTarget());
 const feedback = ref('');
 const pending = ref(false);
+const runMode = ref<'regular' | 'event' | 'task'>('regular');
+const selectedEvent = ref('');
+const selectedTask = ref('');
 const group = computed(() => store.settings.groups.find(item => item.id === store.settings.activeGroupId));
-const enabledTasks = computed(() =>
-  store.settings.tasks.filter(item => group.value?.taskIds.includes(item.id) && item.enabled && item.order >= 0),
+const groupTasks = computed(() => store.settings.tasks.filter(item => group.value?.taskIds.includes(item.id)));
+const eventNames = computed(() => [...new Set(groupTasks.value.map(item => item.eventName).filter(Boolean))]);
+const enabledTasks = computed(() => groupTasks.value.filter(item => item.enabled && item.order >= 0));
+const candidateTasks = computed(() =>
+  runMode.value === 'regular'
+    ? enabledTasks.value
+    : runMode.value === 'event'
+      ? groupTasks.value.filter(item => item.eventName === selectedEvent.value && !!selectedEvent.value)
+      : groupTasks.value.filter(item => item.id === selectedTask.value),
 );
-const canRun = computed(() => !!target.value.chatId && target.value.messageId >= 0 && enabledTasks.value.length > 0);
+const canRun = computed(() => !!target.value.chatId && target.value.messageId >= 0 && candidateTasks.value.length > 0);
+const integrationRules = computed(() =>
+  createEventIntegrationRules(getScriptId(), selectedEvent.value || eventNames.value[0] || 'my_event'),
+);
 const writeTargets = computed(() => [
   ...new Set(
-    enabledTasks.value.flatMap(task =>
+    candidateTasks.value.flatMap(task =>
       task.output.mode === 'return'
         ? []
-        : task.output.writes.map(write =>
-            write.target.kind === 'worldbook' ? `世界书 · ${write.target.bookName}` : '消息正文及其中的MVU更新',
-          ),
+        : task.output.mode === 'event_result'
+          ? ['事件结果广播（无持久写入）']
+          : task.output.writes.map(write =>
+              write.target.kind === 'worldbook' ? `世界书 · ${write.target.bookName}` : '消息正文及其中的MVU更新',
+            ),
     ),
   ),
 ]);
@@ -187,9 +268,18 @@ async function execute(rerun: boolean) {
   pending.value = true;
   feedback.value = '';
   try {
+    const task = runMode.value === 'task' ? candidateTasks.value[0] : undefined;
+    const trigger: Trigger =
+      runMode.value === 'event'
+        ? { kind: 'event', eventName: selectedEvent.value }
+        : task
+          ? task.eventName
+            ? { kind: 'event', eventName: task.eventName, taskId: task.id }
+            : { kind: 'task', taskId: task.id }
+          : { kind: 'manual' };
     const result = rerun
       ? await rerunCurrentTasks()
-      : await runTaskChain({ messageId: target.value.messageId, trigger: { kind: 'manual' } });
+      : await runTaskChain({ messageId: target.value.messageId, trigger, ...(task ? { taskId: task.id } : {}) });
     feedback.value = `${rerun ? '重新计算' : '运行'}：${labels[result.status]}。${result.reason || dataImpact(result)}`;
   } catch (error) {
     feedback.value = `操作未完成：${error instanceof Error ? error.message : String(error)}`;
@@ -198,6 +288,21 @@ async function execute(rerun: boolean) {
   }
 }
 const runCurrent = () => execute(false);
+function runLabel(result: RunResult) {
+  return result.trigger.eventName
+    ? `事件 ${result.trigger.eventName}${result.trigger.taskId ? ' · 单任务' : ''}`
+    : result.trigger.kind === 'task'
+      ? '单任务测试'
+      : '常规任务链';
+}
+async function copyIntegrationRules() {
+  try {
+    await navigator.clipboard.writeText(integrationRules.value);
+    feedback.value = '已复制前端联动规则，可交给其它前端的开发者或 AI 使用。';
+  } catch {
+    feedback.value = '无法访问剪贴板，请手动复制下方规则。';
+  }
+}
 async function rerun() {
   if (!checkTarget()) return;
   const confirmed = await Modal.confirm(
@@ -306,7 +411,8 @@ p {
   flex-wrap: wrap;
   gap: 8px;
 }
-button {
+button,
+select {
   font: inherit;
   font-size: 14px;
   color: var(--mvu-text, #172338);

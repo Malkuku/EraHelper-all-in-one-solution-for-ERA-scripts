@@ -53,7 +53,10 @@ export const WriteSchema = z.object({
 });
 export type WriteSpec = z.infer<typeof WriteSchema>;
 export const INTERNAL_EVENTS = new Set(['kat_task_chain:result', 'kat_task_chain:rerun', 'kat_task_run:cancel']);
-export const eventNameIsValid = (name: string) => name === '' || (name === name.trim() && !name.endsWith(':result') && !INTERNAL_EVENTS.has(name));
+export const eventNameIsValid = (name: string) => name === '' || (name === name.trim() && !name.endsWith(':result') && !INTERNAL_EVENTS.has(name)
+  && !(typeof tavern_events !== 'undefined' && Object.values(tavern_events).includes(name as never))
+  && !(typeof iframe_events !== 'undefined' && Object.values(iframe_events).includes(name as never))
+  && !['mag_variable_update_started', 'mag_variable_update_ended'].includes(name));
 export const TaskSchema = z.object({
   id: z.string().min(1), name: z.string(), comment: z.string().default(''), enabled: z.boolean(),
   eventName: z.string(), order: z.number().int().default(0),
@@ -64,7 +67,7 @@ export const TaskSchema = z.object({
   regexRules: z.array(RegexSpecSchema.safeExtend({
     id: z.string().min(1), stage: z.enum(['history', 'worldinfo', 'prompt', 'response']), replacement: z.string(), enabled: z.boolean(),
   })),
-  output: z.discriminatedUnion('mode', [z.object({ mode: z.literal('return') }), z.object({ mode: z.literal('write'), writes: z.array(WriteSchema) })]),
+  output: z.discriminatedUnion('mode', [z.object({ mode: z.literal('return') }), z.object({ mode: z.literal('event_result') }), z.object({ mode: z.literal('write'), writes: z.array(WriteSchema) })]),
 }).superRefine((task, ctx) => {
   for (const [field, list] of [['regexRules', task.regexRules], ['writes', task.output.mode === 'write' ? task.output.writes : []]] as const) {
     const ids = list.map(item => item.id);
@@ -133,16 +136,20 @@ export function parseTaskSettings(value: unknown): TaskSettings {
   });
   return ConfigSchema.parse({ ...old, schemaVersion: 2, connections, tasks: tasks.map(({ presetId: _presetId, ...task }) => task) });
 }
-export type Trigger = { kind: 'event' | 'sent' | 'received' | 'manual'; eventName?: string };
-export type TaskError = { code: string; message: string; phase: 'prepare' | 'scan' | 'template' | 'request' | 'extract' | 'commit' | 'rollback' };
+export type Trigger = { kind: 'event' | 'sent' | 'received' | 'manual' | 'task'; eventName?: string; taskId?: string };
+export type RequestDiagnostic = {
+  connectionName: string; model: string; endpoint: string; elapsedMs: number;
+  httpStatus?: number; statusText?: string; backendCode?: string; backendType?: string; response?: string;
+};
+export type TaskError = { code: string; message: string; phase: 'prepare' | 'scan' | 'template' | 'request' | 'extract' | 'commit' | 'rollback'; details?: RequestDiagnostic };
 export type WriteResult = { writeId: string; target: string; status: 'committed' | 'failed' | 'rolled_back' | 'rollback_failed'; error?: string };
 export type TaskResult = {
   taskId: string; taskName: string; status: 'succeeded' | 'failed' | 'cancelled' | 'skipped' | 'rolled_back' | 'rollback_failed';
   attempts: number; text?: string; error?: TaskError; writes: WriteResult[];
-  reason?: { code: string; message: string; currentFloor?: number; lastSuccessfulFloor?: number };
+  reason?: { code: string; message: string; currentFloor?: number; lastSuccessfulFloor?: number; lastTriggerFloor?: number };
 };
 export type RunResult = {
-  version: 1; requestId: string; runId: string; activeRunId?: string; trigger: Trigger; chatId: string; messageId: number;
+  version: 1; requestId: string; runId: string; activeRunId?: string; trigger: Trigger; chatId: string; messageId: number; swipeId?: number;
   status: 'succeeded' | 'partial' | 'failed' | 'cancelled' | 'busy' | 'skipped'; reason?: string; tasks: TaskResult[];
   warnings: { code: string; message: string; target?: string }[];
   rollback: { status: 'not_needed' | 'completed' | 'partial' | 'failed'; errors: string[] };
@@ -157,14 +164,14 @@ export interface KatTaskAPI {
   setConfig(settings: unknown): Promise<void>;
   setSecret(reference: string, value: string): void;
   deleteSecret(reference: string): void;
-  run(options: { messageId: number; eventName?: string; requestId?: string }): Promise<RunResult>;
+  run(options: { messageId: number; eventName?: string; requestId?: string; taskId?: string }): Promise<RunResult>;
   cancel(runId: string): boolean;
   getActiveRuns(): { runId: string; requestId: string; trigger: Trigger; chatId: string; messageId: number }[];
   getUnrecoveredJournals(): UnrecoveredJournal[];
 }
 export class TaskFailure extends Error {
   rollbackErrors: string[] = [];
-  constructor(public code: string, message: string, public phase: TaskError['phase']) { super(message); this.name = 'TaskFailure'; }
+  constructor(public code: string, message: string, public phase: TaskError['phase'], public details?: RequestDiagnostic) { super(message); this.name = 'TaskFailure'; }
 }
 export function applyTaskRegex(text: string, task: TaskConfig, stage: TaskConfig['regexRules'][number]['stage']): string {
   return task.regexRules.filter(rule => rule.enabled && rule.stage === stage)

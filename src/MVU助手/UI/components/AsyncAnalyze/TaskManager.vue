@@ -58,7 +58,10 @@
               <button class="primary" @click="addGroup">+ 新建规则组</button>
             </div>
             <label class="active-group-control"
-              >活动规则组<select v-model="draft.activeGroupId" aria-label="活动规则组">
+              >活动规则组<Tooltip content="常规链和事件入口使用当前活动规则组内关联的任务。" /><select
+                v-model="draft.activeGroupId"
+                aria-label="活动规则组"
+              >
                 <option :value="null">不启用规则组</option>
                 <option v-for="item in draft.groups" :key="item.id" :value="item.id">
                   {{ item.name || '未命名规则组' }}
@@ -81,8 +84,15 @@
               <div class="list-content">
                 <template v-if="group"
                   ><div class="fields">
-                    <label>名称<input v-model="group.name" data-config-key="name" /></label
-                    ><label>备注<input v-model="group.comment" data-config-key="comment" /></label>
+                    <label
+                      >名称<Tooltip content="规则组的显示名称，便于按场景选择活动组。" /><input
+                        v-model="group.name"
+                        data-config-key="name" /></label
+                    ><label
+                      >备注<Tooltip content="描述此规则组的用途和使用条件。" /><input
+                        v-model="group.comment"
+                        data-config-key="comment"
+                    /></label>
                   </div>
                   <div class="toolbar">
                     <button :disabled="draft.activeGroupId === group.id" @click="draft.activeGroupId = group.id">
@@ -139,15 +149,17 @@
                     <div class="linked-task-content">
                       <div class="linked-task-heading">
                         <strong>{{ item.name || '未命名任务' }}</strong>
-                        <span class="task-status" :class="{ enabled: item.enabled || !!item.eventName }">{{
-                          item.eventName ? '事件触发' : item.enabled ? '启用' : '停用'
+                        <span class="task-status" :class="{ enabled: item.enabled }">{{
+                          item.enabled ? '参加常规链' : '不参加常规链'
                         }}</span>
                       </div>
                       <div class="linked-task-trigger">
                         <span>顺序 {{ item.order }}</span
-                        ><span>每 {{ item.triggerInterval }} 楼</span>
-                        <span class="task-event">{{ item.eventName ? '事件：' + item.eventName : '常规触发' }}</span>
-                        <span v-if="item.eventName && !item.enabled">当前已停用，事件不会执行</span>
+                        ><span>间隔 {{ item.triggerInterval }} 楼</span>
+                        <span class="task-event">{{
+                          item.eventName ? '附加事件：' + item.eventName : '无附加事件'
+                        }}</span>
+                        <span v-if="item.eventName && !item.enabled">常规链已关闭，事件仍可执行</span>
                       </div>
                       <dl class="linked-task-binding">
                         <div v-for="binding in taskBindings(item)" :key="binding.label">
@@ -203,26 +215,36 @@
                     <h4>连接配置</h4>
                     <div class="fields">
                       <label
-                        >名称<input v-model="connection.name" data-config-key="name" placeholder="为这套 API 起个名字"
+                        >名称<Tooltip content="任务通过 API 配置 ID 关联连接，修改显示名称不会断开关联。" /><input
+                          v-model="connection.name"
+                          data-config-key="name"
+                          placeholder="为这套 API 起个名字"
                       /></label>
                       <label
-                        >备注<input v-model="connection.comment" data-config-key="comment" placeholder="可选"
+                        >备注<Tooltip content="记录 API 用途、模型特点或服务说明。" /><input
+                          v-model="connection.comment"
+                          data-config-key="comment"
+                          placeholder="可选"
                       /></label>
                       <label
-                        >API 根地址<input
+                        >API 根地址<Tooltip
+                          content="填写兼容 OpenAI 的 API 根地址，如 https://example.com/v1，不要填写完整 chat/completions 或 models 路径。" /><input
                           v-model="connection.baseUrl"
                           data-config-key="baseUrl"
                           type="url"
                           placeholder="https://example.com/v1"
                       /></label>
                       <label
-                        >模型<input
+                        >模型<Tooltip
+                          content="填写服务提供的模型 ID，可手动输入，也可从下方获取的模型列表选择。" /><input
                           v-model="connection.model"
                           data-config-key="model"
                           placeholder="输入模型名称，或在下方获取"
                       /></label>
                       <label
-                        >绑定预设<select v-model="connection.presetId" data-config-key="presetId">
+                        >绑定预设<Tooltip
+                          content="选择此 API 的任务共用这里绑定的原生预设副本，包括提示词和采样参数。"
+                        /><select v-model="connection.presetId" data-config-key="presetId">
                           <option :value="null">暂不绑定</option>
                           <option v-for="item in draft.presets" :key="item.id" :value="item.id">
                             {{ item.name || '未命名预设' }}
@@ -245,7 +267,8 @@
                   <section class="form-section">
                     <h4>本地密钥</h4>
                     <label
-                      >更新密钥<input
+                      >更新密钥<Tooltip
+                        content="密钥仅存本地，不随配置导出。留空保留已存密钥；删除时点击清空已存密钥并保存。" /><input
                         v-model="secrets[connection.secretRef]"
                         type="password"
                         autocomplete="new-password"
@@ -339,7 +362,11 @@
               </aside>
               <div class="list-content">
                 <div v-if="preset" class="preset-editor">
-                  <label>预设名称<input v-model="preset.name" data-config-key="name" /></label>
+                  <label
+                    >预设名称<Tooltip content="插件独立预设副本的名称，API 通过 ID 绑定，改名不会解除绑定。" /><input
+                      v-model="preset.name"
+                      data-config-key="name"
+                  /></label>
                   <div class="toolbar">
                     <button @click="duplicatePreset">复制预设</button
                     ><button @click="download(preset.name + '.json', preset.raw)">导出原生预设</button
@@ -351,8 +378,7 @@
                         ['openai_max_context', 'openai_max_tokens'].includes(item.key),
                       )"
                       :key="field.key"
-                      >{{ field.label
-                      }}<input
+                      >{{ field.label }}<Tooltip :content="samplingHelp[field.key]" /><input
                         v-model.number="preset.raw[field.key]"
                         :data-config-key="field.key"
                         type="number"
@@ -367,8 +393,7 @@
                           item => !['openai_max_context', 'openai_max_tokens'].includes(item.key),
                         )"
                         :key="field.key"
-                        >{{ field.label
-                        }}<input
+                        >{{ field.label }}<Tooltip :content="samplingHelp[field.key]" /><input
                           v-model.number="preset.raw[field.key]"
                           :data-config-key="field.key"
                           type="number"
@@ -402,9 +427,13 @@
                       ><button class="danger" @click="removePrompt(prompt.identifier)">删除提示词</button>
                     </div>
                     <div class="fields">
-                      <label>名称<input v-model="prompt.name" /></label
+                      <label
+                        >名称<Tooltip content="提示词条目的显示名称，原生标识用于占位符和顺序关联。" /><input
+                          v-model="prompt.name" /></label
                       ><label
-                        >角色<select v-model="prompt.role">
+                        >角色<Tooltip
+                          content="以 system、user 或 assistant 身份发送这段提示词，按模型支持的角色选择。"
+                        /><select v-model="prompt.role">
                           <option value="system">system</option>
                           <option value="user">user</option>
                           <option value="assistant">assistant</option>
@@ -412,17 +441,32 @@
                       >
                     </div>
                     <p class="hint">标识：{{ prompt.identifier }}{{ prompt.marker ? '（原生占位符）' : '' }}</p>
-                    <label>内容<textarea v-model="prompt.content" rows="5" /></label>
+                    <label
+                      >内容<Tooltip content="提示词正文，支持宏或模板。原生占位符由对应内容源展开。" /><textarea
+                        v-model="prompt.content"
+                        rows="5"
+                      />
+                    </label>
                     <details>
                       <summary>原生注入位置</summary>
                       <div class="fields">
                         <label
-                          >位置<select v-model.number="prompt.injection_position">
+                          >位置<Tooltip content="相对顺序按预设列表组装，聊天深度按指定位置注入聊天历史。" /><select
+                            v-model.number="prompt.injection_position"
+                          >
                             <option :value="0">相对顺序</option>
                             <option :value="1">聊天深度</option>
                           </select></label
-                        ><label>深度<input v-model.number="prompt.injection_depth" type="number" min="0" /></label
-                        ><label>注入顺序<input v-model.number="prompt.injection_order" type="number" /></label>
+                        ><label
+                          >深度<Tooltip content="从聊天历史末端计算的注入深度，0 表示历史末端。" /><input
+                            v-model.number="prompt.injection_depth"
+                            type="number"
+                            min="0" /></label
+                        ><label
+                          >注入顺序<Tooltip content="控制相同聊天深度下提示词的排列顺序。" /><input
+                            v-model.number="prompt.injection_order"
+                            type="number"
+                        /></label>
                       </div>
                     </details>
                   </details>
@@ -440,8 +484,8 @@
             </div>
             <div class="task-list" aria-label="任务列表">
               <article v-for="item in filteredTasks" :key="item.id" class="task-row">
-                <label class="task-enable"
-                  ><input v-model="item.enabled" type="checkbox" :aria-label="'启用 ' + item.name"
+                <label class="task-enable" title="只控制常规链；配置的附加事件仍可执行任务"
+                  ><input v-model="item.enabled" type="checkbox" :aria-label="'参加常规链 ' + item.name"
                 /></label>
                 <button class="task-row-main text-action" @click="editTask(item.id)">
                   <strong>{{ item.name || '未命名任务' }}</strong
@@ -509,26 +553,37 @@
                   <p v-if="notice" class="notice" role="status">{{ notice }}</p>
                   <section v-show="taskTab === 'basic'">
                     <p class="binding-summary">
-                      触发：{{ task.order < 0 ? '发送前，等待任务结束再继续正文' : '接收正文后；相同顺序可并发'
-                      }}{{ task.eventName ? '；额外事件：' + task.eventName : '' }}。{{
-                        task.historyDepth === 0 ? '不提供聊天历史' : '读取最近 ' + task.historyDepth + ' 条历史'
-                      }}。
+                      常规链：{{
+                        !task.enabled
+                          ? '不参加'
+                          : task.order < 0
+                            ? '发送前，等待任务结束再继续正文'
+                            : '接收正文后；相同顺序可并发'
+                      }}。{{ task.eventName ? '附加事件：' + task.eventName + '（不受常规开关限制）。' : ''
+                      }}{{ task.historyDepth === 0 ? '不提供聊天历史' : '读取最近 ' + task.historyDepth + ' 条历史' }}。
                     </p>
                     <div class="toolbar">
                       <label
-                        ><input
-                          v-model="task.enabled"
-                          data-config-key="enabled"
-                          type="checkbox"
-                        />启用任务（所有入口）</label
+                        ><input v-model="task.enabled" data-config-key="enabled" type="checkbox" />参加常规链<Tooltip
+                          content="仅控制任务是否参加活动规则组的常规任务链。配置事件名后，即使关闭此开关，匹配的事件仍可执行任务。" /></label
                       ><button @click="duplicateTask">复制任务</button
                       ><button class="danger" @click="removeTask(task.id)">删除任务</button>
                     </div>
                     <div class="fields">
-                      <label>名称<input v-model="task.name" data-config-key="name" /></label
-                      ><label>备注<input v-model="task.comment" data-config-key="comment" /></label>
                       <label
-                        >API 配置<select v-model="task.connectionId" data-config-key="connectionId">
+                        >名称<Tooltip
+                          content="用于识别和选择任务；规则组通过任务 ID 关联，修改名称不会断开关联。" /><input
+                          v-model="task.name"
+                          data-config-key="name" /></label
+                      ><label
+                        >备注<Tooltip content="记录任务的用途和使用说明，供自己或配置使用者查看。" /><input
+                          v-model="task.comment"
+                          data-config-key="comment"
+                      /></label>
+                      <label
+                        >API 配置<Tooltip
+                          content="选择此任务使用的 API；模型和原生预设由该 API 配置统一绑定。未选择时可以保存草稿，运行前必须补齐。"
+                        /><select v-model="task.connectionId" data-config-key="connectionId">
                           <option value="">请选择 API 配置</option>
                           <option v-for="item in draft.connections" :key="item.id" :value="item.id">
                             {{ item.name || '未命名 API' }}
@@ -537,31 +592,47 @@
                       >
                     </div>
 
-                    <label>任务提示词<textarea v-model="task.prompt" data-config-key="prompt" rows="8" /></label>
+                    <label
+                      >任务提示词<Tooltip
+                        content="发送给 AI 的任务要求，与绑定预设、选定的聊天历史和触发的世界书内容一起组装请求。"
+                      /><textarea v-model="task.prompt" data-config-key="prompt" rows="8" />
+                    </label>
                     <details>
                       <summary>触发与高级参数</summary>
                       <p class="hint">
-                        负顺序在发送前执行；非负顺序在正文接收后执行。同一顺序可并发，数值越小越先执行。附加事件不会退出常规链；间隔仅限制自动触发，失败重试不重试写入冲突。
+                        常规开关只控制常规链，事件名是独立的附加触发入口。负顺序在发送前执行，非负顺序在正文接收后执行。同一顺序可并发，数值越小越先执行。常规与事件触发都检查楼层间隔；单任务测试绕过间隔。失败重试不重试写入冲突。
                       </p>
                       <div class="fields">
-                        <label>附加事件名（可空）<input v-model="task.eventName" data-config-key="eventName" /></label
+                        <label
+                          >附加事件名<Tooltip
+                            content="监听额外的自定义事件。事件匹配忽略“参加常规链”开关；要配置只由事件运行的任务，请关闭该开关。事件入口仍检查楼层间隔。" /><input
+                            v-model="task.eventName"
+                            data-config-key="eventName" /></label
                         ><label
-                          >执行顺序<input v-model.number="task.order" data-config-key="order" type="number" step="1"
+                          >执行顺序<Tooltip
+                            content="数值越小越先运行，同一顺序可并发。常规链中负数在正文发送前运行并等待完成，0 和正数在收到正文后运行。" /><input
+                            v-model.number="task.order"
+                            data-config-key="order"
+                            type="number"
+                            step="1"
                         /></label>
                         <label
-                          >历史消息条数<input
+                          >历史消息条数<Tooltip
+                            content="AI 可读取的最近聊天消息条数；0 表示不提供聊天历史。世界书扫描也只能使用本任务提供的历史。" /><input
                             v-model.number="task.historyDepth"
                             data-config-key="historyDepth"
                             type="number"
                             min="0" /></label
                         ><label
-                          >自动触发楼层间隔<input
+                          >触发楼层间隔<Tooltip
+                            content="当前楼层减去上次成功触发楼层，差值达到间隔才运行；尚无记录时以上次楼层 0 计算。仅间隔大于 1 时检查，1 表示不限制。常规和事件触发均适用；单任务测试绕过此检查。" /><input
                             v-model.number="task.triggerInterval"
                             data-config-key="triggerInterval"
                             type="number"
                             min="1" /></label
                         ><label
-                          >失败重试次数<input
+                          >失败重试次数<Tooltip
+                            content="AI 请求或处理失败后额外重试的次数；0 表示只尝试一次。取消和写入冲突不会自动重试，避免重复覆盖。" /><input
                             v-model.number="task.retryCount"
                             data-config-key="retryCount"
                             type="number"
@@ -581,7 +652,11 @@
                     </button>
                   </section>
                   <section v-show="taskTab === 'worldbook'">
-                    <h4>任务世界书候选池</h4>
+                    <h4>
+                      任务世界书候选池<Tooltip
+                        content="仅在这里选定的世界书条目参与本任务扫描。UID 勾选与名称正则取并集，候选条目仍须满足扫描触发条件。"
+                      />
+                    </h4>
                     <div class="list-editor">
                       <aside class="list-sidebar">
                         <button @click="addCandidateBook">+ 添加世界书</button
@@ -637,8 +712,7 @@
                       <summary>世界书扫描参数</summary>
                       <div class="fields">
                         <label v-for="field in scanNumbers" :key="field.key"
-                          >{{ field.label
-                          }}<input
+                          >{{ field.label }}<Tooltip :content="scanHelp[field.key]" /><input
                             v-model.number="task.scan[field.key]"
                             :data-config-key="field.key"
                             type="number"
@@ -648,8 +722,9 @@
                       </div>
                       <div class="choices">
                         <label v-for="field in scanSwitches" :key="field.key"
-                          ><input v-model="task.scan[field.key]" type="checkbox" />{{ field.label }}</label
-                        >
+                          ><input v-model="task.scan[field.key]" type="checkbox" />{{ field.label
+                          }}<Tooltip :content="scanHelp[field.key]"
+                        /></label>
                       </div>
                     </details>
                   </section>
@@ -659,14 +734,18 @@
                     <button @click="addRegex">+ 添加正则</button>
                     <div v-for="(regex, index) in task.regexRules" :key="regex.id" class="card">
                       <div class="toolbar">
-                        <label><input v-model="regex.enabled" type="checkbox" />启用</label
+                        <label
+                          ><input v-model="regex.enabled" type="checkbox" />启用<Tooltip
+                            content="控制此条显式任务正则是否执行；按列表顺序依次处理，不继承酒馆全局或角色正则。" /></label
                         ><button @click="move(task.regexRules, index, -1)">上移</button
                         ><button @click="move(task.regexRules, index, 1)">下移</button
                         ><button @click="task.regexRules.splice(index, 1)">删除</button>
                       </div>
                       <div class="fields">
                         <label
-                          >阶段<select v-model="regex.stage">
+                          >阶段<Tooltip
+                            content="选择处理的位置：聊天历史、扫描后的世界书、组装后的请求消息，或模型响应。不同阶段作用于对应文本。"
+                          /><select v-model="regex.stage">
                             <option value="history">历史</option>
                             <option value="worldinfo">世界书</option>
                             <option value="prompt">请求消息</option>
@@ -679,27 +758,40 @@
                           @test="openRegex"
                         />
                       </div>
-                      <label>替换文本<textarea v-model="regex.replacement" rows="2" /></label>
+                      <label
+                        >替换文本<Tooltip
+                          content="将当前阶段中正则匹配的片段替换成此文本；支持 JavaScript 替换语法，如 $1 引用第一个捕获组。"
+                        /><textarea v-model="regex.replacement" rows="2" />
+                      </label>
                     </div>
                   </section>
                   <section v-show="taskTab === 'output'">
                     <h4>结果处理</h4>
                     <label
-                      >输出方式<select
+                      >输出方式<Tooltip
+                        content="仅返回保留运行结果；写入目标可更新正文或世界书；事件结果广播将结果发送给监听该事件的其它前端。"
+                      /><select
                         :value="task.output.mode"
                         @change="setOutput(($event.target as HTMLSelectElement).value)"
                       >
                         <option value="return">仅返回结果</option>
                         <option value="write">写入目标</option>
+                        <option value="event_result">事件结果广播</option>
                       </select></label
                     >
+                    <p v-if="task.output.mode === 'event_result'" class="hint">
+                      仅事件执行时，将完整响应 text
+                      广播到“事件名:result”，附带请求、任务与楼层标识，供其它前端监听。请填写事件名并关闭“参加常规链”，事件仍可触发。结果不持久存储；前端联动规则可在运行结果页一键复制。
+                    </p>
                     <template v-if="task.output.mode === 'write'"
                       ><p class="hint">写入成功才视为任务成功；世界书按 UID 定位，目标不存在时自动创建并启用。</p>
                       <button @click="task.output.writes.push(newWrite())">+ 添加写入</button>
                       <div v-for="(write, writeIndex) in task.output.writes" :key="write.id" class="card">
                         <div class="toolbar">
                           <label
-                            >目标<select
+                            >目标<Tooltip
+                              content="当前正文消息写入本轮目标消息；世界书按条目 UID 定位，缺失目标会按配置名称创建并启用条目。"
+                            /><select
                               :value="write.target.kind"
                               @change="setTarget(write, ($event.target as HTMLSelectElement).value)"
                             >
@@ -729,7 +821,9 @@
                         </div>
                         <button @click="write.extract.push({ pattern: '', flags: '' })">+ 提取正则</button>
                         <label
-                          >写入操作<select
+                          >写入操作<Tooltip
+                            content="追加会把提取结果写在目标末尾；正则替换会在目标内容中寻找匹配片段，并替换成提取结果。"
+                          /><select
                             :value="write.operation.kind"
                             @change="
                               write.operation =
@@ -781,7 +875,11 @@
           <section v-if="tab === 'settings'">
             <h3>额外功能</h3>
             <label
-              >自动常规任务的最少正文字数<input v-model.number="draft.automatic.minReceivedChars" type="number" min="0"
+              >自动常规任务的最少正文字数<Tooltip
+                content="正文接收后自动运行常规链的字数门槛，事件和手动测试不受此门槛限制。" /><input
+                v-model.number="draft.automatic.minReceivedChars"
+                type="number"
+                min="0"
             /></label>
             <p class="hint">默认 300 字，仅自动常规任务受此限制。</p>
             <slot name="settings" />
@@ -832,6 +930,7 @@ import WorldbookPicker from './WorldbookPicker.vue';
 import RegexField from './RegexField.vue';
 import RegexWorkbench from './RegexWorkbench.vue';
 import ConnectionCheck from './ConnectionCheck.vue';
+import Tooltip from '../Common/Tooltip.vue';
 import { Modal } from '@/MVU助手/utils/modal';
 
 const props = defineProps<{
@@ -1038,6 +1137,29 @@ const presetPrompts = computed(() => {
     return rank(a.identifier) - rank(b.identifier);
   });
 });
+const samplingHelp: Record<string, string> = {
+  temp_openai: '生成随机性，越高越随机；实际范围与支持程度由 API 模型决定。',
+  openai_max_tokens: '模型最多生成的回复 Token 数，也是组装请求时需要预留的回复预算。',
+  openai_max_context: '此预设可使用的上下文 Token 总预算，包含请求消息和回复预留。',
+  top_p_openai: '按累计概率保留候选词；较低的值会收窄候选范围。',
+  top_k_openai: '仅保留概率最高的 K 个候选词，具体支持情况取决于模型服务。',
+  freq_pen_openai: '根据已出现的次数抑制重复词，是否生效取决于模型服务。',
+  pres_pen_openai: '抑制已经出现过的词，是否生效取决于模型服务。',
+  seed: '请求随机种子；-1 表示随机。相同种子不保证不同服务或模型版本生成完全相同的文本。',
+};
+const scanHelp: Record<string, string> = {
+  depth: '从本任务提供的最近聊天历史中扫描关键词的消息深度。',
+  minActivations: '不足该激活条目数时尝试向更深的历史继续扫描；0 表示不要求最少数量。',
+  minActivationDepthMax: '为达到最少激活条目数，最多扩展到的历史扫描深度；0 使用扫描器的默认上限。',
+  budgetPercent: '世界书内容可占本任务上下文预算的百分比。',
+  budgetCap: '世界书内容的 Token 预算上限；0 表示不添加这个绝对上限。',
+  maxRecursionSteps: '递归扫描可执行的最大步数；0 表示不添加步数限制。',
+  includeNames: '扫描聊天历史关键词时包含消息发送者名称。',
+  recursive: '允许已激活条目的内容继续触发候选池中的其他条目。',
+  caseSensitive: '关键词匹配区分大小写，条目自身配置可覆盖默认行为。',
+  matchWholeWords: '关键词按完整单词匹配，条目自身配置可覆盖默认行为。',
+  useGroupScoring: '同组条目使用关键词命中评分参与筛选，条目自身配置可覆盖默认行为。',
+};
 const samplingFields = [
   { key: 'temp_openai', label: '温度', step: '0.01' },
   { key: 'openai_max_tokens', label: '最大回复 Token', step: '1' },
@@ -1116,10 +1238,10 @@ const fieldLabels: Record<string, string> = {
   presetId: '绑定预设',
   connectionId: 'API 配置',
   prompt: '任务提示词',
-  eventName: '附加事件名',
+  eventName: '事件名',
   order: '执行顺序',
   historyDepth: '历史消息条数',
-  triggerInterval: '自动触发楼层间隔',
+  triggerInterval: '触发楼层间隔',
   retryCount: '失败重试次数',
   openai_max_context: '上下文预算',
   openai_max_tokens: '回复预算',
@@ -1495,7 +1617,12 @@ function newWrite(): WriteSpec {
   return { id: uid(), target: { kind: 'message' }, extract: [], operation: { kind: 'append' } };
 }
 function setOutput(mode: string) {
-  task.value!.output = mode === 'write' ? { mode: 'write', writes: [newWrite()] } : { mode: 'return' };
+  task.value!.output =
+    mode === 'write'
+      ? { mode: 'write', writes: [newWrite()] }
+      : mode === 'event_result'
+        ? { mode: 'event_result' }
+        : { mode: 'return' };
 }
 function setTarget(write: WriteSpec, kind: string) {
   write.target = kind === 'worldbook' ? { kind: 'worldbook', bookName: '', entryName: '' } : { kind: 'message' };

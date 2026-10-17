@@ -3,13 +3,18 @@
     <div class="toolbar">
       <button :disabled="busy" @click="check(false)">{{ busy ? '请求中…' : '测试连接' }}</button>
       <button :disabled="busy" @click="check(true)">获取模型列表</button>
+      <Tooltip
+        content="使用当前 API 和密钥草稿请求 /models 接口。连接成功只说明模型列表接口可访问，实际生成能力请通过任务测试确认；服务不支持列表时可手填模型。"
+      />
       <button v-if="busy" @click="cancel">取消请求</button>
     </div>
     <p class="hint">使用当前草稿检测模型接口；不支持列表时可手填模型。</p>
     <p v-if="status" role="status">{{ status }}</p>
     <p v-if="error" class="error" role="alert">{{ error }}</p>
     <label v-if="models !== null"
-      >可用模型（{{ models.length }} 个）
+      >可用模型（{{ models.length }} 个）<Tooltip
+        content="选择模型会更新当前 API 草稿，保存配置后供引用此 API 的任务使用。"
+      />
       <select :value="connection.model" @change="$emit('select', ($event.target as HTMLSelectElement).value)">
         <option value="" disabled>请选择模型，也可在上方手填</option>
         <option v-if="connection.model && !models.includes(connection.model)" :value="connection.model">
@@ -23,6 +28,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onBeforeUnmount } from 'vue';
+import Tooltip from '../Common/Tooltip.vue';
 import type { TaskSettings } from '@/MVU助手/AsyncAnalyze/TaskSchema';
 
 const props = defineProps<{

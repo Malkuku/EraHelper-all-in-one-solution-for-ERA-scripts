@@ -86,6 +86,10 @@ async function main() {
 
   // v2 has one binding per API; incomplete referenced resources are editable too.
   const boundTask = TaskSchema.parse({ id: 'bound-task', name: 'bound-task', enabled: true, eventName: '', prompt: '', connectionId: 'connection', candidateBooks: [], scan: {}, regexRules: [], output: { mode: 'return' } });
+  const sharedResultConfig = { ...config, tasks: [{ ...boundTask, eventName: 'frontend:event', output: { mode: 'event_result' } }] };
+  await store.replaceSettings(sharedResultConfig); await store.load();
+  assert.equal(store.snapshot().tasks[0].output.mode, 'event_result', 'shared event result mode survives saving and loading');
+  assert.equal(JSON.parse(JSON.stringify(store.snapshot())).tasks[0].eventName, 'frontend:event');
   assert.equal(Object.hasOwn(boundTask, 'presetId'), false);
   assert.equal(ConfigSchema.parse({ ...config, connections: [{ ...config.connections[0], presetId: null }] }).connections[0].presetId, null);
   assert.equal(ConfigSchema.parse({ ...config, tasks: [boundTask], connections: [{ ...config.connections[0], presetId: null }] }).tasks.length, 1);

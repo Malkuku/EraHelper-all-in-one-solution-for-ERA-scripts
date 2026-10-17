@@ -25,6 +25,7 @@ export function removeTaskResource(settings: TaskSettings, kind: 'connection' | 
 export function validateTaskReadiness(settings: TaskSettings, task: TaskConfig) {
   const fail = (message: string): never => { throw new TaskFailure('invalid_config', message, 'prepare'); };
   if (!eventNameIsValid(task.eventName)) fail('任务事件名与内部频道冲突或含首尾空白');
+  if (task.output.mode === 'event_result' && !task.eventName) fail('事件结果广播仅可用于配置了事件名的任务');
   const connection = settings.connections.find(item => item.id === task.connectionId);
   if (!connection) throw new TaskFailure('missing_config', '任务尚未选择 API 配置，或所选 API 已删除', 'prepare');
   let url: URL;

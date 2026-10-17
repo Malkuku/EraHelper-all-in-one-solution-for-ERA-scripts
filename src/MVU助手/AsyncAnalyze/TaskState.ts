@@ -3,7 +3,8 @@ import { withTargetLocks } from '../utils/TargetLocks';
 import { TaskFailure } from './TaskSchema';
 
 type EffectRecord = { value: TimedEffect | null; settledFloor: number; sequence: number; ownerRunId: string };
-export type TaskHistory = { lastSuccessfulFloor?: number; ownerRunId?: string; sequence?: number; effects: Record<string, EffectRecord> };
+export type TaskHistory = { lastSuccessfulFloor?: number; ownerRunId?: string; sequence?: number;
+  triggerBaseline?: { floor: number; runId: string; sequence: number }; effects: Record<string, EffectRecord> };
 type StateRoot = Record<string, TaskHistory>;
 export type StateUndo = { taskId: string; before: TaskHistory | undefined; after: TaskHistory; runId: string };
 export class StateSaveFailure extends TaskFailure {
@@ -15,7 +16,7 @@ export function stateSequenceHighWater(identity: MessageIdentity): number {
   assertMessage(identity);
   let highest = 0;
   for (const state of Object.values(readRoot())) {
-    highest = Math.max(highest, state.sequence ?? 0);
+    highest = Math.max(highest, state.sequence ?? 0, state.triggerBaseline?.sequence ?? 0);
     for (const effect of Object.values(state.effects)) highest = Math.max(highest, effect.sequence);
   }
   return highest;
@@ -34,6 +35,20 @@ export function timedSnapshot(history: TaskHistory): TimedState {
   }
   return result;
 }
+/** Moving to an earlier floor resets interval bookkeeping without inventing a success. */
+export async function resetTaskTriggerBaseline(taskId: string, identity: MessageIdentity, runId: string, sequence: number) {
+  await withTargetLocks([`state:${identity.chatKey}:${taskId}`], async () => {
+    assertMessage(identity);
+    await updateVariablesWith(current => {
+      assertMessage(identity);
+      const root = current[stateKey()] ?? {};
+      const state: TaskHistory = Object.hasOwn(root, taskId) ? structuredClone(root[taskId]) : { effects: {} };
+      if (sequence >= (state.triggerBaseline?.sequence ?? 0)) state.triggerBaseline = { floor: identity.messageId, runId, sequence };
+      return { ...current, [stateKey()]: { ...root, [taskId]: state } };
+    }, { type: 'chat' });
+    assertMessage(identity);
+  });
+}
 export async function settleTaskState(taskId: string, identity: MessageIdentity, beforeScan: TimedState, afterScan: TimedState, runId: string, sequence: number): Promise<StateUndo> {
   return withTargetLocks([`state:${identity.chatKey}:${taskId}`], async () => {
     assertMessage(identity);
@@ -41,6 +56,7 @@ export async function settleTaskState(taskId: string, identity: MessageIdentity,
     const before = Object.hasOwn(root, taskId) ? structuredClone(root[taskId]) : undefined;
     const state = structuredClone(before ?? { effects: {} });
     const floor = identity.messageId;
+    if (sequence >= (state.triggerBaseline?.sequence ?? 0)) state.triggerBaseline = { floor, runId, sequence };
     if (state.lastSuccessfulFloor === undefined || floor > state.lastSuccessfulFloor || (floor === state.lastSuccessfulFloor && sequence > (state.sequence ?? -1))) {
       state.lastSuccessfulFloor = floor; state.ownerRunId = runId; state.sequence = sequence;
     }
@@ -89,6 +105,9 @@ export async function rollbackTaskState(undo: StateUndo, identity: MessageIdenti
     assertMessage(identity);
     const root = readRoot();
     const state = structuredClone(Object.hasOwn(root, undo.taskId) ? root[undo.taskId] : { effects: {} });
+    if (state.triggerBaseline?.runId === undo.runId && _.isEqual(state.triggerBaseline, undo.after.triggerBaseline)) {
+      if (undo.before?.triggerBaseline) state.triggerBaseline = undo.before.triggerBaseline; else delete state.triggerBaseline;
+    }
     if (state.ownerRunId === undo.runId && state.sequence === undo.after.sequence) {
       state.lastSuccessfulFloor = undo.before?.lastSuccessfulFloor;
       state.ownerRunId = undo.before?.ownerRunId;

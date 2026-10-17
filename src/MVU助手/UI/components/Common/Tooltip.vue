@@ -1,143 +1,113 @@
 <template>
-  <!-- 1. 外层容器：增加 position: relative -->
-  <div
-    ref="referenceRef"
-    class="tooltip-wrapper"
-    @mouseenter="show"
-    @mouseleave="hide"
-  >
-    <!-- 图标插槽 -->
-    <slot>
-      <svg class="default-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-        <path d="M12 16V12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        <circle cx="12" cy="8" r="1" fill="currentColor"/>
-      </svg>
-    </slot>
-
-    <!-- 2. 提示框：直接写在这里，不要 Teleport -->
-    <Transition name="tooltip-fade">
+  <span class="tooltip-wrapper" @mouseenter="show" @mouseleave="hide">
+    <button
+      ref="referenceRef"
+      type="button"
+      class="tooltip-trigger"
+      aria-label="查看字段说明"
+      :aria-describedby="visible ? tooltipId : undefined"
+      :aria-expanded="visible"
+      @focus="open"
+      @blur="hide"
+      @click.stop.prevent="open"
+      @keydown.esc.stop.prevent="hide"
+    >
+      <slot
+        ><svg class="default-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+          <path d="M12 16V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          <circle cx="12" cy="8" r="1" fill="currentColor" /></svg
+      ></slot>
+    </button>
+    <Teleport v-if="visible && referenceRef" :to="referenceRef.ownerDocument.body">
       <div
         v-if="visible"
+        :id="tooltipId"
         ref="floatingRef"
         class="tooltip-content"
+        role="tooltip"
         :style="floatingStyles"
       >
         {{ content || '无内容' }}
-
-        <!-- 箭头 -->
-        <div
-          ref="arrowRef"
-          class="tooltip-arrow"
-          :style="{
-            position: 'absolute',
-            left: middlewareData.arrow?.x != null ? `${middlewareData.arrow.x}px` : '',
-            top: middlewareData.arrow?.y != null ? `${middlewareData.arrow.y}px` : '',
-            [staticSide]: '-4px',
-          }"
-        ></div>
       </div>
-    </Transition>
-  </div>
+    </Teleport>
+  </span>
 </template>
-
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { useFloating, offset, flip, shift, arrow, autoUpdate } from '@floating-ui/vue';
-
-interface Props {
-  content?: string;
-  placement?: 'top' | 'bottom' | 'left' | 'right';
-  delay?: number;
-}
-const props = withDefaults(defineProps<Props>(), {
-  content: '',
-  placement: 'top',
-  delay: 200
-});
-
+import { onBeforeUnmount, ref, useId } from 'vue';
+import { useFloating, offset, flip, shift, autoUpdate } from '@floating-ui/vue';
+const props = withDefaults(
+  defineProps<{ content?: string; placement?: 'top' | 'bottom' | 'left' | 'right'; delay?: number }>(),
+  { content: '', placement: 'top', delay: 200 },
+);
+const tooltipId = useId();
 const visible = ref(false);
-const referenceRef = ref(null);
-const floatingRef = ref(null);
-const arrowRef = ref(null);
-
-const { floatingStyles, middlewareData, placement: finalPlacement } = useFloating(referenceRef, floatingRef, {
+const referenceRef = ref<HTMLElement | null>(null);
+const floatingRef = ref<HTMLElement | null>(null);
+const { floatingStyles } = useFloating(referenceRef, floatingRef, {
   placement: props.placement,
-  strategy: 'absolute', // 改为 absolute，相对于父级定位
+  strategy: 'fixed',
   whileElementsMounted: autoUpdate,
-  middleware: [
-    offset(8),
-    flip(),
-    shift(),
-    arrow({ element: arrowRef }),
-  ],
+  middleware: [offset(8), flip({ padding: 8 }), shift({ padding: 8 })],
 });
-
-const staticSide = computed(() => {
-  return {
-    top: 'bottom',
-    right: 'left',
-    bottom: 'top',
-    left: 'right',
-  }[finalPlacement.value.split('-')[0]] || 'bottom';
-});
-
-let timer: number | null = null;
-
-const show = () => {
-  if (timer) clearTimeout(timer);
-  timer = window.setTimeout(() => {
-    visible.value = true;
-  }, props.delay);
-};
-
-const hide = () => {
-  if (timer) clearTimeout(timer);
-  visible.value = false;
-};
-</script>
-
-<style scoped lang="scss">
-.tooltip-wrapper {
-  position: relative; /* 关键：为内部的 absolute 元素提供定位基准 */
-  display: inline-block;
-  vertical-align: middle;
-  line-height: 1;
+let timer: ReturnType<typeof setTimeout> | undefined;
+function open() {
+  clearTimeout(timer);
+  visible.value = true;
 }
-
+function show() {
+  clearTimeout(timer);
+  timer = setTimeout(open, props.delay);
+}
+function hide() {
+  clearTimeout(timer);
+  visible.value = false;
+}
+onBeforeUnmount(hide);
+</script>
+<style scoped>
+.tooltip-wrapper {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-inline-start: 5px;
+}
+.tooltip-trigger {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px !important;
+  min-height: 24px !important;
+  padding: 3px !important;
+  border: 0 !important;
+  border-radius: 4px;
+  background: transparent !important;
+  color: inherit !important;
+  cursor: help;
+}
+.tooltip-trigger:focus-visible {
+  outline: 2px solid #818cf8;
+  outline-offset: 2px;
+}
 .default-icon {
   width: 16px;
   height: 16px;
-  color: #9ca3af;
-  cursor: help;
-  &:hover { color: #4b5563; }
 }
-
 .tooltip-content {
   width: max-content;
-  max-width: 200px;
-  background-color: #333;
-  padding: 6px 10px;
-  border-radius: 4px;
-
-  /* 强制样式：确保可见 */
+  max-width: min(340px, calc(100vw - 16px));
+  box-sizing: border-box;
+  background: #252936;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-family: sans-serif;
   font-size: 12px !important;
-  line-height: 1.5 !important;
+  font-weight: 400;
+  line-height: 1.6 !important;
   color: #fff !important;
-  z-index: 9999;
-
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  z-index: 2147483647;
   pointer-events: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 12px #0004;
 }
-
-.tooltip-arrow {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  background-color: #333;
-  transform: rotate(45deg);
-}
-
-.tooltip-fade-enter-active, .tooltip-fade-leave-active { transition: opacity 0.2s; }
-.tooltip-fade-enter-from, .tooltip-fade-leave-to { opacity: 0; }
 </style>

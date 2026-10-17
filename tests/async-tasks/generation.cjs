@@ -420,7 +420,43 @@ async function generationErrorChecks() {
     cancelled.controller.abort(); release();
     await assert.rejects(() => pending, error => cancelled.controller.signal.aborted && (error.name === 'AbortError' || (error.code === 'host_error' && error.phase === 'request')),
       'cancelled generation rejects late text; cancellation classification belongs to the runtime signal');
-    console.log('PASS: generic prepare/scan/template/request phase mapping, typed failure preservation and cancelled late response rejection');
+    const logs = [], originalConsole = {};
+    for (const level of ['info', 'debug', 'warn', 'error']) { originalConsole[level] = console[level]; console[level] = (...args) => logs.push([level, ...args]); }
+    try {
+      const privateKey = 'private-diagnostic-key';
+      for (const [label, response, expectedCode, expectedMessage] of [
+        ['backend-json', () => new Response(JSON.stringify({ error: { message: `Invalid model; key=${privateKey}`, code: 'model_not_found', type: 'invalid_request_error' } }), { status: 200 }), 'backend_error', 'Invalid model'],
+        ['backend-string', () => new Response(JSON.stringify({ error: 'Quota exhausted' })), 'backend_error', 'Quota exhausted'],
+        ['backend-boolean', () => new Response(JSON.stringify({ error: true, message: 'Provider unavailable' })), 'backend_error', 'Provider unavailable'],
+        ['http-json', () => new Response(JSON.stringify({ error: { message: 'Rate limit exceeded', code: 429 } }), { status: 429, statusText: 'Too Many Requests' }), 'request_http_error', 'Rate limit exceeded'],
+        ['http-html', () => new Response(`<h1>Upstream timeout</h1> Bearer ${privateKey}`, { status: 502, statusText: 'Bad Gateway' }), 'request_http_error', 'Upstream timeout'],
+        ['bad-json', () => new Response('not JSON from proxy'), 'invalid_response', 'not JSON from proxy'],
+        ['empty-choices', () => new Response(JSON.stringify({ choices: [], provider: 'provider-without-text' })), 'empty_result', '未返回非空文本'],
+      ]) {
+        global.fetch = async (input, init) => new URL(input).pathname.endsWith('/generate') ? response() : ordinaryFetch(input, init);
+        const diagnostic = await make(); diagnostic.secret = privateKey;
+        diagnostic.connection.baseUrl = `https://user:password@a.invalid/v1?api_key=${privateKey}`;
+        await assert.rejects(() => generateTask(diagnostic), error => {
+          assert.equal(error.code, expectedCode, label); assert.equal(error.phase, 'request');
+          assert(error.message.includes(expectedMessage), `${label}: ${error.message}`);
+          assert.equal(error.details.endpoint, 'https://a.invalid/v1');
+          assert.equal(error.details.connectionName, 'A'); assert.equal(error.details.model, 'A');
+          assert.equal(typeof error.details.elapsedMs, 'number'); assert(error.details.httpStatus >= 200);
+          assert(error.details.response, label); assert(!JSON.stringify(error).includes(privateKey));
+          if (label === 'backend-json') { assert.equal(error.details.backendCode, 'model_not_found'); assert.equal(error.details.backendType, 'invalid_request_error'); }
+          return true;
+        });
+      }
+      global.fetch = ordinaryFetch;
+      assert.equal(await generateTask(await make()), 'PHASE_RESULT');
+      const dump = JSON.stringify(logs);
+      for (const message of ['世界书扫描完成', '发送模型请求', '模型请求内容', '模型原始输出', '生成失败', '模型响应完成']) assert(dump.includes(message), message);
+      assert(!dump.includes(privateKey), 'logs must redact the configured key, including upstream echoes');
+      assert(!dump.includes('user:password@'), 'diagnostics must not disclose URL credentials');
+      console.info = () => { throw new Error('console unavailable'); };
+      assert.equal(await generateTask(await make()), 'PHASE_RESULT', 'logging failure cannot change generation');
+    } finally { Object.assign(console, originalConsole); }
+    console.log('PASS: generic phases, backend JSON/text/HTTP diagnostics, credential redaction and restored console traces');
   } finally { global.fetch = priorFetch; window.parent.EjsTemplate = priorEjs; }
 }
 const selectedChecks = process.argv.includes('--errors-only') ? generationErrorChecks : main;

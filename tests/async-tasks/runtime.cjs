@@ -85,14 +85,13 @@ async function main() {
   const common = runTaskChain({ messageId: 1, trigger: { kind: 'received' } }); await until(() => calls.length === 1);
   const literalRegular = eventRun('regular', 'literal-event'); await until(() => calls.length === 2);
   regularGate.resolve(); assert.equal((await common).status, 'succeeded'); assert.equal((await literalRegular).status, 'succeeded');
+  assert.deepEqual(calls.map(value => value.model), ['A', 'A'], 'enabled event task also participates in the regular chain as in the original behavior');
 
   resetChat('enabled-threshold'); await configure([task('A', { enabled: false, eventName: 'disabled' }), task('B', { eventName: 'manual-event' })], 300);
-  assert.equal((await eventRun('disabled')).tasks[0].reason.code, 'disabled');
-  assert.equal(notifications.length, 1);
-  assert.equal(notifications[0].level, 'warning');
-  assert.match(notifications[0].message, /任务已禁用/);
+  assert.equal((await eventRun('disabled')).status, 'succeeded', 'event trigger bypasses the regular-chain enabled switch');
+  const notificationCount = notifications.length;
   assert.equal((await runTaskChain({ messageId: 1, trigger: { kind: 'received' } })).status, 'skipped');
-  assert.equal(notifications.length, 1, 'routine automatic skips must not create notification noise');
+  assert.equal(notifications.length, notificationCount, 'routine automatic skips must not create notification noise');
   model = async body => success(body.model);
   assert.equal((await eventRun('manual-event')).status, 'succeeded');
   assert.equal((await eventRun('manual-event')).status, 'succeeded', 'explicit events bypass floor interval');
@@ -137,7 +136,160 @@ async function main() {
   await independentRuntimeChecks();
   await unfinishedRuntimeChecks();
   await notificationChecks();
+  await failureDiagnosticChecks();
+  await eventContractChecks();
   console.log('PASS: explicit busy and independent event/regular runs, enable/threshold/interval, isolated cancellation, commit-order rollback and reserved rerun lifecycle');
+}
+async function failureDiagnosticChecks() {
+  resetChat('screenshot-backend-error');
+  await configure([task('微信主动聊天', { enabled: false, eventName: 'Chat_On_WeChat', retryCount: 1 })]);
+  const logs = [], savedConsole = {};
+  for (const level of ['info', 'debug', 'warn', 'error']) { savedConsole[level] = console[level]; console[level] = (...args) => logs.push([level, ...args]); }
+  try {
+    model = async () => new Response(JSON.stringify({ error: { message: 'Unknown model: wechat-test', code: 'model_not_found' } }), { status: 200 });
+    const failed = await eventRun('Chat_On_WeChat', 'diagnostic-request');
+    assert.equal(failed.status, 'failed');
+    const error = failed.tasks[0].error;
+    assert.equal(error.code, 'backend_error'); assert.match(error.message, /Unknown model/);
+    assert.equal(error.details.backendCode, 'model_not_found'); assert.equal(error.details.httpStatus, 200);
+    assert.equal(error.details.model, '微信主动聊天'); assert.match(error.details.response, /Unknown model/);
+    assert.equal(failed.tasks[0].attempts, 2);
+    assert.deepEqual(events.at(-1).result.tasks[0].error, error, 'broadcast, copy diagnostics and UI retain request details');
+    const dump = JSON.stringify(logs);
+    for (const text of ['运行准入', '开始执行任务', '生成尝试', '生成尝试未完成', 'retrying', '任务执行未完成', '运行结算', 'diagnostic-request']) assert(dump.includes(text), text);
+    resetChat('diagnostic-success'); await configure([task('OK')]);
+    model = async () => success('OUTPUT');
+    assert.equal((await runTaskChain({ messageId: 1, trigger: { kind: 'manual' } })).status, 'succeeded');
+    const finalDump = JSON.stringify(logs);
+    for (const text of ['开始提交任务结果', '任务执行成功', '模型原始输出']) assert(finalDump.includes(text), text);
+  } finally { Object.assign(console, savedConsole); }
+}
+async function eventContractChecks() {
+  resetChat('event-listener-contract');
+  await configure([
+    task('REG'), task('NEG', { order: -1, triggerInterval: 20 }), task('REG_EVENT', { eventName: 'regular:also' }),
+    task('EV', { enabled: false, eventName: 'frontend:event', output: { mode: 'event_result' } }),
+    task('OFF', { enabled: false, eventName: 'frontend:off' }),
+    task('PEER', { enabled: false, eventName: 'frontend:event', output: { mode: 'event_result' } }),
+    task('OTHER', { enabled: false, eventName: 'frontend:other', output: { mode: 'event_result' } }),
+  ]);
+  const handlers = new Map();
+  global.tavern_events = { MESSAGE_SENT: 'sent', MESSAGE_RECEIVED: 'received', CHAT_CHANGED: 'changed' };
+  global.eventOn = (name, handler) => { handlers.set(name, handler); return { stop: () => handlers.delete(name) }; };
+  global.initializeGlobal = () => {};
+  model = async body => success(`FULL_RESPONSE_${body.model}`);
+  initializeTaskRuntime();
+  try {
+    const api = window.KatTaskAPI;
+    const fired = async (name, payload) => handlers.get(name)(payload);
+    assert.deepEqual((await fired('sent', 1)).tasks.map(item => item.taskId), ['NEG']);
+    const regular = await fired('received', 1);
+    assert(regular.tasks.some(item => item.taskId === 'REG_EVENT' && item.status === 'succeeded'), 'enabled event tasks remain eligible in the regular chain');
+    await api.run({ messageId: 1 });
+    const beforeOff = calls.length;
+    assert.equal((await fired('frontend:off', 'off-request')).status, 'succeeded');
+    assert.equal(calls.length, beforeOff + 1, 'disabled regular-chain task still responds to its event');
+    const stringResult = await fired('frontend:event', 'literal-request');
+    assert.equal(stringResult.requestId, 'literal-request');
+    assert.equal(events.filter(item => item.name === 'frontend:event:result' && item.result.requestId === 'literal-request').length, 1);
+    assert.equal(stringResult.tasks.length, 2);
+    assert.deepEqual(events.find(item => item.result.runId === stringResult.runId).result, stringResult, 'broadcast and Promise expose the same terminal result');
+    for (const item of stringResult.tasks) { assert.equal(item.text, `FULL_RESPONSE_${item.taskId}`); assert.deepEqual(item.writes, []); }
+    assert.equal(host.chat[1].mes, 'BODY', 'event broadcast never appends to the message');
+    assert.deepEqual(Object.keys(chatVariables), ['kat_async_task_state:runtime-script'], 'broadcast creates only existing task history, no result storage');
+    host.chat.push({ mes: 'SECOND_BODY', name: 'Char', is_user: false, swipe_id: 2 });
+    const selected = await fired('frontend:event', { requestId: 'object-request', messageId: 2, taskId: 'EV' });
+    assert.equal(selected.requestId, 'object-request'); assert.equal(selected.messageId, 2);
+    assert.equal(selected.swipeId, 2, 'terminal broadcast must identify the actual swipe');
+    assert.deepEqual(selected.tasks.map(item => item.taskId), ['EV']);
+    assert.equal(selected.tasks[0].text, 'FULL_RESPONSE_EV');
+    for (const bad of [[], 42, null, { requestId: {} }, { messageId: '1' }, { taskId: 7 }]) {
+      const before = calls.length;
+      const invalid = await fired('frontend:event', bad);
+      assert.equal(invalid.status, 'failed', JSON.stringify(bad));
+      assert.equal(calls.length, before, 'bad event payload must never fall back to a current-floor execution');
+    }
+    assert.equal((await fired('frontend:event', { requestId: 'wrong-event', taskId: 'OTHER' })).status, 'failed');
+    assert.equal((await api.run({ messageId: 1, taskId: 'missing' })).status, 'failed');
+    const unbound = store.snapshot(); unbound.tasks.push(task('UNBOUND')); await store.replaceSettings(unbound);
+    assert.equal((await api.run({ messageId: 1, taskId: 'UNBOUND' })).status, 'failed');
+    calls.length = 0;
+    const negative = await api.run({ messageId: 1, taskId: 'NEG' });
+    assert.equal(negative.status, 'succeeded'); assert.deepEqual(calls.map(item => item.model), ['NEG']);
+    const singleEvent = await api.run({ messageId: 1, taskId: 'EV', requestId: 'single-event' });
+    assert.equal(singleEvent.trigger.kind, 'event'); assert.equal(singleEvent.trigger.eventName, 'frontend:event');
+    assert.deepEqual(singleEvent.tasks.map(item => item.taskId), ['EV']);
+  } finally { disposeTaskRuntime(); }
+
+  resetChat('event-result-concurrency');
+  chatVariables.other_frontend = { retained: ['USER_DATA'] };
+  await configure([task('A', { eventName: 'alpha', output: { mode: 'event_result' } }), task('B', { eventName: 'beta', output: { mode: 'event_result' } })]);
+  const gate = deferred(); model = async body => { await gate.promise; return success(body.model); };
+  const alpha = eventRun('alpha', 'alpha-req'), beta = eventRun('beta', 'beta-req');
+  await until(() => calls.length === 2); gate.resolve();
+  const both = await Promise.all([alpha, beta]);
+  assert(both.every(value => value.status === 'succeeded'));
+  for (const result of both) {
+    const published = events.filter(item => item.result.runId === result.runId);
+    assert.equal(published.length, 1); assert.deepEqual(published[0].result, result);
+    assert.equal(result.tasks[0].text, result.tasks[0].taskId);
+  }
+  assert.deepEqual(Object.keys(chatVariables).sort(), ['kat_async_task_state:runtime-script', 'other_frontend']);
+  assert.deepEqual(chatVariables.other_frontend, { retained: ['USER_DATA'] });
+
+  resetChat('event-result-partial');
+  await configure([task('A', { eventName: 'partial-result', output: { mode: 'event_result' } }), task('FAIL', { eventName: 'partial-result', output: { mode: 'event_result' } })]);
+  model = async body => body.model === 'FAIL' ? { ok: false, status: 500 } : success('KEEP_SUCCESS');
+  const partial = await eventRun('partial-result');
+  assert.equal(partial.status, 'partial');
+  assert.equal(partial.tasks.find(item => item.taskId === 'A').text, 'KEEP_SUCCESS');
+  assert.equal(events.filter(item => item.result.runId === partial.runId).length, 1);
+
+  resetChat('event-result-requires-event');
+  await configure([task('A', { output: { mode: 'event_result' } })]);
+  const invalidMode = await runTaskChain({ messageId: 1, trigger: { kind: 'manual' } });
+  assert.equal(invalidMode.status, 'failed');
+  assert.equal(calls.length, 0, 'regular task with an event-only output must fail before generation');
+
+  resetChat('event-result-listener-failure');
+  await configure([task('A', { eventName: 'listener-failure', output: { mode: 'event_result' } })]);
+  const emitter = global.eventEmit;
+  let broadcasts = 0;
+  global.eventEmit = async () => { broadcasts++; throw Error('OTHER_FRONTEND_LISTENER_FAILURE'); };
+  try {
+    const result = await eventRun('listener-failure', 'listener-request');
+    assert.equal(result.status, 'succeeded');
+    assert.equal(broadcasts, 1, 'a failing listener must not cause duplicate broadcasts or paid retries');
+    assert(result.warnings.some(item => item.code === 'result_listener_failed'));
+    assert.equal(result.tasks[0].text, 'KEEP_SUCCESS');
+    assert.equal(activeTaskRuns.size, 0);
+  } finally { global.eventEmit = emitter; }
+
+  await originalIntervalChecks();
+  console.log('PASS: actual registered event payloads and original enabled semantics, single-task/negative-order/unbound rejection, broadcast metadata/concurrency and no result persistence');
+}
+async function originalIntervalChecks() {
+  model = async body => success(body.model);
+  resetChat('original-first-interval');
+  await configure([task('A', { eventName: 'interval', triggerInterval: 3 })]);
+  assert.equal((await eventRun('interval')).status, 'skipped', 'first interval starts from floor zero');
+  assert.equal(calls.length, 0);
+  host.chat.push({ mes: 'floor2', is_user: false, name: 'Char' }, { mes: 'floor3', is_user: false, name: 'Char' });
+  const atBoundary = await runTaskChain({ messageId: 3, trigger: { kind: 'event', eventName: 'interval' } });
+  assert.equal(atBoundary.status, 'succeeded');
+  assert.equal((await runTaskChain({ messageId: 3, trigger: { kind: 'event', eventName: 'interval' } })).status, 'skipped', 'event obeys configured interval greater than one');
+  const backwards = await runTaskChain({ messageId: 1, trigger: { kind: 'event', eventName: 'interval' } });
+  assert.equal(backwards.status, 'skipped');
+  assert.equal(backwards.tasks[0].reason.lastTriggerFloor, 3);
+  assert.equal(chatVariables['kat_async_task_state:runtime-script'].A.lastSuccessfulFloor, 3, 'baseline reset must not invent a successful run');
+  assert.equal(chatVariables['kat_async_task_state:runtime-script'].A.triggerBaseline.floor, 1);
+  host.chat.push({ mes: 'floor4', is_user: false, name: 'Char' });
+  assert.equal((await runTaskChain({ messageId: 4, trigger: { kind: 'event', eventName: 'interval' } })).status, 'succeeded', 'floor rollback resets the interval baseline to the current floor');
+  resetChat('original-one-interval'); await configure([task('A', { eventName: 'one', triggerInterval: 1 })]);
+  assert.equal((await eventRun('one')).status, 'succeeded');
+  assert.equal((await eventRun('one')).status, 'succeeded', 'interval one allows repeated same-floor events');
+  assert.equal((await runTaskChain({ messageId: 1, trigger: { kind: 'manual' } })).status, 'succeeded');
+  assert.equal((await runTaskChain({ messageId: 1, trigger: { kind: 'manual' } })).status, 'succeeded', 'interval one also allows repeated regular runs');
 }
 async function notificationChecks() {
   resetChat('notification-partial');
@@ -213,15 +365,16 @@ async function independentRuntimeChecks() {
   resetChat('threshold-zero', ''); await configure([task('A')], 0);
   assert.equal((await runTaskChain({ messageId: 1, trigger: { kind: 'received' } })).status, 'succeeded');
 
-  resetChat('interval-boundary'); await configure([task('A', { triggerInterval: 2, eventName: 'explicit' })]);
-  assert.equal((await eventRun('explicit')).status, 'succeeded');
+  resetChat('interval-boundary'); await configure([task('A', { triggerInterval: 2 })]);
   host.chat.push({ mes: 'BODY_2', is_user: false, name: 'Char' });
-  const tooSoon = await runTaskChain({ messageId: 2, trigger: { kind: 'manual' } });
-  assert.equal(tooSoon.tasks[0].reason.code, 'interval_not_reached');
-  assert.equal(tooSoon.tasks[0].reason.currentFloor, 2);
-  assert.equal(tooSoon.tasks[0].reason.lastSuccessfulFloor, 1);
+  assert.equal((await runTaskChain({ messageId: 2, trigger: { kind: 'manual' } })).status, 'succeeded');
   host.chat.push({ mes: 'BODY_3', is_user: false, name: 'Char' });
-  assert.equal((await runTaskChain({ messageId: 3, trigger: { kind: 'manual' } })).status, 'succeeded');
+  const tooSoon = await runTaskChain({ messageId: 3, trigger: { kind: 'manual' } });
+  assert.equal(tooSoon.tasks[0].reason.code, 'interval_not_reached');
+  assert.equal(tooSoon.tasks[0].reason.currentFloor, 3);
+  assert.equal(tooSoon.tasks[0].reason.lastSuccessfulFloor, 2);
+  host.chat.push({ mes: 'BODY_4', is_user: false, name: 'Char' });
+  assert.equal((await runTaskChain({ messageId: 4, trigger: { kind: 'manual' } })).status, 'succeeded');
 
   resetChat('negative-order'); await configure([task('NEG', { order: -1 }), task('ZERO'), task('POS', { order: 1 })]);
   const sent = await runTaskChain({ messageId: 1, trigger: { kind: 'sent' } });

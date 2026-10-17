@@ -1,9 +1,19 @@
 <template>
   <div class="worldbook-picker">
     <div class="picker-toolbar">
-      <label>搜索世界书<input v-model="bookSearch" placeholder="输入世界书名称" /></label>
       <label
-        >酒馆世界书<select :value="bookName" @change="changeBook(($event.target as HTMLSelectElement).value)">
+        >搜索世界书<Tooltip content="仅筛选下拉列表中的世界书，不会更改已经选择的世界书。" /><input
+          v-model="bookSearch"
+          placeholder="输入世界书名称"
+      /></label>
+      <label
+        >酒馆世界书<Tooltip
+          :content="
+            single
+              ? '选择结果写入的目标世界书。更换世界书会清空原条目选择。'
+              : '选择参与本任务扫描的世界书。更换世界书会清空原条目选择；仅选择世界书不会自动选中全部条目。'
+          "
+        /><select :value="bookName" @change="changeBook(($event.target as HTMLSelectElement).value)">
           <option value="">请选择世界书</option>
           <option v-if="bookName && !names.includes(bookName)" :value="bookName">{{ bookName }}（当前不可用）</option>
           <option v-for="name in filteredNames" :key="name" :value="name">{{ name }}</option>
@@ -14,7 +24,12 @@
     <p v-if="error" class="error" role="alert">读取失败：{{ error }}。已选数据保留，可重试。</p>
     <template v-if="bookName">
       <div class="picker-toolbar">
-        <label>搜索条目<input v-model="entrySearch" placeholder="名称、UID 或内容" /></label>
+        <label
+          >搜索条目<Tooltip
+            content="按名称、UID 或内容筛选列表，不会取消已选条目。勾选搜索结果仅增加当前可见条目。" /><input
+            v-model="entrySearch"
+            placeholder="名称、UID 或内容"
+        /></label>
         <span v-if="!single">已勾选 {{ entryUids.length }} 项</span>
         <button v-if="!single" type="button" :disabled="!!error || loading" @click="selectVisible">勾选搜索结果</button>
         <button v-if="!single" type="button" @click="$emit('update:entryUids', [])">清空勾选</button>
@@ -43,7 +58,8 @@
       <template v-if="single">
         <button type="button" @click="$emit('update:entryUid', undefined)">使用新建条目名称</button>
         <label
-          >条目名称 / 新建名称<input
+          >条目名称 / 新建名称<Tooltip
+            content="选定已有条目时按 UID 写入；使用新建条目名称后，按此名称创建缺失目标并启用。" /><input
             :value="entryName"
             @input="$emit('update:entryName', ($event.target as HTMLInputElement).value)"
         /></label>
@@ -53,6 +69,7 @@
 </template>
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import Tooltip from '../Common/Tooltip.vue';
 import type { RegexSpec } from '@/MVU助手/AsyncAnalyze/TaskSchema';
 const props = withDefaults(
   defineProps<{

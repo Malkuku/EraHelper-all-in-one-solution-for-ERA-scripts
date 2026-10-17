@@ -138,7 +138,7 @@ async function worldTarget(write: WriteSpec & { target: Extract<WriteSpec['targe
   return { kind: 'worldbook', book: target.bookName, uid: entry.uid };
 }
 export async function commitTask(task: TaskConfig, text: string, identity: MessageIdentity, journal: Journal, taskResult: TaskResult, runResult: RunResult, signal: AbortSignal) {
-  if (task.output.mode === 'return') return;
+  if (task.output.mode === 'return' || task.output.mode === 'event_result') return;
   const writes = task.output.writes;
   const prepared = writes.map(write => ({ write, content: extract(text, write) }));
   if (prepared.some(item => !item.content.trim())) throw new TaskFailure('empty_result', '提取内容为空，未执行写入', 'extract');
