@@ -3,6 +3,14 @@ import { z } from 'zod';
 const integer = z.number().int().nonnegative();
 export const RegexSpecSchema = z.object({ pattern: z.string(), flags: z.string() });
 export type RegexSpec = z.infer<typeof RegexSpecSchema>;
+/** Accept a plain expression or a complete /expression/flags literal in one field. */
+export function parseRegexInput(value: string): RegexSpec {
+  const literal = value.match(/^\/(.*)\/([a-z]*)$/s);
+  return { pattern: literal ? literal[1] : value, flags: literal ? literal[2] : '' };
+}
+export function formatRegexInput(spec: RegexSpec): string {
+  return spec.flags ? `/${spec.pattern}/${spec.flags}` : spec.pattern;
+}
 export const RegexPresetSchema = RegexSpecSchema.safeExtend({
   id: z.string().min(1),
   name: z.string(),
@@ -23,9 +31,7 @@ export function parseRegexPresets(value: unknown): RegexPreset[] {
     if (!item || typeof item !== 'object') throw new Error('正则配置格式无效');
     let { pattern, flags } = item;
     if (typeof item.regex === 'string') {
-      const literal = item.regex.match(/^\/(.*)\/([a-z]*)$/s);
-      pattern = literal ? literal[1] : item.regex;
-      flags = literal ? literal[2] : '';
+      ({ pattern, flags } = parseRegexInput(item.regex));
     }
     return RegexPresetSchema.parse({ ...item, id: item.id || crypto.randomUUID(), pattern, flags: flags ?? '' });
   });

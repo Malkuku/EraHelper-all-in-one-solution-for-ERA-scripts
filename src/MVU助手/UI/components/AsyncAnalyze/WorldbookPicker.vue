@@ -28,10 +28,7 @@
           />
           <span
             ><strong>{{ entry.name || '未命名条目' }}</strong
-            ><small
-              >UID {{ entry.uid }} · {{ entry.enabled ? '已启用' : '已停用'
-              }}<template v-if="matchedByRegex(entry.name)"> · 名称正则命中</template></small
-            ></span
+            ><small v-if="matchedByRegex(entry.name)">名称正则命中</small></span
           >
           <details @click.stop>
             <summary>内容</summary>

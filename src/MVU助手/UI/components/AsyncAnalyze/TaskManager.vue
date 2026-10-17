@@ -136,24 +136,37 @@
                     </button>
                   </div>
                   <article v-for="item in groupTasks(group)" :key="item.id" class="linked-task">
-                    <div>
-                      <strong>{{ item.name || '未命名任务' }}</strong>
-                      <p class="hint">
-                        {{ item.enabled ? '启用' : '停用' }} · 顺序 {{ item.order }} · 间隔
-                        {{ item.triggerInterval }} 楼 ·
-                        {{ item.eventName || '常规触发' }}
-                      </p>
-                      <p class="hint">{{ bindingSummary(item) }}</p>
+                    <div class="linked-task-content">
+                      <div class="linked-task-heading">
+                        <strong>{{ item.name || '未命名任务' }}</strong>
+                        <span class="task-status" :class="{ enabled: item.enabled || !!item.eventName }">{{
+                          item.eventName ? '事件触发' : item.enabled ? '启用' : '停用'
+                        }}</span>
+                      </div>
+                      <div class="linked-task-trigger">
+                        <span>顺序 {{ item.order }}</span
+                        ><span>每 {{ item.triggerInterval }} 楼</span>
+                        <span class="task-event">{{ item.eventName ? '事件：' + item.eventName : '常规触发' }}</span>
+                        <span v-if="item.eventName && !item.enabled">当前已停用，事件不会执行</span>
+                      </div>
+                      <dl class="linked-task-binding">
+                        <div v-for="binding in taskBindings(item)" :key="binding.label">
+                          <dt>{{ binding.label }}</dt>
+                          <dd>{{ binding.value }}</dd>
+                        </div>
+                      </dl>
                     </div>
-                    <button
-                      @click="
-                        selectedTask = item.id;
-                        taskTab = 'basic';
-                        tab = 'tasks';
-                      "
-                    >
-                      编辑</button
-                    ><button @click="group.taskIds = group.taskIds.filter(id => id !== item.id)">移除关联</button>
+                    <div class="linked-task-actions">
+                      <button
+                        @click="
+                          selectedTask = item.id;
+                          taskTab = 'basic';
+                          tab = 'tasks';
+                        "
+                      >
+                        编辑</button
+                      ><button @click="group.taskIds = group.taskIds.filter(id => id !== item.id)">移除关联</button>
+                    </div>
                   </article>
                   <p v-if="!group.taskIds.length" class="empty-state">此规则组尚未关联任务。</p></template
                 >
@@ -902,6 +915,14 @@ const connection = computed(() => draft.value.connections.find(item => item.id =
 const connectionTasks = computed(() => draft.value.tasks.filter(item => item.connectionId === connection.value?.id));
 function presetName(id: string | null, config = draft.value) {
   return config.presets.find(item => item.id === id)?.name || (id ? '未命名预设' : '未绑定预设');
+}
+function taskBindings(task: TaskConfig) {
+  const api = draft.value.connections.find(item => item.id === task.connectionId);
+  return [
+    { label: 'API', value: api ? api.name || '未命名 API' : '未选择' },
+    { label: '模型', value: api?.model || '未配置' },
+    { label: '预设', value: api ? presetName(api.presetId) : '未绑定预设' },
+  ];
 }
 function bindingSummary(task: TaskConfig, config = draft.value) {
   const api = config.connections.find(item => item.id === task.connectionId);
@@ -1831,18 +1852,71 @@ summary {
 }
 .linked-task {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: flex-start;
+  gap: 16px;
   flex-wrap: wrap;
-  padding: 14px 0;
+  padding: 20px 0;
   border-bottom: 1px solid var(--line);
 }
-.linked-task > div {
-  flex: 1;
-  min-width: 140px;
+.linked-task-content {
+  flex: 1 1 280px;
+  min-width: 0;
 }
-.linked-task p {
-  margin: 3px 0 0;
+.linked-task-heading,
+.linked-task-trigger,
+.linked-task-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.linked-task-heading strong {
+  font-size: 16px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.task-status {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+  background: var(--soft);
+}
+.task-status.enabled {
+  color: var(--mvu-accent);
+  border-color: currentColor;
+}
+.linked-task-trigger {
+  margin: 8px 0 12px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.task-event {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.linked-task-binding {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.linked-task-binding > div {
+  display: grid;
+  grid-template-columns: 3em minmax(0, 1fr);
+  gap: 12px;
+}
+.linked-task-binding dt {
+  color: var(--muted);
+}
+.linked-task-binding dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.linked-task-actions {
+  flex: 0 0 auto;
+  gap: 8px;
 }
 .search-bar {
   display: flex;

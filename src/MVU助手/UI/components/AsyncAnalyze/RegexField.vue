@@ -2,9 +2,9 @@
   <div class="regex-field">
     <div class="regex-inputs">
       <label
-        >{{ label || '正则表达式' }}<input v-model="model.pattern" class="code-font" placeholder="pattern"
+        >{{ label || '正则表达式'
+        }}<input v-model="expression" class="code-font" placeholder="输入正则表达式，或 /表达式/gi"
       /></label>
-      <label class="flags">flags<input v-model="model.flags" placeholder="gimsu" /></label>
     </div>
     <div class="regex-tools">
       <select aria-label="从正则库选择" value="" @change="usePreset($event)">
@@ -17,8 +17,8 @@
   </div>
 </template>
 <script setup lang="ts">
-import { computed } from 'vue';
-import type { RegexSpec, RegexPreset } from '@/MVU助手/AsyncAnalyze/TaskSchema';
+import { computed, ref, watch } from 'vue';
+import { parseRegexInput, formatRegexInput, type RegexSpec, type RegexPreset } from '@/MVU助手/AsyncAnalyze/TaskSchema';
 const model = defineModel<RegexSpec & { replacement?: string }>({ required: true });
 const props = defineProps<{
   presets: RegexPreset[];
@@ -28,6 +28,16 @@ const props = defineProps<{
 defineEmits<{
   test: [value: RegexSpec & { replacement?: string }, purpose: 'match' | 'extract' | 'task' | 'target'];
 }>();
+const expression = ref(formatRegexInput(model.value));
+watch(expression, value => Object.assign(model.value, parseRegexInput(value)), { flush: 'sync' });
+watch(
+  () => [model.value.pattern, model.value.flags],
+  () => {
+    const parsed = parseRegexInput(expression.value);
+    if (parsed.pattern !== model.value.pattern || parsed.flags !== model.value.flags)
+      expression.value = formatRegexInput(model.value);
+  },
+);
 const error = computed(() => {
   try {
     new RegExp(model.value.pattern, model.value.flags);
@@ -62,9 +72,6 @@ function usePreset(event: Event) {
 .regex-inputs label:first-child {
   flex: 1;
   min-width: 120px;
-}
-.regex-inputs .flags {
-  width: 75px;
 }
 .regex-tools {
   margin: 5px 0 10px;

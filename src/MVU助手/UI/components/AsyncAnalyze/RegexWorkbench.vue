@@ -21,7 +21,7 @@
           @click="load(item)"
         >
           <strong>{{ item.name }}</strong
-          ><small>/{{ item.pattern }}/{{ item.flags }}</small>
+          ><small>{{ formatRegexInput(item) }}</small>
         </button>
         <p v-if="!filtered.length" class="hint">暂无匹配配置。配置保存后可在各正则编辑处复用。</p>
       </aside>
@@ -34,14 +34,15 @@
           </div>
         </div>
         <div class="fields">
-          <label>正则表达式<input v-model="current.pattern" placeholder="pattern" class="code-font" /></label
-          ><label>flags<input v-model="current.flags" placeholder="gimsu" /></label>
+          <label
+            >正则表达式<input v-model="expression" placeholder="输入正则表达式，或 /表达式/gi" class="code-font"
+          /></label>
         </div>
         <p v-if="preview.error" class="error" role="alert">{{ preview.error }}</p>
         <label>替换文本<input v-model="replacement" placeholder="任务正则支持 $1 等替换语法" /></label>
         <label>测试文本<textarea v-model="testText" rows="6" placeholder="粘贴模型响应、条目名称或待替换文本" /></label>
         <div class="preview-box">
-          <strong>提取预览（完整匹配，按 flags 取首项或全部）</strong>
+          <strong>提取预览（完整匹配）</strong>
           <pre>{{ preview.extracted }}</pre>
         </div>
         <details open>
@@ -74,6 +75,8 @@
 import { computed, ref, watch } from 'vue';
 import {
   matchTaskRegex,
+  parseRegexInput,
+  formatRegexInput,
   parseRegexPresets,
   RegexPresetSchema,
   type RegexPreset,
@@ -91,11 +94,27 @@ const currentId = ref(''),
   replacement = ref(''),
   testText = ref(''),
   replaceMode = ref('task');
-const current = ref<RegexSpec>({ pattern: '', flags: 'g' }),
+const current = ref<RegexSpec>({ pattern: '', flags: '' }),
   error = ref(''),
   notice = ref('');
 const filtered = computed(() =>
   library.value.filter(item => `${item.name} ${item.pattern}`.toLowerCase().includes(search.value.toLowerCase())),
+);
+const expression = ref(formatRegexInput(current.value));
+watch(
+  expression,
+  value => {
+    current.value = parseRegexInput(value);
+  },
+  { flush: 'sync' },
+);
+watch(
+  () => [current.value.pattern, current.value.flags],
+  () => {
+    const parsed = parseRegexInput(expression.value);
+    if (parsed.pattern !== current.value.pattern || parsed.flags !== current.value.flags)
+      expression.value = formatRegexInput(current.value);
+  },
 );
 const preview = computed(() => {
   try {
@@ -131,7 +150,7 @@ watch(
 function create() {
   currentId.value = '';
   currentName.value = '';
-  current.value = { pattern: '', flags: 'g' };
+  current.value = { pattern: '', flags: '' };
   replacement.value = '';
   error.value = '';
   notice.value = '';

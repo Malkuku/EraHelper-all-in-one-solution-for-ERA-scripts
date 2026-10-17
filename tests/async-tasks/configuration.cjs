@@ -17,7 +17,7 @@ global.getScriptId = () => scriptId;
 global.getVariables = () => structuredClone(variables);
 global.updateVariablesWith = async update => { variables = await update(structuredClone(variables)); };
 const { useTaskStore } = require(path.join(root, 'stores/TaskStore.ts'));
-const { emptySettings, ConfigSchema, TaskSchema, parseTaskSettings, parseRegexPresets, matchTaskRegex } = require(path.join(root, 'AsyncAnalyze/TaskSchema.ts'));
+const { emptySettings, ConfigSchema, TaskSchema, parseTaskSettings, parseRegexPresets, matchTaskRegex, parseRegexInput, formatRegexInput } = require(path.join(root, 'AsyncAnalyze/TaskSchema.ts'));
 const { removeTaskResource } = require(path.join(root, 'AsyncAnalyze/TaskConfiguration.ts'));
 
 async function main() {
@@ -51,6 +51,12 @@ async function main() {
   assert.deepEqual(ConfigSchema.parse(beforeRegexLibrary).regexPresets, [], 'current configs may omit the optional reusable regex library');
   config.regexPresets = parseRegexPresets([{ id: 'saved', name: '命名表达式', regex: '/<result>(.*?)<\/result>/gs', replacement: '$1' }]);
   assert.deepEqual(config.regexPresets, [{ id: 'saved', name: '命名表达式', pattern: '<result>(.*?)</result>', flags: 'gs', replacement: '$1' }]);
+  assert.deepEqual(parseRegexInput('<tag>(.*?)</tag>'), { pattern: '<tag>(.*?)</tag>', flags: '' });
+  assert.deepEqual(parseRegexInput('/<tag>(.*?)<\\/tag>/gi'), { pattern: '<tag>(.*?)<\\/tag>', flags: 'gi' });
+  for (const spec of [{ pattern: 'a/b', flags: 'gi' }, { pattern: 'tag', flags: '' }])
+    assert.deepEqual(parseRegexInput(formatRegexInput(spec)), spec);
+  assert.equal(matchTaskRegex('TAG tag', parseRegexInput('/tag/gi')).length, 2);
+  assert.equal(matchTaskRegex('TAG tag', parseRegexInput('tag')).length, 1);
   const response = '<result>甲</result>\n<result>乙</result>';
   assert.deepEqual(matchTaskRegex(response, config.regexPresets[0]).map(match => match[0]), ['<result>甲</result>', '<result>乙</result>']);
   assert.deepEqual(matchTaskRegex(response, { ...config.regexPresets[0], flags: 's' }).map(match => match[0]), ['<result>甲</result>'], 'non-global tester preview must match runtime extraction');

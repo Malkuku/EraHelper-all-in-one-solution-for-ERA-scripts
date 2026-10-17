@@ -28,6 +28,9 @@ global.setChatMessages = async messages => { for (const message of messages) if 
 global.waitGlobalInitialized = async () => {};
 global.Mvu = { getMvuData: () => ({ stat_data: {} }), parseMessage: async () => undefined, replaceMvuData: async () => {} };
 const events = [];
+const notifications = [];
+global.toastr = Object.fromEntries(['info', 'success', 'warning', 'error'].map(level => [level,
+  (message, title, options) => notifications.push({ level, message, title, options })]));
 global.eventEmit = async (name, result) => { events.push({ name, result }); };
 const { createPinia, setActivePinia } = require('pinia'); setActivePinia(createPinia());
 const root = path.resolve(__dirname, '../../src/MVU助手');
@@ -45,7 +48,7 @@ global.fetch = async (input, init) => {
   return { ok: true, json: async () => url.pathname.endsWith('/encode') ? { ids: Array.from({ length: body.text.length }) } : { token_count: JSON.stringify(body).length + 2 } };
 };
 function resetChat(name, text = 'BODY') {
-  chatId = name; chatVariables = {}; calls.length = 0; events.length = 0;
+  chatId = name; chatVariables = {}; calls.length = 0; events.length = 0; notifications.length = 0;
   host.chat = [{ mes: 'USER', is_user: true, name: 'Player' }, { mes: text, is_user: false, name: 'Char' }];
   onStateSaved = async () => {}; onMessageSaved = async () => {};
 }
@@ -66,9 +69,15 @@ async function main() {
   resetChat('busy'); await configure([task('A', { eventName: 'same' }), task('B', { eventName: 'other' })]);
   const gate = deferred(); model = async body => { await gate.promise; return success(body.model); };
   const first = eventRun('same', 'caller-1'); await until(() => calls.length === 1);
+  assert.equal(notifications.length, 1, 'background event start must be visible without mounting the UI');
+  assert.match(notifications[0].title, /任务开始/);
+  assert.match(notifications[0].message, /same.*A/);
+  assert.equal(notifications[0].options.escapeHtml, true);
   const duplicate = await eventRun('same', 'caller-2'); assert.equal(duplicate.status, 'busy'); assert.equal(duplicate.requestId, 'caller-2'); assert(duplicate.activeRunId);
   const independent = eventRun('other', 'caller-3'); await until(() => calls.length === 2);
   gate.resolve(); assert.equal((await first).status, 'succeeded'); assert.equal((await independent).status, 'succeeded');
+  assert.equal(notifications.filter(item => item.level === 'success').length, 2, 'each independent run must report completion exactly once');
+  assert.equal(notifications.filter(item => item.title.includes('任务开始')).length, 2, 'busy request must not report a new start');
   assert.equal(events.filter(value => value.result.requestId === 'caller-2').length, 1);
 
   resetChat('regular-event-name'); await configure([task('A', { eventName: 'regular' })]);
@@ -79,7 +88,11 @@ async function main() {
 
   resetChat('enabled-threshold'); await configure([task('A', { enabled: false, eventName: 'disabled' }), task('B', { eventName: 'manual-event' })], 300);
   assert.equal((await eventRun('disabled')).tasks[0].reason.code, 'disabled');
+  assert.equal(notifications.length, 1);
+  assert.equal(notifications[0].level, 'warning');
+  assert.match(notifications[0].message, /任务已禁用/);
   assert.equal((await runTaskChain({ messageId: 1, trigger: { kind: 'received' } })).status, 'skipped');
+  assert.equal(notifications.length, 1, 'routine automatic skips must not create notification noise');
   model = async body => success(body.model);
   assert.equal((await eventRun('manual-event')).status, 'succeeded');
   assert.equal((await eventRun('manual-event')).status, 'succeeded', 'explicit events bypass floor interval');
@@ -91,6 +104,7 @@ async function main() {
   const cancel = eventRun('cancel-me'); const keep = eventRun('continue'); await until(() => calls.length === 2);
   const cancelId = [...activeTaskRuns.values()].find(value => value.result.trigger.eventName === 'cancel-me').id;
   assert.equal(cancelTaskRun(cancelId), true); assert.equal((await cancel).status, 'cancelled'); continueGate.resolve(); assert.equal((await keep).status, 'succeeded');
+  assert.equal(notifications.filter(item => item.title.includes('任务已取消')).length, 1);
 
   resetChat('commit-order', '<x>old</x>');
   await configure([task('A', { output: messageWrite('<x>.*?</x>') }), task('B', { output: messageWrite('<x>.*?</x>') }), task('FAIL', { order: 1 })]);
@@ -105,6 +119,10 @@ async function main() {
   assert.equal(failed.status, 'failed'); assert.equal(failed.rollback.status, 'completed');
   assert.equal(host.chat[1].mes, '<x>old</x>', 'rollback uses commit sequence despite reversed state-settlement completion');
   assert.deepEqual(failed.tasks.map(value => value.status), ['rolled_back', 'rolled_back', 'failed']);
+  assert.equal(notifications.at(-1).level, 'error');
+  assert.match(notifications.at(-1).message, /FAIL/);
+  assert.match(notifications.at(-1).message, /本链提交已回滚/);
+  assert(!notifications.some(item => item.level === 'success'), 'rolled back intermediate successes must never announce overall success');
 
   resetChat('rerun-reservation', 'ORIGINAL'); await configure([task('A', { output: messageWrite() })]); model = async () => success('APPENDED');
   assert.equal((await runTaskChain({ messageId: 1, trigger: { kind: 'received' } })).status, 'succeeded');
@@ -118,7 +136,33 @@ async function main() {
   assert.equal(activeTaskRuns.size, 0);
   await independentRuntimeChecks();
   await unfinishedRuntimeChecks();
+  await notificationChecks();
   console.log('PASS: explicit busy and independent event/regular runs, enable/threshold/interval, isolated cancellation, commit-order rollback and reserved rerun lifecycle');
+}
+async function notificationChecks() {
+  resetChat('notification-partial');
+  await configure([task('<b>A</b>', { eventName: 'notice' }), task('FAIL', { eventName: 'notice' })]);
+  model = async body => body.model === 'FAIL' ? { ok: false, status: 500 } : success('OK');
+  const partial = await eventRun('notice');
+  assert.equal(partial.status, 'partial');
+  assert.equal(notifications.at(-1).level, 'warning');
+  assert.match(notifications.at(-1).title, /部分成功/);
+  assert.match(notifications.at(-1).message, /成功 1 项，失败 1 项/);
+  assert.equal(notifications[0].options.escapeHtml, true, 'user task names must not render as HTML');
+
+  resetChat('notification-failure'); await configure([task('A', { eventName: 'notice' })]);
+  model = async () => success('OK');
+  const previousToastr = global.toastr, previousWarn = console.warn;
+  const warnings = [];
+  global.toastr = { info: () => { throw Error('toast unavailable'); }, success: () => { throw Error('toast unavailable'); } };
+  console.warn = (...args) => warnings.push(args);
+  try {
+    const result = await eventRun('notice');
+    assert.equal(result.status, 'succeeded');
+    assert.equal(events.filter(item => item.result.runId === result.runId).length, 1, 'toast failure must preserve the result event');
+    assert.equal(activeTaskRuns.size, 0);
+    assert.equal(warnings.length, 2);
+  } finally { global.toastr = previousToastr; console.warn = previousWarn; }
 }
 async function unfinishedRuntimeChecks() {
   const priorFetch = global.fetch;

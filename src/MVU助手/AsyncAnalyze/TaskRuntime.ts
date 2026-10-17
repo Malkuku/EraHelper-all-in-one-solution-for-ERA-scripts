@@ -40,9 +40,47 @@ function errorOf(error: unknown, phase: TaskFailure['phase'] = 'prepare') {
 function resultFor(requestId: string, runId: string, trigger: Trigger, messageId: number): RunResult {
   return { version: 1, requestId, runId, trigger, messageId, chatId: '', status: 'failed', tasks: [], warnings: [], rollback: { status: 'not_needed', errors: [] } };
 }
+function notifyRun(level: 'info' | 'success' | 'warning' | 'error', title: string, message: string) {
+  try {
+    toastr[level](message, `MVU助手 · ${title}`, { escapeHtml: true, closeButton: true });
+  } catch (error) {
+    // Notification failure must not change task settlement or prevent result delivery.
+    console.warn('[MVU助手] 无法显示任务通知', error);
+  }
+}
+function notifyResult(result: RunResult) {
+  const automatic = result.trigger.kind === 'sent' || result.trigger.kind === 'received';
+  if (automatic && (result.status === 'skipped' || result.status === 'busy')) return;
+  const context = `楼层 ${result.messageId}${result.trigger.kind === 'event' ? ` · 事件 ${result.trigger.eventName}` : ''}`;
+  const counts = new Map<string, number>();
+  const labels: Record<TaskResult['status'], string> = {
+    succeeded: '成功', failed: '失败', cancelled: '取消', skipped: '跳过', rolled_back: '已回滚', rollback_failed: '回滚失败',
+  };
+  for (const task of result.tasks) {
+    const label = labels[task.status];
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
+  const summary = [...counts].map(([label, count]) => `${label} ${count} 项`).join('，');
+  const failures = result.tasks.filter(task => task.error).map(task => `${task.taskName || '未命名任务'}：${task.error!.message}`);
+  const skipped = result.status === 'skipped' ? result.tasks.map(task => `${task.taskName || '未命名任务'}：${task.reason?.message || '未执行'}`) : [];
+  const residue = ['partial', 'failed'].includes(result.rollback.status) || result.tasks.some(task => task.status === 'rollback_failed' || task.writes.some(write => write.status === 'rollback_failed'));
+  const detail = [context, summary,
+    result.status === 'busy' ? '已有任务正在运行，本次未重复启动' : result.reason === 'no_matching_tasks' ? '没有符合条件的任务' : result.reason,
+    ...failures, ...skipped,
+    residue ? '存在未恢复的修改，请打开运行结果检查' : result.rollback.status === 'completed' ? '本链提交已回滚' : '',
+    ...result.warnings.map(warning => warning.message),
+    '详情见助手的“运行结果”',
+  ].filter(Boolean).join('；');
+  const titles = { succeeded: '任务完成', partial: '任务部分成功', failed: '任务失败', cancelled: '任务已取消', busy: '任务正在运行', skipped: '本次未执行' };
+  const level = result.status === 'failed' || residue ? 'error'
+    : result.status === 'succeeded' && !result.warnings.length ? 'success'
+    : result.status === 'busy' || result.status === 'cancelled' ? 'info' : 'warning';
+  notifyRun(level, titles[result.status], detail);
+}
 async function publish(result: RunResult) {
   const published = structuredClone(result);
   taskRunResults.value = [...taskRunResults.value.filter(item => item.runId !== published.runId), published];
+  notifyResult(published);
   try { await eventEmit(published.trigger.kind === 'event' ? `${published.trigger.eventName}:result` : 'kat_task_chain:result', structuredClone(published)); }
   catch { published.warnings.push({ code: 'result_listener_failed', message: '结果已保留，但结果频道的监听器执行失败' }); }
   return structuredClone(published);
@@ -176,6 +214,7 @@ export async function runTaskChain(options: { messageId: number; trigger: Trigge
       else if (options.trigger.kind !== 'event' && history.lastSuccessfulFloor !== undefined && options.messageId - history.lastSuccessfulFloor < task.triggerInterval) reason = { code: 'interval_not_reached', message: '未达到楼层间隔', currentFloor: options.messageId, lastSuccessfulFloor: history.lastSuccessfulFloor };
       if (reason) taskResult.reason = reason; else ready.push({ task, result: taskResult });
     }
+    if (ready.length) notifyRun('info', '任务开始', `楼层 ${options.messageId}${options.trigger.kind === 'event' ? ` · 事件 ${options.trigger.eventName}` : ''}：${ready.map(item => item.task.name || '未命名任务').join('、')}`);
     const orders = [...new Set(ready.map(item => item.task.order))].sort((a, b) => a - b);
     for (const order of orders) {
       if (run.controller.signal.aborted) break;
