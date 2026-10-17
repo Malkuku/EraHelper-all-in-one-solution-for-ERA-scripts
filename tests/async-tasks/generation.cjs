@@ -14,7 +14,7 @@ global._ = require('lodash');
 const root = path.resolve(__dirname, '../../src/MVU助手/AsyncAnalyze');
 const { TaskSchema, ConfigSchema, emptySettings } = require(path.join(root, 'TaskSchema.ts'));
 const { createGenerationContext } = require(path.join(root, 'generation/GenerationHost.ts'));
-const { generateTask } = require(path.join(root, 'generation/TaskGeneration.ts'));
+const { generateTask, generationPayload } = require(path.join(root, 'generation/TaskGeneration.ts'));
 const { scanWorldInfo } = require(path.join(root, 'generation/WorldInfoScanner.ts'));
 const { TaskTemplate } = require(path.join(root, 'generation/TaskTemplate.ts'));
 const { parseNativePreset } = require(path.join(root, 'generation/NativePreset.ts'));
@@ -36,7 +36,7 @@ const host = { chat: [{ mes: 'SHARED_HISTORY', name: 'Player', is_user: true }],
 global.window = { parent: { location: { origin: 'https://host.invalid' }, SillyTavern: { getContext: () => host } } };
 const identity = { chatKey: JSON.stringify(['chat-1', '', 'Char.png']), chatId: 'chat-1', messageId: 0, swipeId: 0, raw: host.chat[0] };
 const settings = emptySettings();
-for (const label of ['A', 'B']) { settings.tasks.push(task(label)); settings.connections.push({ id: label, name: label, comment: '', baseUrl: `https://${label}.invalid/v1`, model: label, secretRef: label, presetId: label }); settings.presets.push({ id: label, name: label, raw: preset(label) }); }
+for (const label of ['A', 'B']) { settings.tasks.push(task(label)); settings.connections.push({ id: label, name: label, comment: '', activeLinkId: label, links: [{ id: label, name: label, baseUrl: `https://${label}.invalid/v1`, model: label, secretRef: label }], presetId: label }); settings.presets.push({ id: label, name: label, raw: preset(label) }); }
 const tokenFetch = async (url, init) => {
   const body = JSON.parse(init.body);
   return { ok: true, json: async () => url.pathname.endsWith('/encode') ? { ids: Array.from({ length: body.text.length }) } : { token_count: JSON.stringify(body).length + 2 } };
@@ -46,7 +46,21 @@ async function main() {
   await tavernRegexInputChecks();
   assert.equal(TaskSchema.parse({ ...task('A'), historyDepth: 0, scan: { depth: 0 } }).historyDepth, 0);
   assert.equal(TaskSchema.parse({ ...task('A'), eventName: 'loop:result' }).eventName, 'loop:result', 'unfinished event is editable; execution owns validity');
-  assert.equal(ConfigSchema.parse({ ...settings, connections: [{ ...settings.connections[0], baseUrl: 'https://user:password@host.invalid' }] }).connections[0].baseUrl, 'https://user:password@host.invalid');
+  assert.equal(ConfigSchema.parse({ ...settings, connections: [{ ...settings.connections[0], links: [{ ...settings.connections[0].links[0], baseUrl: 'https://user:password@host.invalid' }] }] }).connections[0].links[0].baseUrl, 'https://user:password@host.invalid');
+  const multi = structuredClone(settings);
+  multi.connections[0].links.push({ id: 'second', name: 'second', baseUrl: 'https://second.invalid/v1', model: 'second-model', secretRef: 'second-secret' });
+  const firstContext = await createGenerationContext('first-link', multi.tasks[0], multi, identity, new AbortController(), 'first-credential', { sticky: {}, cooldown: {} });
+  multi.connections[0].activeLinkId = 'second';
+  const secondContext = await createGenerationContext('second-link', multi.tasks[0], multi, identity, new AbortController(), 'second-credential', { sticky: {}, cooldown: {} });
+  const secondPayload = generationPayload(secondContext);
+  assert.equal(secondPayload.custom_url, 'https://second.invalid/v1');
+  assert.equal(secondPayload.model, 'second-model');
+  assert.equal(JSON.parse(secondPayload.custom_include_headers).Authorization, 'Bearer second-credential');
+  assert.equal(secondContext.link.secretRef, 'second-secret');
+  assert.equal(firstContext.link.model, 'A', 'changing current link cannot mutate a prepared request snapshot');
+  assert.equal(firstContext.connection.activeLinkId, 'A');
+  multi.connections[0].links[1].model = 'edited-after-prepare';
+  assert.equal(secondContext.link.model, 'second-model');
   let pending = [];
   const sent = [];
   global.fetch = async (input, init) => {
@@ -75,7 +89,7 @@ async function main() {
   for (const sharedTask of sharedTasks) {
     const context = await createGenerationContext('rebound', sharedTask, rebound, identity, new AbortController(), '', { sticky: {}, cooldown: {} });
     assert.equal(context.preset.temp_openai, 0.8, 'all API consumers use its changed preset binding');
-    assert.equal(context.connection.model, 'A', 'changing preset preserves the selected API/model');
+    assert.equal(context.link.model, 'A', 'changing preset preserves the selected API/model');
   }
   assert.equal(a.preset.temp_openai, 0.2, 'already prepared runs keep their captured preset');
   for (const presetId of [null, 'absent']) {
@@ -237,10 +251,13 @@ async function editableConfigurationChecks() {
   const cases = [
     ['missing API', value => { value.tasks[0].connectionId = ''; }],
     ['dangling API', value => { value.tasks[0].connectionId = 'absent'; }],
-    ['empty model', value => { value.connections[0].model = ''; }],
-    ['empty address', value => { value.connections[0].baseUrl = ''; }],
-    ['invalid address', value => { value.connections[0].baseUrl = 'bad-address'; }],
-    ['embedded URL credentials', value => { value.connections[0].baseUrl = 'https://user:password@host.invalid'; }],
+    ['missing current link', value => { value.connections[0].activeLinkId = null; }],
+    ['dangling current link', value => { value.connections[0].activeLinkId = 'absent'; }],
+    ['deleted links', value => { value.connections[0].links = []; }],
+    ['empty model', value => { value.connections[0].links[0].model = ''; }],
+    ['empty address', value => { value.connections[0].links[0].baseUrl = ''; }],
+    ['invalid address', value => { value.connections[0].links[0].baseUrl = 'bad-address'; }],
+    ['embedded URL credentials', value => { value.connections[0].links[0].baseUrl = 'https://user:password@host.invalid'; }],
     ['missing preset', value => { value.connections[0].presetId = null; }],
     ['dangling preset', value => { value.connections[0].presetId = 'absent'; }],
     ['unfinished preset budget', value => { value.presets[0].raw.openai_max_context = 0; }],
@@ -259,10 +276,10 @@ async function editableConfigurationChecks() {
     }
     const value = structuredClone(settings);
     value.tasks.push(TaskSchema.parse({ ...task('unused'), connectionId: '', regexRules: [{ id: 'bad', stage: 'response', pattern: '[', flags: 'gg', replacement: '', enabled: true }] }));
-    value.connections.push({ id: 'unused', name: '', comment: '', baseUrl: '', model: '', presetId: null, secretRef: 'unused' });
+    value.connections.push({ id: 'unused', name: '', comment: '', activeLinkId: null, links: [], presetId: null });
     value.presets.push({ id: 'unused', name: '', raw: {} });
     const context = await createGenerationContext('unrelated', value.tasks[0], ConfigSchema.parse(value), currentIdentity, new AbortController(), '', { sticky: {}, cooldown: {} });
-    assert.equal(context.connection.model, 'A', 'idle unfinished resources cannot block a healthy task');
+    assert.equal(context.link.model, 'A', 'idle unfinished resources cannot block a healthy task');
     console.log('PASS: 14 unfinished configuration cases save structurally but fail prepare before any HTTP; idle broken resources do not block healthy preparation');
   } finally { global.fetch = priorFetch; }
 }
@@ -559,7 +576,7 @@ async function generationErrorChecks() {
       ]) {
         global.fetch = async (input, init) => new URL(input).pathname.endsWith('/generate') ? response() : ordinaryFetch(input, init);
         const diagnostic = await make(); diagnostic.secret = privateKey;
-        diagnostic.connection.baseUrl = `https://user:password@a.invalid/v1?api_key=${privateKey}`;
+        diagnostic.link.baseUrl = `https://user:password@a.invalid/v1?api_key=${privateKey}`;
         await assert.rejects(() => generateTask(diagnostic), error => {
           assert.equal(error.code, expectedCode, label); assert.equal(error.phase, 'request');
           assert(error.message.includes(expectedMessage), `${label}: ${error.message}`);

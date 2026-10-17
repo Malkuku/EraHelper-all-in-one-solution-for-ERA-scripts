@@ -39,7 +39,7 @@ export class TaskTemplate {
   }
   async initialize() {
     const env = { runID: this.context.runId, runType: 'generate', generateType: 'normal', isDryRun: false,
-      message_id: undefined, swipe_id: undefined, generateData: this.context.messages, model: this.context.connection.model };
+      message_id: undefined, swipe_id: undefined, generateData: this.context.messages, model: this.context.link.model };
     this.env = this.api ? await this.api.prepareContext(env, this.context.identity.messageId) : env;
     const getPreset = async (name: string | RegExp, data: Record<string, any> = {}) => {
       const prompt = this.context.preset.prompts.find(item => item.name === name || item.name.match(name));

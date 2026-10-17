@@ -94,7 +94,7 @@ export class TokenCounter {
 }
 export type GenerationContext = {
   runId: string; task: TaskConfig; identity: MessageIdentity; controller: AbortController; ctx: HostContext;
-  preset: NativePreset; connection: TaskSettings['connections'][number]; secret: string;
+  preset: NativePreset; connection: TaskSettings['connections'][number]; link: TaskSettings['connections'][number]['links'][number]; secret: string;
   candidates: RawEntry[]; history: TextMessage[]; scanHistory: string[]; timedState: TimedState;
   tokenCounter: TokenCounter; messages: TextMessage[];
 };
@@ -102,7 +102,7 @@ export async function createGenerationContext(
   runId: string, task: TaskConfig, settings: TaskSettings, identity: MessageIdentity,
   controller: AbortController, secret: string, timedState: TimedState,
 ): Promise<GenerationContext> {
-  const { connection, preset } = validateTaskReadiness(settings, task);
+  const { connection, link, preset } = validateTaskReadiness(settings, task);
   const ctx = hostContext();
   assertMessage(identity, controller.signal);
   const historyStart = Math.max(0, identity.messageId - task.historyDepth + 1);
@@ -123,6 +123,6 @@ export async function createGenerationContext(
   const scanHistory = rawHistory.map((message, index) => (task.scan.includeNames ? `${message.name}: ` : '') + history[index].content).reverse();
   const candidates = await collectCandidates(task);
   assertMessage(identity, controller.signal);
-  return { runId, task, identity, controller, ctx, preset, connection: structuredClone(connection), secret, candidates, history, scanHistory,
-    timedState: structuredClone(timedState), tokenCounter: new TokenCounter(connection.model, controller.signal, ctx), messages: [] };
+  return { runId, task, identity, controller, ctx, preset, connection: structuredClone(connection), link: structuredClone(link), secret, candidates, history, scanHistory,
+    timedState: structuredClone(timedState), tokenCounter: new TokenCounter(link.model, controller.signal, ctx), messages: [] };
 }

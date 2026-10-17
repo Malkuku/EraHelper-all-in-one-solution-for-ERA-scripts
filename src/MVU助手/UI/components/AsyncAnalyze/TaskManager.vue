@@ -192,7 +192,7 @@
                   {{ item.name || '未命名 API' }}
                 </option>
               </select>
-              <button class="primary" @click="addConnection">+ 新建连接</button>
+              <button class="primary" @click="addConnection">+ 新建 API</button>
             </div>
             <div class="list-editor">
               <aside class="list-sidebar">
@@ -204,13 +204,13 @@
                   @click="selectedConnection = item.id"
                 >
                   <strong>{{ item.name || '未命名 API' }}</strong
-                  ><small>{{ item.model || '未配置模型' }}</small>
+                  ><small>{{ item.links.find(link => link.id === item.activeLinkId)?.model || '未配置模型' }}</small>
                 </button>
               </aside>
               <div class="list-content">
                 <template v-if="connection">
                   <section class="form-section">
-                    <h4>连接配置</h4>
+                    <h4>API 配置</h4>
                     <div class="fields">
                       <label
                         ><span class="field-label"
@@ -228,27 +228,6 @@
                           aria-label="备注"
                           data-config-key="comment"
                           placeholder="可选"
-                      /></label>
-                      <label
-                        ><span class="field-label"
-                          >API 根地址<Tooltip
-                            content="填写兼容 OpenAI 的 API 根地址，如 https://example.com/v1，不要填写完整 chat/completions 或 models 路径。" /></span
-                        ><input
-                          v-model="connection.baseUrl"
-                          aria-label="API 根地址"
-                          data-config-key="baseUrl"
-                          type="url"
-                          placeholder="https://example.com/v1"
-                      /></label>
-                      <label
-                        ><span class="field-label"
-                          >模型<Tooltip
-                            content="填写服务提供的模型 ID，可手动输入，也可从下方获取的模型列表选择。" /></span
-                        ><input
-                          v-model="connection.model"
-                          aria-label="模型"
-                          data-config-key="model"
-                          placeholder="输入模型名称，或在下方获取"
                       /></label>
                       <label
                         ><span class="field-label"
@@ -275,57 +254,95 @@
                     </div>
                   </section>
                   <section class="form-section">
-                    <h4>本地密钥</h4>
-                    <label
-                      ><span class="field-label"
-                        >更新密钥<Tooltip
-                          content="密钥仅存本地，不随配置导出。留空保留已存密钥；删除时点击清空已存密钥并保存。" /></span
-                      ><input
-                        v-model="secrets[connection.secretRef]"
-                        aria-label="更新密钥"
-                        type="password"
-                        autocomplete="new-password"
-                        placeholder="留空保留已存密钥"
-                    /></label>
-                    <div class="secret-actions">
-                      <span class="hint">密钥保存在本地，不随配置导出。</span
-                      ><button
-                        class="text-action"
-                        @click="
-                          secrets[connection.secretRef] = '';
-                          clearedSecrets.add(connection.secretRef);
-                        "
+                    <h4>链接设置</h4>
+                    <p class="hint">每个链接单独保存地址、模型和密钥，共用上方预设。选择当前链接并保存后生效。</p>
+                    <div class="header-actions">
+                      <label
+                        >当前链接<select v-model="connection.activeLinkId" aria-label="当前链接">
+                          <option :value="null">暂不选择</option>
+                          <option v-if="connection.activeLinkId && !link" :value="connection.activeLinkId">
+                            链接已删除
+                          </option>
+                          <option v-for="item in connection.links" :key="item.id" :value="item.id">
+                            {{ item.name || '未命名链接' }}
+                          </option>
+                        </select></label
                       >
-                        {{ clearedSecrets.has(connection.secretRef) ? '已标记清空' : '清空已存密钥' }}
-                      </button>
+                      <button @click="addLink">+ 新建链接</button>
                     </div>
-                    <p v-if="clearedSecrets.has(connection.secretRef)" class="hint">保存后清空密钥；填写新值可替换。</p>
-                    <p
-                      v-if="
-                        draft.connections.some(
-                          item => item.id !== connection!.id && item.secretRef === connection!.secretRef,
-                        )
-                      "
-                      class="hint"
-                    >
-                      此密钥由多个 API 配置共享，更新或清空会影响这些配置。
+                    <template v-if="link">
+                      <label>链接名称<input v-model="link.name" aria-label="链接名称" /></label>
+                      <div class="fields">
+                        <label
+                          ><span class="field-label"
+                            >API 根地址<Tooltip
+                              content="填写兼容 OpenAI 的 API 根地址，如 https://example.com/v1，不要填写完整 chat/completions 或 models 路径。" /></span
+                          ><input
+                            v-model="link.baseUrl"
+                            aria-label="API 根地址"
+                            data-config-key="baseUrl"
+                            type="url"
+                            placeholder="https://example.com/v1"
+                        /></label>
+                        <label
+                          ><span class="field-label"
+                            >模型<Tooltip
+                              content="填写服务提供的模型 ID，可手动输入，也可从下方获取的模型列表选择。" /></span
+                          ><input
+                            v-model="link.model"
+                            aria-label="模型"
+                            data-config-key="model"
+                            placeholder="输入模型名称，或在下方获取"
+                        /></label>
+                      </div>
+                      <label
+                        ><span class="field-label"
+                          >更新密钥<Tooltip
+                            content="密钥属于当前链接，仅存本地，不随配置导出。留空保留已存密钥；删除时点击清空已存密钥并保存。" /></span
+                        ><input
+                          v-model="secrets[link.secretRef]"
+                          aria-label="更新密钥"
+                          type="password"
+                          autocomplete="new-password"
+                          placeholder="留空保留已存密钥"
+                      /></label>
+                      <div class="secret-actions">
+                        <span class="hint">此链接的密钥保存在本地，不随配置导出。</span
+                        ><button
+                          class="text-action"
+                          @click="
+                            secrets[link.secretRef] = '';
+                            clearedSecrets.add(link.secretRef);
+                          "
+                        >
+                          {{ clearedSecrets.has(link.secretRef) ? '已标记清空' : '清空已存密钥' }}
+                        </button>
+                      </div>
+                      <p v-if="clearedSecrets.has(link.secretRef)" class="hint">保存后清空密钥；填写新值可替换。</p>
+                      <p
+                        v-if="
+                          draft.connections.some(item =>
+                            item.links.some(other => other !== link && other.secretRef === link!.secretRef),
+                          )
+                        "
+                        class="hint"
+                      >
+                        此密钥由多个链接共享，更新或清空会影响这些链接。
+                      </p>
+                      <ConnectionCheck
+                        :key="`${connection.id}:${link.id}`"
+                        :connection="link"
+                        :secret="connectionSecret"
+                        :credential-revision="
+                          JSON.stringify([secrets[link.secretRef], clearedSecrets.has(link.secretRef), baseline])
+                        "
+                        @select="link.model = $event"
+                      />
+                      <button class="danger text-action" @click="removeLink(link.id)">删除此链接</button>
+                    </template>
+                    <p v-else class="hint">
+                      选择或新建链接后填写地址、模型和密钥。未选择时可保存，相关任务运行前会提示补全。
                     </p>
-                  </section>
-                  <section class="form-section">
-                    <h4>连接检测</h4>
-                    <ConnectionCheck
-                      :key="connection.id"
-                      :connection="connection"
-                      :secret="connectionSecret"
-                      :credential-revision="
-                        JSON.stringify([
-                          secrets[connection.secretRef],
-                          clearedSecrets.has(connection.secretRef),
-                          baseline,
-                        ])
-                      "
-                      @select="connection.model = $event"
-                    />
                   </section>
                   <details class="reference-list">
                     <summary>使用此 API 的任务 · {{ connectionTasks.length }}</summary>
@@ -347,6 +364,7 @@
             </div>
           </section>
           <section v-if="tab === 'presets'">
+            <PromptTools variant="preset" />
             <select v-model="selectedPreset" class="mobile-resource-select preset-selector" aria-label="编辑预设">
               <option v-if="!draft.presets.length" value="">暂无预设</option>
               <option v-for="item in draft.presets" :key="item.id" :value="item.id">
@@ -766,13 +784,12 @@
                     </details>
                   </section>
                   <section v-show="taskTab === 'regex'">
-                    <label class="field-label"
-                      ><input
-                        v-model="task.useTavernRegex"
-                        type="checkbox"
-                        data-config-key="useTavernRegex" />自动应用酒馆当前正则<Tooltip
-                        content="对输入的正文历史应用酒馆当前启用的全局、预设和局部正则，遵守消息来源、深度及用于提示词的规则。使用酒馆当前预设的正则，随后再执行下方历史阶段正则。仅影响本任务输入，不改写聊天原文。"
-                    /></label>
+                    <label
+                      ><input v-model="task.useTavernRegex" type="checkbox" data-config-key="useTavernRegex" /><span
+                        class="field-label"
+                        >自动应用酒馆当前正则<Tooltip
+                          content="对输入的正文历史应用酒馆当前启用的全局、预设和局部正则，遵守消息来源、深度及用于提示词的规则。使用酒馆当前预设的正则，随后再执行下方历史阶段正则。仅影响本任务输入，不改写聊天原文。" /></span
+                    ></label>
                     <p class="hint">勾选后，正文输入跟随酒馆当前正则筛选结果；仅格式显示的规则不用于模型输入。</p>
                     <h4>显式任务正则（{{ task.regexRules.length }}）</h4>
                     <p class="hint">按阶段和列表顺序依次执行；可与上方酒馆正文正则叠加。</p>
@@ -828,9 +845,15 @@
                         <option value="event_result">事件结果广播</option>
                       </select></label
                     >
+                    <PromptTools
+                      v-if="task.output.mode === 'event_result'"
+                      variant="event"
+                      :event-name="task.eventName"
+                      :task-id="task.id"
+                    />
                     <p v-if="task.output.mode === 'event_result'" class="hint">
-                      仅事件执行时，将完整响应 text
-                      广播到“事件名:result”，附带请求、任务与楼层标识，供其它前端监听。请填写事件名并关闭“参加常规链”，事件仍可触发。结果不持久存储；前端联动规则可在运行结果页一键复制。
+                      支持所有触发方式。事件执行广播到“事件名:result”，其它执行广播到“kat_task_chain:result”，附带完整响应
+                      text、请求、任务和楼层标识。结果不持久存储。
                     </p>
                     <template v-if="task.output.mode === 'write'"
                       ><p class="hint">写入成功才视为任务成功；世界书按 UID 定位，目标不存在时自动创建并启用。</p>
@@ -986,6 +1009,7 @@ import WorldbookPicker from './WorldbookPicker.vue';
 import RegexField from './RegexField.vue';
 import RegexWorkbench from './RegexWorkbench.vue';
 import ConnectionCheck from './ConnectionCheck.vue';
+import PromptTools from './PromptTools.vue';
 import Tooltip from '../Common/Tooltip.vue';
 import { Modal } from '@/MVU助手/utils/modal';
 
@@ -1067,6 +1091,7 @@ const selectedBooks = computed(() =>
 );
 const group = computed(() => draft.value.groups.find(item => item.id === selectedGroup.value));
 const connection = computed(() => draft.value.connections.find(item => item.id === selectedConnection.value));
+const link = computed(() => connection.value?.links.find(item => item.id === connection.value?.activeLinkId));
 const connectionTasks = computed(() => draft.value.tasks.filter(item => item.connectionId === connection.value?.id));
 function presetName(id: string | null, config = draft.value) {
   return config.presets.find(item => item.id === id)?.name || (id ? '未命名预设' : '未绑定预设');
@@ -1075,14 +1100,16 @@ function taskBindings(task: TaskConfig) {
   const api = draft.value.connections.find(item => item.id === task.connectionId);
   return [
     { label: 'API', value: api ? api.name || '未命名 API' : '未选择' },
-    { label: '模型', value: api?.model || '未配置' },
+    { label: '链接', value: api?.links.find(link => link.id === api.activeLinkId)?.name || '未选择' },
+    { label: '模型', value: api?.links.find(link => link.id === api.activeLinkId)?.model || '未配置' },
     { label: '预设', value: api ? presetName(api.presetId) : '未绑定预设' },
   ];
 }
 function bindingSummary(task: TaskConfig, config = draft.value) {
   const api = config.connections.find(item => item.id === task.connectionId);
+  const currentLink = api?.links.find(link => link.id === api.activeLinkId);
   return api
-    ? `API：${api.name || '未命名 API'} · 模型：${api.model || '未配置'} · 预设：${presetName(api.presetId, config)}`
+    ? `API：${api.name || '未命名 API'} · 链接：${currentLink?.name || '未选择'} · 模型：${currentLink?.model || '未配置'} · 预设：${presetName(api.presetId, config)}`
     : '尚未选择 API 配置';
 }
 function editTask(id: string) {
@@ -1091,7 +1118,7 @@ function editTask(id: string) {
   tab.value = 'tasks';
 }
 function connectionSecret() {
-  const reference = connection.value!.secretRef;
+  const reference = link.value!.secretRef;
   return secrets[reference] || (clearedSecrets.has(reference) ? '' : props.getSecret(reference));
 }
 const filteredTasks = computed(() =>
@@ -1290,6 +1317,8 @@ const fieldLabels: Record<string, string> = {
   name: '名称',
   comment: '备注',
   baseUrl: 'API 根地址',
+  links: '链接设置',
+  activeLinkId: '当前链接',
   model: '模型',
   presetId: '绑定预设',
   connectionId: 'API 配置',
@@ -1441,9 +1470,11 @@ async function save() {
     configurationSaved = true;
     baseline.value = JSON.stringify(config);
     for (const reference of clearedSecrets)
-      if (config.connections.some(item => item.secretRef === reference)) props.setSecret(reference, '');
+      if (config.connections.some(item => item.links.some(link => link.secretRef === reference)))
+        props.setSecret(reference, '');
     for (const [reference, secret] of Object.entries(secrets))
-      if (secret && config.connections.some(item => item.secretRef === reference)) props.setSecret(reference, secret);
+      if (secret && config.connections.some(item => item.links.some(link => link.secretRef === reference)))
+        props.setSecret(reference, secret);
     const hadRegexContext = invalidateRegexContext();
     draft.value = klona(config);
     clearSecretDrafts();
@@ -1507,17 +1538,35 @@ function removeGroup(id: string) {
   selectedGroup.value = draft.value.groups[0]?.id ?? '';
 }
 function addConnection() {
-  const item = { id: uid(), name: '新连接', comment: '', baseUrl: '', model: '', secretRef: uid(), presetId: null };
+  const first = { id: uid(), name: '链接 1', baseUrl: '', model: '', secretRef: uid() };
+  const item = { id: uid(), name: '新 API', comment: '', presetId: null, activeLinkId: first.id, links: [first] };
   draft.value.connections.push(item);
   selectedConnection.value = item.id;
+}
+function discardUnusedSecretDraft(reference: string) {
+  if (draft.value.connections.some(api => api.links.some(link => link.secretRef === reference))) return;
+  delete secrets[reference];
+  clearedSecrets.delete(reference);
+}
+function addLink() {
+  if (!connection.value) return;
+  const item = { id: uid(), name: '新链接', baseUrl: '', model: '', secretRef: uid() };
+  connection.value.links.push(item);
+  connection.value.activeLinkId = item.id;
+}
+function removeLink(id: string) {
+  const api = connection.value;
+  if (!api) return;
+  const removed = api.links.find(item => item.id === id);
+  api.links = api.links.filter(item => item.id !== id);
+  if (api.activeLinkId === id) api.activeLinkId = null;
+  if (removed) discardUnusedSecretDraft(removed.secretRef);
+  notice.value = '链接已从草稿删除，任务已保留；请重新选择当前链接并保存。';
 }
 function removeConnection(id: string) {
   const removed = draft.value.connections.find(item => item.id === id);
   draft.value = removeTaskResource(draft.value, 'connection', id);
-  if (removed && !draft.value.connections.some(item => item.secretRef === removed.secretRef)) {
-    delete secrets[removed.secretRef];
-    clearedSecrets.delete(removed.secretRef);
-  }
+  for (const link of removed?.links ?? []) discardUnusedSecretDraft(link.secretRef);
   selectedConnection.value = draft.value.connections[0]?.id ?? '';
   error.value = '';
   notice.value = 'API 已从草稿删除，引用任务已保留并清空 API 选择。保存后生效。';
@@ -1813,8 +1862,7 @@ fieldset {
   font-weight: 500;
   min-width: 0;
 }
-.choices label,
-.toolbar label:has(input[type='checkbox']) {
+:deep(label:has(> input[type='checkbox'])) {
   flex-direction: row;
   align-items: center;
 }

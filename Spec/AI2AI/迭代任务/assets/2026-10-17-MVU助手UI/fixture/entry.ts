@@ -18,7 +18,7 @@ w.getCharWorldbookNames=()=>({primary:'角色资料',additional:[]});w.hostFail=
 w.getWorldbookNames=()=>{if(w.hostFail)throw Error('宿主模拟失败');return ['角色资料','场景设定'];};
 w.getWorldbook=async(name:string)=>{if(w.hostFail)throw Error('宿主模拟失败');return name==='角色资料'?[{uid:7,name:'角色甲',content:'甲内容'},{uid:12,name:'角色乙',content:'乙内容'},{uid:13,name:'版本记录',content:w.rules}]:[{uid:99,name:'场景一',content:'场景内容'}];};
 const config=emptySettings();config.presets=[{id:'preset',name:'验收预设',raw:{openai_max_context:8192,openai_max_tokens:300,prompts:[],prompt_order:[{character_id:100001,order:[]}]}}];
-config.connections=[{id:'api',name:'验收 API',comment:'',baseUrl:'https://example.invalid/v1',model:'验收模型',secretRef:'secret',presetId:'preset'}];
+config.connections=[{id:'api',name:'验收 API',comment:'',activeLinkId:'link',links:[{id:'link',name:'默认链接',baseUrl:'https://example.invalid/v1',model:'验收模型',secretRef:'secret'}],presetId:'preset'}];
 config.tasks=[{id:'task',name:'验收任务',comment:'',enabled:true,eventName:'',order:0,historyDepth:2,triggerInterval:1,retryCount:0,prompt:'原任务提示词',connectionId:'api',candidateBooks:[],scan:ScanSchema.parse({}),regexRules:[],output:{mode:'return'}}];config.groups=[{id:'group',name:'验收组',comment:'',taskIds:['task']}];config.activeGroupId='group';
 w.scriptVariables={async_task_config:config,era_data_rule:{version_control:{enable:true,lore_name:'版本记录'}}};w.saved=[];w.writeFail=false;w.writes=[];
 w.getVariables=(options:any)=>structuredClone(options?.type==='message'?w.messageData.at(options.message_id):w.scriptVariables);

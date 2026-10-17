@@ -25,13 +25,14 @@ export function removeTaskResource(settings: TaskSettings, kind: 'connection' | 
 export function validateTaskReadiness(settings: TaskSettings, task: TaskConfig) {
   const fail = (message: string): never => { throw new TaskFailure('invalid_config', message, 'prepare'); };
   if (!eventNameIsValid(task.eventName)) fail('任务事件名与内部频道冲突或含首尾空白');
-  if (task.output.mode === 'event_result' && !task.eventName) fail('事件结果广播仅可用于配置了事件名的任务');
   const connection = settings.connections.find(item => item.id === task.connectionId);
   if (!connection) throw new TaskFailure('missing_config', '任务尚未选择 API 配置，或所选 API 已删除', 'prepare');
+  const link = connection.links.find(item => item.id === connection.activeLinkId);
+  if (!link) throw new TaskFailure('missing_config', 'API 尚未选择当前链接，或当前链接已删除', 'prepare');
   let url: URL;
-  try { url = new URL(connection.baseUrl); } catch { return fail('API 根地址未填写或格式无效'); }
+  try { url = new URL(link.baseUrl); } catch { return fail('API 根地址未填写或格式无效'); }
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) fail('API 根地址仅支持无内嵌凭据的 HTTP/HTTPS 地址');
-  if (!connection.model.trim()) fail('API 尚未填写模型');
+  if (!link.model.trim()) fail('API 尚未填写模型');
   const record = settings.presets.find(item => item.id === connection.presetId);
   if (!record) throw new TaskFailure('missing_config', 'API 尚未绑定预设，或所绑定预设已删除', 'prepare');
   const preset = parseNativePreset(structuredClone(record.raw));
@@ -55,5 +56,5 @@ export function validateTaskReadiness(settings: TaskSettings, task: TaskConfig) 
       if (write.operation.kind === 'replace') regex(write.operation.regex);
     }
   }
-  return { connection, preset };
+  return { connection, link, preset };
 }

@@ -14,7 +14,7 @@
     <label v-if="models !== null"
       ><span class="field-label"
         >可用模型（{{ models.length }} 个）<Tooltip
-          content="选择模型会更新当前 API 草稿，保存配置后供引用此 API 的任务使用。"
+          content="选择模型会更新当前链接草稿，保存配置后供引用此 API 的任务使用。"
       /></span>
       <select
         :aria-label="`可用模型（${models.length} 个）`"
@@ -37,7 +37,7 @@ import Tooltip from '../Common/Tooltip.vue';
 import type { TaskSettings } from '@/MVU助手/AsyncAnalyze/TaskSchema';
 
 const props = defineProps<{
-  connection: TaskSettings['connections'][number];
+  connection: TaskSettings['connections'][number]['links'][number];
   secret: () => string;
   credentialRevision: string;
 }>();
@@ -54,7 +54,7 @@ function cancel() {
   status.value = '请求已取消。';
 }
 watch(
-  () => [props.connection.id, props.connection.baseUrl, props.credentialRevision],
+  () => [props.connection.id, props.connection.baseUrl, props.connection.secretRef, props.credentialRevision],
   () => {
     cancel();
     models.value = null;

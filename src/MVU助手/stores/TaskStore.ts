@@ -53,7 +53,7 @@ export const useTaskStore = defineStore('KatTasks', () => {
     configurationWarning.value = '';
     // Credential cleanup cannot undo or misreport a successful configuration save.
     try {
-      const retainedReferences = new Set(parsed.connections.map(connection => connection.secretRef));
+      const retainedReferences = new Set(parsed.connections.flatMap(connection => connection.links.map(link => link.secretRef)));
       const secrets = readSecrets();
       let changed = false;
       for (const reference of Object.keys(secrets)) if (!retainedReferences.has(reference)) {

@@ -76,12 +76,14 @@ export const TaskSchema = z.object({
   }
 });
 export type TaskConfig = z.infer<typeof TaskSchema>;
+export const ApiLinkSchema = z.object({ id: z.string().min(1), name: z.string(), baseUrl: z.string(), model: z.string(), secretRef: z.string().min(1) });
+export type ApiLink = z.infer<typeof ApiLinkSchema>;
 export const ConfigSchema = z.object({
-  schemaVersion: z.literal(2), activeGroupId: z.string().nullable(), automatic: z.object({ minReceivedChars: integer.default(300) }),
+  schemaVersion: z.literal(3), activeGroupId: z.string().nullable(), automatic: z.object({ minReceivedChars: integer.default(300) }),
   groups: z.array(z.object({ id: z.string().min(1), name: z.string(), comment: z.string(), taskIds: z.array(z.string()) })),
   tasks: z.array(TaskSchema),
   regexPresets: z.array(RegexPresetSchema).default([]),
-  connections: z.array(z.object({ id: z.string().min(1), name: z.string(), comment: z.string(), baseUrl: z.string(), model: z.string(), secretRef: z.string().min(1), presetId: z.string().min(1).nullable() })),
+  connections: z.array(z.object({ id: z.string().min(1), name: z.string(), comment: z.string(), presetId: z.string().min(1).nullable(), activeLinkId: z.string().nullable(), links: z.array(ApiLinkSchema) })),
   presets: z.array(z.object({ id: z.string().min(1), name: z.string(), raw: z.record(z.string(), z.unknown()).refine(raw => z.json().safeParse(raw).success, '预设必须为 JSON 对象') })),
 }).superRefine((config, ctx) => {
   for (const field of ['groups', 'tasks', 'connections', 'presets', 'regexPresets'] as const) {
@@ -91,6 +93,10 @@ export const ConfigSchema = z.object({
       ids.add(entity.id);
     });
   }
+  config.connections.forEach((connection, index) => {
+    if (new Set(connection.links.map(link => link.id)).size !== connection.links.length)
+      ctx.addIssue({ code: 'custom', path: ['connections', index, 'links'], message: '链接 ID 重复' });
+  });
   const taskIds = new Set(config.tasks.map(task => task.id));
   config.groups.forEach((group, index) => {
     if (new Set(group.taskIds).size !== group.taskIds.length) ctx.addIssue({ code: 'custom', path: ['groups', index, 'taskIds'], message: '任务引用重复' });
@@ -101,11 +107,18 @@ export const ConfigSchema = z.object({
   }
 });
 export type TaskSettings = z.infer<typeof ConfigSchema>;
-export const emptySettings = (): TaskSettings => ({ schemaVersion: 2, activeGroupId: null, automatic: { minReceivedChars: 300 }, groups: [], tasks: [], connections: [], presets: [], regexPresets: [] });
-/** Upgrade only independent-task v1, preserving each existing API/preset pair. */
+export const emptySettings = (): TaskSettings => ({ schemaVersion: 3, activeGroupId: null, automatic: { minReceivedChars: 300 }, groups: [], tasks: [], connections: [], presets: [], regexPresets: [] });
+/** Upgrade independent-task v1/v2 only; v3 is the sole internal representation. */
 export function parseTaskSettings(value: unknown): TaskSettings {
-  if (!value || typeof value !== 'object' || (value as { schemaVersion?: unknown }).schemaVersion !== 1)
-    return ConfigSchema.parse(value);
+  const version = value && typeof value === 'object' ? (value as { schemaVersion?: unknown }).schemaVersion : undefined;
+  const upgradeLinks = (config: Record<string, unknown>) => {
+    const connections = z.array(z.object({ id: z.string(), name: z.string(), baseUrl: z.string(), model: z.string(), secretRef: z.string().min(1) }).passthrough()).parse(config.connections);
+    return ConfigSchema.parse({ ...config, schemaVersion: 3, connections: connections.map(({ baseUrl, model, secretRef, ...connection }) => ({
+      ...connection, activeLinkId: connection.id + ':link', links: [{ id: connection.id + ':link', name: connection.name || '链接 1', baseUrl, model, secretRef }],
+    })) });
+  };
+  if (version === 2) return upgradeLinks(value as Record<string, unknown>);
+  if (version !== 1) return ConfigSchema.parse(value);
   const old = z.object({
     schemaVersion: z.literal(1), tasks: z.array(z.object({ connectionId: z.string(), presetId: z.string().min(1) }).passthrough()),
     connections: z.array(z.object({ id: z.string(), name: z.string(), secretRef: z.string() }).passthrough()),
@@ -135,7 +148,7 @@ export function parseTaskSettings(value: unknown): TaskSettings {
       return { ...connection, id, presetId, name: index === 0 ? connection.name : `${connection.name} · ${old.presets.find(preset => preset.id === presetId)!.name}` };
     });
   });
-  return ConfigSchema.parse({ ...old, schemaVersion: 2, connections, tasks: tasks.map(({ presetId: _presetId, ...task }) => task) });
+  return upgradeLinks({ ...old, connections, tasks: tasks.map(({ presetId: _presetId, ...task }) => task) });
 }
 export type Trigger = { kind: 'event' | 'sent' | 'received' | 'manual' | 'task'; eventName?: string; taskId?: string };
 export type RequestDiagnostic = {

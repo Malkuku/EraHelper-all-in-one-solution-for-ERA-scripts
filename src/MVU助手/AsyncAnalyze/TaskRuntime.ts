@@ -118,9 +118,7 @@ async function executeTask(run: Run, task: TaskConfig, snapshot: ReturnType<Retu
   let savedState: StateUndo | undefined;
   try {
     const store = useTaskStore();
-    if (task.output.mode === 'event_result' && run.result.trigger.kind !== 'event')
-      throw new TaskFailure('invalid_config', '事件结果广播只能通过事件触发；请关闭该任务的常规链参与后使用事件触发', 'prepare');
-    const { connection } = validateTaskReadiness(snapshot, task);
+    const { link } = validateTaskReadiness(snapshot, task);
     const history = readTaskHistory(task.id, run.identity);
     const beforeState = timedSnapshot(history);
     let generated: Awaited<ReturnType<typeof createGenerationContext>> | undefined;
@@ -134,7 +132,7 @@ async function executeTask(run: Run, task: TaskConfig, snapshot: ReturnType<Retu
       run.controller.signal.addEventListener('abort', abort, { once: true });
       try {
         phase = 'prepare';
-        generated = await createGenerationContext(run.id, task, snapshot, run.identity, controller, store.getSecret(connection.secretRef), beforeState);
+        generated = await createGenerationContext(run.id, task, snapshot, run.identity, controller, store.getSecret(link.secretRef), beforeState);
         phase = 'request';
         text = await generateTask(generated);
         phase = 'extract';

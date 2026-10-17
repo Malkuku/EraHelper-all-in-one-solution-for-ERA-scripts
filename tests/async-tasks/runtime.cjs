@@ -58,7 +58,7 @@ function task(id, overrides = {}) { return TaskSchema.parse({ id, name: id, enab
 async function configure(tasks, minimum = 0) {
   const settings = emptySettings(); settings.automatic.minReceivedChars = minimum;
   settings.groups = [{ id: 'group', name: 'group', comment: '', taskIds: tasks.map(value => value.id) }]; settings.activeGroupId = 'group'; settings.tasks = tasks;
-  settings.connections = tasks.map(value => ({ id: value.id, name: value.id, comment: '', baseUrl: 'https://api.invalid/v1', model: value.id, secretRef: value.id, presetId: 'preset' }));
+  settings.connections = tasks.map(value => ({ id: value.id, name: value.id, comment: '', presetId: 'preset', activeLinkId: 'link', links: [{ id: 'link', name: '默认链接', baseUrl: 'https://api.invalid/v1', model: value.id, secretRef: value.id }] }));
   settings.presets = [{ id: 'preset', name: 'preset', raw: { openai_max_context: 10000, openai_max_tokens: 300,
     prompts: [{ identifier: 'main', name: 'main', role: 'system', content: 'SYSTEM' }, { identifier: 'chatHistory', name: 'history', role: 'system', marker: true }],
     prompt_order: [{ character_id: 100001, order: [{ identifier: 'main', enabled: true }, { identifier: 'chatHistory', enabled: true }] }] } }];
@@ -138,10 +138,30 @@ async function main() {
   assert.equal(activeTaskRuns.size, 0);
   await independentRuntimeChecks();
   await unfinishedRuntimeChecks();
+  await currentLinkRuntimeChecks();
   await notificationChecks();
   await failureDiagnosticChecks();
   await eventContractChecks();
   console.log('PASS: explicit busy and independent event/regular runs, enable/threshold/interval, isolated cancellation, commit-order rollback and reserved rerun lifecycle');
+}
+async function currentLinkRuntimeChecks() {
+  resetChat('active-link-credentials');
+  await configure([task('A', { output: { mode: 'event_result' } })]);
+  const config = store.snapshot();
+  config.connections[0].links.push({ id: 'backup', name: 'backup', baseUrl: 'https://backup.invalid/v1', model: 'backup-model', secretRef: 'backup-ref' });
+  config.connections[0].activeLinkId = 'backup';
+  store.setSecret('A', 'PRIMARY_TEST_CREDENTIAL');
+  store.setSecret('backup-ref', 'BACKUP_TEST_CREDENTIAL');
+  await store.replaceSettings(config);
+  model = async body => success(body.model);
+  const result = await runTaskChain({ messageId: 1, trigger: { kind: 'manual' } });
+  assert.equal(result.status, 'succeeded');
+  assert.equal(result.tasks[0].text, 'backup-model');
+  assert.equal(calls[0].custom_url, 'https://backup.invalid/v1');
+  assert.equal(JSON.parse(calls[0].custom_include_headers).Authorization, 'Bearer BACKUP_TEST_CREDENTIAL');
+  assert.equal(JSON.stringify(result).includes('TEST_CREDENTIAL'), false);
+  assert.equal(store.getSecret('A'), 'PRIMARY_TEST_CREDENTIAL');
+  console.log('PASS: production runtime resolves selected link address/model/local credential and retains inactive credentials');
 }
 async function failureDiagnosticChecks() {
   resetChat('screenshot-backend-error');
@@ -248,11 +268,21 @@ async function eventContractChecks() {
   assert.equal(partial.tasks.find(item => item.taskId === 'A').text, 'KEEP_SUCCESS');
   assert.equal(events.filter(item => item.result.runId === partial.runId).length, 1);
 
-  resetChat('event-result-requires-event');
-  await configure([task('A', { output: { mode: 'event_result' } })]);
-  const invalidMode = await runTaskChain({ messageId: 1, trigger: { kind: 'manual' } });
-  assert.equal(invalidMode.status, 'failed');
-  assert.equal(calls.length, 0, 'regular task with an event-only output must fail before generation');
+  for (const kind of ['manual', 'received', 'sent', 'task']) {
+    resetChat(`broadcast-from-${kind}`);
+    await configure([task('A', { order: kind === 'sent' ? -1 : 0, output: { mode: 'event_result' } })]);
+    const trigger = { kind, ...(kind === 'task' ? { taskId: 'A' } : {}) };
+    const result = await runTaskChain({ messageId: 1, trigger, ...(kind === 'task' ? { taskId: 'A' } : {}) });
+    assert.equal(result.status, 'succeeded', `${kind} supports broadcast output without an event name`);
+    assert.equal(calls.length, 1);
+    assert.equal(result.tasks[0].text, 'KEEP_SUCCESS');
+    const published = events.filter(item => item.result.runId === result.runId);
+    assert.equal(published.length, 1, 'one terminal broadcast per run');
+    assert.equal(published[0].name, 'kat_task_chain:result');
+    assert.deepEqual(published[0].result, result);
+    assert.equal(host.chat[1].mes, 'BODY');
+    assert.deepEqual(Object.keys(chatVariables), ['kat_async_task_state:runtime-script']);
+  }
 
   resetChat('event-result-listener-failure');
   await configure([task('A', { eventName: 'listener-failure', output: { mode: 'event_result' } })]);
@@ -329,8 +359,10 @@ async function unfinishedRuntimeChecks() {
   try {
     for (const [label, mutate] of [
       ['API', config => { config.tasks[0].connectionId = ''; }],
-      ['model', config => { config.connections[0].model = ''; }],
-      ['baseUrl', config => { config.connections[0].baseUrl = ''; }],
+      ['model', config => { config.connections[0].links[0].model = ''; }],
+      ['baseUrl', config => { config.connections[0].links[0].baseUrl = ''; }],
+      ['link', config => { config.connections[0].activeLinkId = null; }],
+      ['missing-link', config => { config.connections[0].activeLinkId = 'missing'; }],
       ['preset', config => { config.connections[0].presetId = null; }],
       ['regex', config => { config.tasks[0].regexRules = [{ id: 'bad', stage: 'response', pattern: '[', flags: '', replacement: '', enabled: true }]; }],
     ]) {
@@ -352,7 +384,7 @@ async function unfinishedRuntimeChecks() {
     }
     resetChat('unfinished-idle'); await configure([task('healthy')]);
     const config = store.snapshot();
-    config.connections.push({ id: 'idle', name: '', comment: '', baseUrl: '', model: '', secretRef: 'idle', presetId: null });
+    config.connections.push({ id: 'idle', name: '', comment: '', links: [], activeLinkId: null, presetId: null });
     config.presets.push({ id: 'idle', name: '', raw: {} });
     config.tasks.push(task('idle', { connectionId: '', enabled: false }));
     await store.replaceSettings(config);

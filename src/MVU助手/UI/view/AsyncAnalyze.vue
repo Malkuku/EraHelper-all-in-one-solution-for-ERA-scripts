@@ -71,11 +71,6 @@
                   重新计算会先撤销当前楼层上一条常规链的提交。日志仅在本次脚本会话有效；重载后不可恢复旧日志，是否可回滚由任务内核校验。
                 </p>
               </details>
-              <details class="integration-rules">
-                <summary>其它前端联动规则</summary>
-                <button @click="copyIntegrationRules">一键复制前端联动规则</button>
-                <pre>{{ integrationRules }}</pre>
-              </details>
             </div>
           </details>
           <p v-if="feedback" role="status" class="feedback">{{ feedback }}</p>
@@ -243,7 +238,6 @@ import {
   cancelTaskRun,
 } from '../../AsyncAnalyze/TaskRuntime';
 import type { RunResult, Trigger } from '../../AsyncAnalyze/TaskSchema';
-import { createEventIntegrationRules } from '../../AsyncAnalyze/EventIntegrationRules';
 import { Modal } from '../../utils/modal';
 import TaskManager from '../components/AsyncAnalyze/TaskManager.vue';
 import Settings from '../components/AsyncAnalyze/Settings.vue';
@@ -293,9 +287,6 @@ const candidateTasks = computed(() =>
       : groupTasks.value.filter(item => item.id === selectedTask.value),
 );
 const canRun = computed(() => !!target.value.chatId && target.value.messageId >= 0 && candidateTasks.value.length > 0);
-const integrationRules = computed(() =>
-  createEventIntegrationRules(getScriptId(), selectedEvent.value || eventNames.value[0] || 'my_event'),
-);
 const writeTargets = computed(() => [
   ...new Set(
     candidateTasks.value.flatMap(task =>
@@ -353,14 +344,6 @@ function runLabel(result: RunResult) {
     : result.trigger.kind === 'task'
       ? '单任务测试'
       : '常规任务链';
-}
-async function copyIntegrationRules() {
-  try {
-    await navigator.clipboard.writeText(integrationRules.value);
-    feedback.value = '已复制前端联动规则，可交给其它前端的开发者或 AI 使用。';
-  } catch {
-    feedback.value = '无法访问剪贴板，请手动复制下方规则。';
-  }
 }
 async function rerun() {
   if (!checkTarget()) return;

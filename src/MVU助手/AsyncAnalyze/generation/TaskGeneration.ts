@@ -100,12 +100,12 @@ export function generationPayload(context: GenerationContext) {
   const preset = context.preset;
   return {
     chat_completion_source: 'custom',
-    custom_url: context.connection.baseUrl.replace(/\/+$/, ''),
+    custom_url: context.link.baseUrl.replace(/\/+$/, ''),
     custom_include_headers: JSON.stringify({ Authorization: `Bearer ${context.secret}` }),
     custom_include_body: '',
     custom_exclude_body: '',
     custom_prompt_post_processing: 'none',
-    model: context.connection.model,
+    model: context.link.model,
     messages: context.messages,
     stream: false,
     n: 1,
@@ -154,8 +154,8 @@ export async function generateTask(context: GenerationContext): Promise<string> 
     requestedAt = Date.now();
     requestDetails = {
       connectionName: context.connection.name,
-      model: context.connection.model,
-      endpoint: diagnosticEndpoint(context.connection.baseUrl),
+      model: context.link.model,
+      endpoint: diagnosticEndpoint(context.link.baseUrl),
       elapsedMs: 0,
     };
     taskLog(
