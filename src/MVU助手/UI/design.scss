@@ -4,6 +4,7 @@
   --mvu-soft: #f6f8fb;
   --mvu-line: #d7dfea;
   --mvu-control-line: #7c8ca3;
+  --mvu-input-bg: #f0f4fa;
   --mvu-text: #172338;
   --mvu-muted: #53637b;
   --mvu-accent: #4b4de0;
@@ -30,6 +31,7 @@
     --mvu-soft: #111a28;
     --mvu-line: #3e4c62;
     --mvu-control-line: #8393ab;
+    --mvu-input-bg: #0c1624;
     --mvu-text: #e9eef7;
     --mvu-muted: #b2bfd1;
     --mvu-accent: #a6a7ff;
@@ -81,11 +83,37 @@
   select {
     min-height: 40px;
     border-radius: 8px;
-    border: 1px solid var(--mvu-control-line);
-    color: var(--mvu-text);
-    background: var(--mvu-panel);
+    border: 1px solid var(--mvu-control-line) !important;
+    color: var(--mvu-text) !important;
+    background: var(--mvu-input-bg) !important;
     padding: 8px 10px;
     max-width: 100%;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.5;
+    box-shadow: inset 0 1px 2px rgb(0 0 0 / 6%);
+
+    &::placeholder {
+      color: var(--mvu-muted);
+      opacity: 1;
+    }
+    &:hover:not(:disabled):not([readonly]) {
+      border-color: var(--mvu-accent) !important;
+    }
+    &:focus {
+      border-color: var(--mvu-accent) !important;
+      outline: 2px solid var(--mvu-focus);
+      outline-offset: 2px;
+    }
+    &:disabled,
+    &[readonly] {
+      background: var(--mvu-soft) !important;
+      color: var(--mvu-muted) !important;
+      box-shadow: none;
+    }
+    &:disabled {
+      cursor: not-allowed;
+    }
   }
   textarea {
     line-height: 1.6;

@@ -767,7 +767,10 @@
                   </section>
                   <section v-show="taskTab === 'regex'">
                     <label class="field-label"
-                      ><input v-model="task.useTavernRegex" type="checkbox" data-config-key="useTavernRegex" />自动应用酒馆当前正则<Tooltip
+                      ><input
+                        v-model="task.useTavernRegex"
+                        type="checkbox"
+                        data-config-key="useTavernRegex" />自动应用酒馆当前正则<Tooltip
                         content="对输入的正文历史应用酒馆当前启用的全局、预设和局部正则，遵守消息来源、深度及用于提示词的规则。使用酒馆当前预设的正则，随后再执行下方历史阶段正则。仅影响本任务输入，不改写聊天原文。"
                     /></label>
                     <p class="hint">勾选后，正文输入跟随酒馆当前正则筛选结果；仅格式显示的规则不用于模型输入。</p>
@@ -1706,7 +1709,7 @@ function setTarget(write: WriteSpec, kind: string) {
   margin: 0 0 3px;
 }
 h2 {
-  font-size: 24px;
+  font-size: 20px;
   line-height: 1.3;
   margin: 0;
   color: var(--text);
@@ -1806,6 +1809,7 @@ fieldset {
   flex-direction: column;
   gap: 6px;
   margin: 8px 0;
+  font-size: 13px;
   font-weight: 500;
   min-width: 0;
 }
@@ -1821,12 +1825,6 @@ fieldset {
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  padding: 9px 10px;
-  border: 1px solid var(--mvu-control-line);
-  border-radius: 7px;
-  color: var(--text) !important;
-  background: var(--panel) !important;
-  font: inherit;
 }
 :deep(select) {
   appearance: auto !important;
@@ -2036,7 +2034,7 @@ summary {
   align-items: flex-start;
   gap: 16px;
   flex-wrap: wrap;
-  padding: 20px 0;
+  padding: 14px 0;
   border-bottom: 1px solid var(--line);
 }
 .linked-task-content {
@@ -2052,7 +2050,7 @@ summary {
   gap: 8px 16px;
 }
 .linked-task-heading strong {
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
@@ -2068,8 +2066,9 @@ summary {
   border-color: currentColor;
 }
 .linked-task-trigger {
-  margin: 8px 0 12px;
-  font-size: 13px;
+  margin: 6px 0 8px;
+  color: var(--muted);
+  font-size: 12px;
   line-height: 1.6;
 }
 .task-event {
@@ -2078,7 +2077,7 @@ summary {
 }
 .linked-task-binding {
   display: grid;
-  gap: 6px;
+  gap: 3px;
   margin: 0;
   font-size: 13px;
   line-height: 1.6;
@@ -2231,7 +2230,7 @@ button.task-row-main {
   flex-shrink: 0;
 }
 .task-header strong {
-  font-size: 17px;
+  font-size: 15px;
   overflow-wrap: anywhere;
 }
 .inner-tabs {
