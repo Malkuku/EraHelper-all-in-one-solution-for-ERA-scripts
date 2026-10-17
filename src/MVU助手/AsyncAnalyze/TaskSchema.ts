@@ -61,6 +61,7 @@ export const TaskSchema = z.object({
   id: z.string().min(1), name: z.string(), comment: z.string().default(''), enabled: z.boolean(),
   eventName: z.string(), order: z.number().int().default(0),
   historyDepth: integer.default(2), triggerInterval: integer.min(1).default(1), retryCount: integer.default(0),
+  useTavernRegex: z.boolean().default(false),
   prompt: z.string(), connectionId: z.string(),
   candidateBooks: z.array(z.object({ bookName: z.string(), entryUids: z.array(integer), nameRegexes: z.array(RegexSpecSchema) })),
   scan: ScanSchema,

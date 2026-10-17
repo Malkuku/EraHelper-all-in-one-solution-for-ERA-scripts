@@ -42,6 +42,7 @@ const tokenFetch = async (url, init) => {
   return { ok: true, json: async () => url.pathname.endsWith('/encode') ? { ids: Array.from({ length: body.text.length }) } : { token_count: JSON.stringify(body).length + 2 } };
 };
 async function main() {
+  await tavernRegexInputChecks();
   assert.equal(TaskSchema.parse({ ...task('A'), historyDepth: 0, scan: { depth: 0 } }).historyDepth, 0);
   assert.equal(TaskSchema.parse({ ...task('A'), eventName: 'loop:result' }).eventName, 'loop:result', 'unfinished event is editable; execution owns validity');
   assert.equal(ConfigSchema.parse({ ...settings, connections: [{ ...settings.connections[0], baseUrl: 'https://user:password@host.invalid' }] }).connections[0].baseUrl, 'https://user:password@host.invalid');
@@ -103,6 +104,71 @@ async function main() {
   await editableConfigurationChecks();
   await generationErrorChecks();
   console.log('PASS: generation boundary and independent isolation, cancellation, positions, template phases, budgets and native preservation checks');
+}
+
+async function tavernRegexInputChecks() {
+  const originalChat = host.chat;
+  const originalFormat = global.formatAsTavernRegexedString;
+  const originalFetch = global.fetch;
+  const calls = [];
+  const source = [
+    { mes: 'OLDER', name: 'Player', is_user: true },
+    { mes: 'USER_RAW', name: 'Player', is_user: true },
+    { mes: 'AI_RAW', name: 'Char', is_user: false },
+    { mes: 'NEWER', name: 'Char', is_user: false },
+  ];
+  try {
+    host.chat = structuredClone(source);
+    const target = { ...identity, messageId: 2, raw: host.chat[2] };
+    const build = selected => createGenerationContext('tavern-regex', selected, settings, target, new AbortController(), '', { sticky: {}, cooldown: {} });
+    global.formatAsTavernRegexedString = (text, source, destination, options) => {
+      calls.push({ text, source, destination, options });
+      // The native API owns global/preset/character selection, enablement and ordering.
+      return `${text}|GLOBAL|CURRENT_PRESET|CHARACTER`;
+    };
+    const disabled = await build(task('A'));
+    assert.equal(disabled.task.useTavernRegex, false, 'existing task configurations default off');
+    assert.equal(calls.length, 0, 'disabled option never invokes host regexes');
+    assert.deepEqual(disabled.history.map(item => item.content), ['USER_RAW', 'AI_RAW']);
+    const enabled = TaskSchema.parse({ ...task('A'), useTavernRegex: true, regexRules: [
+      { id: 'history', stage: 'history', pattern: 'CHARACTER$', flags: '', replacement: 'TASK_HISTORY', enabled: true },
+    ] });
+    const reloaded = ConfigSchema.parse(JSON.parse(JSON.stringify({ ...settings, tasks: [enabled] })));
+    assert.equal(reloaded.tasks[0].useTavernRegex, true, 'save/export/reload retains the checkbox');
+    const context = await build(reloaded.tasks[0]);
+    assert.deepEqual(calls, [
+      { text: 'USER_RAW', source: 'user_input', destination: 'prompt', options: { depth: 2 } },
+      { text: 'AI_RAW', source: 'ai_output', destination: 'prompt', options: { depth: 1 } },
+    ], 'pass original text, source, prompt destination and actual chat depth even for earlier targets');
+    assert.deepEqual(context.history.map(item => item.content), ['USER_RAW|GLOBAL|CURRENT_PRESET|TASK_HISTORY', 'AI_RAW|GLOBAL|CURRENT_PRESET|TASK_HISTORY']);
+    assert.deepEqual(context.scanHistory, ['Char: AI_RAW|GLOBAL|CURRENT_PRESET|TASK_HISTORY', 'Player: USER_RAW|GLOBAL|CURRENT_PRESET|TASK_HISTORY']);
+    assert.equal(context.candidates[0].content, 'WORLD_A', 'host regex option applies only to body history');
+    assert.equal(context.task.prompt, 'TASK_A');
+    const sent = [];
+    global.fetch = async (input, init) => {
+      const url = new URL(input);
+      if (!url.pathname.endsWith('/generate')) return tokenFetch(url, init);
+      sent.push(JSON.parse(init.body));
+      return { ok: true, json: async () => ({ choices: [{ message: { content: 'RAW_RESPONSE' } }] }) };
+    };
+    assert.equal(await generateTask(context), 'RAW_RESPONSE', 'host regexes do not transform the model response');
+    assert(sent[0].messages.some(item => item.content === 'AI_RAW|GLOBAL|CURRENT_PRESET|TASK_HISTORY'), 'filtered history reaches the model request');
+    assert.equal(calls.length, 2, 'no second host pass on assembled prompts, world info or response');
+    await build(TaskSchema.parse({ ...enabled, historyDepth: 0 }));
+    assert.equal(calls.length, 2, 'zero history does not invoke the host formatter');
+    global.formatAsTavernRegexedString = () => { throw new Error('native regex failure'); };
+    let httpCalls = 0;
+    global.fetch = async () => { httpCalls++; throw new Error('must fail before HTTP'); };
+    await assert.rejects(build(enabled), /native regex failure/, 'native errors cannot silently send unfiltered content');
+    assert.equal(httpCalls, 0);
+    assert.deepEqual(host.chat, source, 'filtering never writes back to host messages');
+    console.log('PASS: optional native body regex input, default/persistence, role/depth/prompt contract, custom order, scan/request reuse and failure before HTTP');
+  } finally {
+    host.chat = originalChat;
+    global.fetch = originalFetch;
+    if (originalFormat === undefined) delete global.formatAsTavernRegexedString;
+    else global.formatAsTavernRegexedString = originalFormat;
+  }
 }
 
 async function editableConfigurationChecks() {

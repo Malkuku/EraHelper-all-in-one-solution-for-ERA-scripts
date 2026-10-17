@@ -105,9 +105,15 @@ export async function createGenerationContext(
   const { connection, preset } = validateTaskReadiness(settings, task);
   const ctx = hostContext();
   assertMessage(identity, controller.signal);
-  const rawHistory = task.historyDepth === 0 ? [] : ctx.chat.slice(Math.max(0, identity.messageId - task.historyDepth + 1), identity.messageId + 1);
-  const history: TextMessage[] = rawHistory.map(message => {
-    let content = applyTaskRegex(message.mes, task, 'history').replace(/\r/g, '');
+  const historyStart = Math.max(0, identity.messageId - task.historyDepth + 1);
+  const rawHistory = task.historyDepth === 0 ? [] : ctx.chat.slice(historyStart, identity.messageId + 1);
+  const history: TextMessage[] = rawHistory.map((message, index) => {
+    const input = task.useTavernRegex
+      ? formatAsTavernRegexedString(message.mes, message.is_user ? 'user_input' : 'ai_output', 'prompt', {
+        depth: ctx.chat.length - 1 - (historyStart + index),
+      })
+      : message.mes;
+    let content = applyTaskRegex(input, task, 'history').replace(/\r/g, '');
     const role = message.is_system ? 'system' : message.is_user ? 'user' : 'assistant';
     const namesBehavior = preset.names_behavior ?? 0;
     if (namesBehavior === 2 || (namesBehavior === 0 && ((ctx.groupId && !message.is_user) || (message.force_avatar && !message.is_user)))) content = `${message.name}: ${content}`;

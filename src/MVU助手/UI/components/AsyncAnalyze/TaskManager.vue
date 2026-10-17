@@ -766,14 +766,19 @@
                     </details>
                   </section>
                   <section v-show="taskTab === 'regex'">
+                    <label class="field-label"
+                      ><input v-model="task.useTavernRegex" type="checkbox" data-config-key="useTavernRegex" />自动应用酒馆当前正则<Tooltip
+                        content="对输入的正文历史应用酒馆当前启用的全局、预设和局部正则，遵守消息来源、深度及用于提示词的规则。使用酒馆当前预设的正则，随后再执行下方历史阶段正则。仅影响本任务输入，不改写聊天原文。"
+                    /></label>
+                    <p class="hint">勾选后，正文输入跟随酒馆当前正则筛选结果；仅格式显示的规则不用于模型输入。</p>
                     <h4>显式任务正则（{{ task.regexRules.length }}）</h4>
-                    <p class="hint">依次执行；不继承酒馆全局或角色正则。</p>
+                    <p class="hint">按阶段和列表顺序依次执行；可与上方酒馆正文正则叠加。</p>
                     <button @click="addRegex">+ 添加正则</button>
                     <div v-for="(regex, index) in task.regexRules" :key="regex.id" class="card">
                       <div class="toolbar">
                         <label
                           ><input v-model="regex.enabled" type="checkbox" />启用<Tooltip
-                            content="控制此条显式任务正则是否执行；按列表顺序依次处理，不继承酒馆全局或角色正则。" /></label
+                            content="控制此条显式任务正则是否执行；同一阶段按列表顺序依次处理。历史阶段在上方酒馆正文正则之后执行。" /></label
                         ><button @click="move(task.regexRules, index, -1)">上移</button
                         ><button @click="move(task.regexRules, index, 1)">下移</button
                         ><button @click="task.regexRules.splice(index, 1)">删除</button>
@@ -1632,6 +1637,7 @@ function addTask() {
     eventName: '',
     order: 0,
     historyDepth: 2,
+    useTavernRegex: false,
     triggerInterval: 1,
     retryCount: 0,
     prompt: '',
