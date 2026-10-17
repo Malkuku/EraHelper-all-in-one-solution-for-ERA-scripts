@@ -49,11 +49,11 @@ function resetChat(name, text = 'BODY') {
   host.chat = [{ mes: 'USER', is_user: true, name: 'Player' }, { mes: text, is_user: false, name: 'Char' }];
   onStateSaved = async () => {}; onMessageSaved = async () => {};
 }
-function task(id, overrides = {}) { return TaskSchema.parse({ id, name: id, enabled: true, eventName: '', historyDepth: 0, prompt: id, connectionId: id, presetId: 'preset', candidateBooks: [], scan: {}, regexRules: [], output: { mode: 'return' }, ...overrides }); }
+function task(id, overrides = {}) { return TaskSchema.parse({ id, name: id, enabled: true, eventName: '', historyDepth: 0, prompt: id, connectionId: id, candidateBooks: [], scan: {}, regexRules: [], output: { mode: 'return' }, ...overrides }); }
 async function configure(tasks, minimum = 0) {
   const settings = emptySettings(); settings.automatic.minReceivedChars = minimum;
   settings.groups = [{ id: 'group', name: 'group', comment: '', taskIds: tasks.map(value => value.id) }]; settings.activeGroupId = 'group'; settings.tasks = tasks;
-  settings.connections = tasks.map(value => ({ id: value.id, name: value.id, comment: '', baseUrl: 'https://api.invalid/v1', model: value.id, secretRef: value.id }));
+  settings.connections = tasks.map(value => ({ id: value.id, name: value.id, comment: '', baseUrl: 'https://api.invalid/v1', model: value.id, secretRef: value.id, presetId: 'preset' }));
   settings.presets = [{ id: 'preset', name: 'preset', raw: { openai_max_context: 10000, openai_max_tokens: 300,
     prompts: [{ identifier: 'main', name: 'main', role: 'system', content: 'SYSTEM' }, { identifier: 'chatHistory', name: 'history', role: 'system', marker: true }],
     prompt_order: [{ character_id: 100001, order: [{ identifier: 'main', enabled: true }, { identifier: 'chatHistory', enabled: true }] }] } }];

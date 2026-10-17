@@ -56,7 +56,7 @@ export const TaskSchema = z.object({
   id: z.string().min(1), name: z.string().min(1), comment: z.string().default(''), enabled: z.boolean(),
   eventName: z.string().refine(eventNameIsValid, '事件名与内部结果频道冲突'), order: z.number().int().default(0),
   historyDepth: integer.default(2), triggerInterval: integer.min(1).default(1), retryCount: integer.default(0),
-  prompt: z.string(), connectionId: z.string().min(1), presetId: z.string().min(1),
+  prompt: z.string(), connectionId: z.string().min(1),
   candidateBooks: z.array(z.object({ bookName: z.string().min(1), entryUids: z.array(integer), nameRegexes: z.array(RegexSpecSchema) })),
   scan: ScanSchema,
   regexRules: z.array(RegexSpecSchema.safeExtend({
@@ -71,14 +71,14 @@ export const TaskSchema = z.object({
 });
 export type TaskConfig = z.infer<typeof TaskSchema>;
 export const ConfigSchema = z.object({
-  schemaVersion: z.literal(1), activeGroupId: z.string().nullable(), automatic: z.object({ minReceivedChars: integer.default(300) }),
+  schemaVersion: z.literal(2), activeGroupId: z.string().nullable(), automatic: z.object({ minReceivedChars: integer.default(300) }),
   groups: z.array(z.object({ id: z.string().min(1), name: z.string().min(1), comment: z.string(), taskIds: z.array(z.string()) })),
   tasks: z.array(TaskSchema),
   regexPresets: z.array(RegexPresetSchema).default([]),
   connections: z.array(z.object({ id: z.string().min(1), name: z.string().min(1), comment: z.string(), baseUrl: z.url().refine(value => {
     const url = new URL(value);
     return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password;
-  }, '连接仅支持无内嵌凭据的 HTTP/HTTPS 地址'), model: z.string().min(1), secretRef: z.string().min(1) })),
+  }, '连接仅支持无内嵌凭据的 HTTP/HTTPS 地址'), model: z.string().min(1), secretRef: z.string().min(1), presetId: z.string().min(1).nullable() })),
   presets: z.array(z.object({ id: z.string().min(1), name: z.string().min(1), raw: z.record(z.string(), z.unknown()) })),
 }).superRefine((config, ctx) => {
   for (const field of ['groups', 'tasks', 'connections', 'presets', 'regexPresets'] as const) {
@@ -96,14 +96,53 @@ export const ConfigSchema = z.object({
   if (config.activeGroupId !== null && !config.groups.some(group => group.id === config.activeGroupId)) {
     ctx.addIssue({ code: 'custom', path: ['activeGroupId'], message: '活动组不存在' });
   }
+  config.connections.forEach((connection, index) => {
+    if (connection.presetId !== null && !config.presets.some(preset => preset.id === connection.presetId))
+      ctx.addIssue({ code: 'custom', path: ['connections', index, 'presetId'], message: '绑定预设不存在' });
+  });
   config.tasks.forEach((task, index) => {
-    for (const [field, collection] of [['connectionId', config.connections], ['presetId', config.presets]] as const) {
-      if (!collection.some(entity => entity.id === task[field])) ctx.addIssue({ code: 'custom', path: ['tasks', index, field], message: '引用不存在' });
-    }
+    const connection = config.connections.find(item => item.id === task.connectionId);
+    if (!connection) ctx.addIssue({ code: 'custom', path: ['tasks', index, 'connectionId'], message: 'API 配置不存在' });
+    else if (!connection.presetId) ctx.addIssue({ code: 'custom', path: ['tasks', index, 'connectionId'], message: '任务使用的 API 尚未绑定预设' });
   });
 });
 export type TaskSettings = z.infer<typeof ConfigSchema>;
-export const emptySettings = (): TaskSettings => ({ schemaVersion: 1, activeGroupId: null, automatic: { minReceivedChars: 300 }, groups: [], tasks: [], connections: [], presets: [], regexPresets: [] });
+export const emptySettings = (): TaskSettings => ({ schemaVersion: 2, activeGroupId: null, automatic: { minReceivedChars: 300 }, groups: [], tasks: [], connections: [], presets: [], regexPresets: [] });
+/** Upgrade only independent-task v1, preserving each existing API/preset pair. */
+export function parseTaskSettings(value: unknown): TaskSettings {
+  if (!value || typeof value !== 'object' || (value as { schemaVersion?: unknown }).schemaVersion !== 1)
+    return ConfigSchema.parse(value);
+  const old = z.object({
+    schemaVersion: z.literal(1), tasks: z.array(z.object({ connectionId: z.string(), presetId: z.string().min(1) }).passthrough()),
+    connections: z.array(z.object({ id: z.string(), name: z.string(), secretRef: z.string() }).passthrough()),
+    presets: z.array(z.object({ id: z.string(), name: z.string() }).passthrough()),
+  }).passthrough().parse(value);
+  for (const list of [old.connections, old.presets])
+    if (new Set(list.map(item => item.id)).size !== list.length) throw new Error('版本 1 配置 ID 重复');
+  for (const task of old.tasks) {
+    if (!old.connections.some(connection => connection.id === task.connectionId)) throw new Error(`旧任务引用的 API 不存在：${task.connectionId}`);
+    if (!old.presets.some(preset => preset.id === task.presetId)) throw new Error(`旧任务引用的预设不存在：${task.presetId}`);
+  }
+  const usedIds = new Set(old.connections.map(item => item.id));
+  const tasks = old.tasks.map(item => ({ ...item }));
+  const connections = old.connections.flatMap((connection): (typeof connection & { presetId: string | null })[] => {
+    const presetIds = [...new Set(old.tasks.filter(task => task.connectionId === connection.id).map(task => task.presetId))];
+    if (!presetIds.length) return [{ ...connection, presetId: null }];
+    return presetIds.map((presetId, index) => {
+      let id = connection.id;
+      if (index > 0) {
+        const base = `${connection.id}:preset:${presetId}`;
+        id = base;
+        for (let suffix = 1; usedIds.has(id); suffix++) id = `${base}:${suffix}`;
+        usedIds.add(id);
+      }
+      for (let i = 0; i < old.tasks.length; i++)
+        if (old.tasks[i].connectionId === connection.id && old.tasks[i].presetId === presetId) tasks[i].connectionId = id;
+      return { ...connection, id, presetId, name: index === 0 ? connection.name : `${connection.name} · ${old.presets.find(preset => preset.id === presetId)!.name}` };
+    });
+  });
+  return ConfigSchema.parse({ ...old, schemaVersion: 2, connections, tasks: tasks.map(({ presetId: _presetId, ...task }) => task) });
+}
 export type Trigger = { kind: 'event' | 'sent' | 'received' | 'manual'; eventName?: string };
 export type TaskError = { code: string; message: string; phase: 'prepare' | 'scan' | 'template' | 'request' | 'extract' | 'commit' | 'rollback' };
 export type WriteResult = { writeId: string; target: string; status: 'committed' | 'failed' | 'rolled_back' | 'rollback_failed'; error?: string };

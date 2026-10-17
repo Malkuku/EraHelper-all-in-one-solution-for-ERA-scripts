@@ -17,7 +17,7 @@ global.getScriptId = () => scriptId;
 global.getVariables = () => structuredClone(variables);
 global.updateVariablesWith = async update => { variables = await update(structuredClone(variables)); };
 const { useTaskStore } = require(path.join(root, 'stores/TaskStore.ts'));
-const { emptySettings, ConfigSchema, parseRegexPresets, matchTaskRegex } = require(path.join(root, 'AsyncAnalyze/TaskSchema.ts'));
+const { emptySettings, ConfigSchema, TaskSchema, parseTaskSettings, parseRegexPresets, matchTaskRegex } = require(path.join(root, 'AsyncAnalyze/TaskSchema.ts'));
 
 async function main() {
   const store = useTaskStore();
@@ -43,11 +43,11 @@ async function main() {
   assert.equal(store.getSecret('__proto__'), 'PROTOTYPE_KEY_SECRET');
   const config = emptySettings();
   config.automatic.minReceivedChars = 17;
-  config.connections = [{ id: 'connection', name: 'connection', comment: '', baseUrl: 'https://api.invalid/v1', model: 'model', secretRef: 'reference-A' }];
+  config.connections = [{ id: 'connection', name: 'connection', comment: '', baseUrl: 'https://api.invalid/v1', model: 'model', secretRef: 'reference-A', presetId: 'preset' }];
   config.presets = [{ id: 'preset', name: 'native', raw: { future: { preserved: ['raw'] }, prompts: [], prompt_order: [] } }];
   const beforeRegexLibrary = structuredClone(config);
   delete beforeRegexLibrary.regexPresets;
-  assert.deepEqual(ConfigSchema.parse(beforeRegexLibrary).regexPresets, [], 'existing v1 configs load without reconfiguration');
+  assert.deepEqual(ConfigSchema.parse(beforeRegexLibrary).regexPresets, [], 'current configs may omit the optional reusable regex library');
   config.regexPresets = parseRegexPresets([{ id: 'saved', name: '命名表达式', regex: '/<result>(.*?)<\/result>/gs', replacement: '$1' }]);
   assert.deepEqual(config.regexPresets, [{ id: 'saved', name: '命名表达式', pattern: '<result>(.*?)</result>', flags: 'gs', replacement: '$1' }]);
   const response = '<result>甲</result>\n<result>乙</result>';
@@ -78,6 +78,55 @@ async function main() {
   assert.throws(() => parseRegexPresets([{ name: '坏表达式', regex: '/[/g' }]));
   assert.deepEqual(variables, beforeInvalid, 'invalid configuration cannot partially save');
 
+  // v2 has one binding per API. Unused APIs may be incomplete; referenced ones may not.
+  const boundTask = TaskSchema.parse({ id: 'bound-task', name: 'bound-task', enabled: true, eventName: '', prompt: '', connectionId: 'connection', candidateBooks: [], scan: {}, regexRules: [], output: { mode: 'return' } });
+  assert.equal(Object.hasOwn(boundTask, 'presetId'), false);
+  assert.equal(ConfigSchema.parse({ ...config, connections: [{ ...config.connections[0], presetId: null }] }).connections[0].presetId, null);
+  assert.throws(() => ConfigSchema.parse({ ...config, tasks: [boundTask], connections: [{ ...config.connections[0], presetId: null }] }), /尚未绑定预设/);
+  assert.throws(() => ConfigSchema.parse({ ...config, connections: [{ ...config.connections[0], presetId: 'absent' }] }), /绑定预设不存在/);
+  assert.throws(() => ConfigSchema.parse({ ...config, tasks: [{ ...boundTask, connectionId: 'absent' }] }), /API 配置不存在/);
+
+  const legacy = {
+    ...config, schemaVersion: 1,
+    presets: [...config.presets, { id: 'other-preset', name: '另一预设', raw: { temperature: 0.7 } }],
+    connections: [config.connections[0], { ...config.connections[0], id: 'connection:preset:other-preset', name: '未使用 API' }].map(({ presetId, ...connection }) => connection),
+    tasks: [
+      { ...boundTask, id: 'original-a', presetId: 'preset' },
+      { ...boundTask, id: 'original-b', presetId: 'other-preset' },
+      { ...boundTask, id: 'same-pair', presetId: 'other-preset' },
+    ],
+    groups: [{ id: 'migrated-group', name: '迁移规则组', comment: '', taskIds: ['original-a', 'original-b', 'same-pair'] }], activeGroupId: 'migrated-group',
+  };
+  const original = structuredClone(legacy);
+  variables.async_task_config = legacy;
+  await store.load();
+  assert.equal(store.configurationError, '');
+  const migrated = store.snapshot();
+  assert.equal(migrated.schemaVersion, 2);
+  assert.equal(migrated.connections.length, 3, 'one API used by two presets must split, retaining unused API');
+  assert.equal(new Set(migrated.connections.map(connection => connection.id)).size, 3, 'split IDs cannot collide with existing APIs');
+  assert.equal(migrated.connections.find(connection => connection.name === '未使用 API').presetId, null);
+  for (const oldTask of original.tasks) {
+    const currentTask = migrated.tasks.find(task => task.id === oldTask.id);
+    const connection = migrated.connections.find(connection => connection.id === currentTask.connectionId);
+    assert.equal(connection.presetId, oldTask.presetId, 'migration preserves the original API/preset pair');
+    assert.equal(connection.secretRef, 'reference-A', 'split APIs share the existing secret reference');
+    assert.equal(connection.baseUrl, original.connections[0].baseUrl);
+    assert.equal(connection.model, original.connections[0].model);
+    assert.equal(store.getSecret(connection.secretRef), 'PLUGIN_SECRET_A');
+    assert.equal(Object.hasOwn(currentTask, 'presetId'), false);
+  }
+  assert.equal(migrated.tasks[1].connectionId, migrated.tasks[2].connectionId, 'equal old pairs reuse one split API');
+  assert.deepEqual(legacy, original, 'loading migration cannot mutate its input');
+  await store.replaceSettings(migrated); await store.load();
+  assert.deepEqual(store.snapshot(), migrated, 'v2 binding and upgraded task routing survive persistence/reload');
+  assert.equal(variables.async_task_config.schemaVersion, 2);
+  assert.deepEqual(parseTaskSettings(original), migrated, 'repeated v1 imports preserve deterministic routing');
+  assert.throws(() => parseTaskSettings({ ...original, tasks: [{ ...original.tasks[0], presetId: 'absent' }] }), /预设不存在/);
+  assert.throws(() => parseTaskSettings({ ...original, tasks: [...original.tasks, { ...original.tasks[0], id: 'dangling', connectionId: 'connection:preset:other-preset:1' }] }), /API.*不存在|连接.*不存在/, 'a dangling v1 reference cannot be captured by a generated split ID');
+  assert.throws(() => parseTaskSettings({ ...original, connections: [...original.connections, original.connections[0]] }), /重复/);
+  assert.throws(() => parseTaskSettings({ ...original, presets: [...original.presets, original.presets[0]] }), /重复/);
+
   scriptId = 'other-script';
   assert.equal(store.getSecret('reference-A'), '', 'secret namespaces must not cross script identity');
   store.setSecret('reference-A', 'OTHER_SCRIPT_SECRET');
@@ -96,6 +145,6 @@ async function main() {
   await store.load();
   assert(store.configurationError.includes('无效'));
   assert.deepEqual(variables.unrelated, unrelated);
-  console.log('PASS: current-schema persistence, reusable regex import/match/reload and legacy data preservation, scoped plaintext cleanup, detached exports, secret references/namespaces and explicit corruption errors');
+  console.log('PASS: v2 API/preset ownership, v1 pair-preserving split migration/reload and dangling/duplicate rejection, reusable regex library, scoped plaintext cleanup, secret references/namespaces and explicit corruption errors');
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

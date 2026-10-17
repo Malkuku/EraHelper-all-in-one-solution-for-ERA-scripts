@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { klona } from 'klona';
-import { ConfigSchema, emptySettings, TaskSettings } from '../AsyncAnalyze/TaskSchema';
+import { parseTaskSettings, emptySettings, TaskSettings } from '../AsyncAnalyze/TaskSchema';
 
 const legacyKeys = ['async_analyze_setting', 'task_config_settings', 'api_config_settings', 'active_rule_name', 'saved_analyze_backup'];
 export const useTaskStore = defineStore('KatTasks', () => {
@@ -36,13 +36,12 @@ export const useTaskStore = defineStore('KatTasks', () => {
       configurationError.value = legacy ? '旧版分步配置不受支持，请重新配置。旧连接明文密钥已清理。' : '';
       return;
     }
-    const parsed = ConfigSchema.safeParse(variables.async_task_config);
-    if (!parsed.success) { configurationError.value = `分步配置无效，请修正或重新导入：${parsed.error.message}`; return; }
-    settings.value = parsed.data;
+    try { settings.value = parseTaskSettings(variables.async_task_config); }
+    catch (error) { configurationError.value = `分步配置无效，请修正或重新导入：${error instanceof Error ? error.message : String(error)}`; return; }
     configurationError.value = '';
   }
   async function replaceSettings(value: unknown) {
-    const parsed = ConfigSchema.parse(value);
+    const parsed = parseTaskSettings(value);
     await updateVariablesWith(current => {
       const result: Record<string, any> = { ...current, async_task_config: klona(parsed) };
       for (const key of legacyKeys) delete result[key];

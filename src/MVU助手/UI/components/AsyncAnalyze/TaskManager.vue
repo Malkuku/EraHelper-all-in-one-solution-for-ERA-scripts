@@ -1,5 +1,25 @@
 <template>
   <div class="task-manager main-container" :class="{ 'dark-mode': uiStore.darkMode }">
+    <section class="effective-config" aria-label="当前生效配置">
+      <div class="card-header">
+        <strong>当前生效 · {{ savedGroup?.name || '未启用规则组' }}</strong
+        ><span class="status-badge" :class="{ active: !dirty }">{{ dirty ? '草稿尚未生效' : '已保存' }}</span>
+      </div>
+      <p v-if="!savedGroup" class="hint">先配置 API 和预设，再创建任务、关联规则组并启用，最后保存配置。</p>
+      <p v-else-if="!savedGroup.taskIds.length" class="hint">当前规则组没有任务，请关联任务后保存。</p>
+      <div v-for="item in savedTasks" :key="item.id" class="binding-row">
+        <strong>{{ item.name }}{{ item.enabled ? '' : '（已停用）' }}</strong
+        ><span>{{ bindingSummary(item, props.settings) }}</span>
+      </div>
+      <p v-if="dirty" class="hint">下方正在编辑草稿；运行仍使用这里显示的已保存配置。</p>
+    </section>
+    <div class="setup-steps" aria-label="配置步骤">
+      <button @click="tab = 'presets'">1 · 导入或新建预设</button>
+      <button @click="tab = 'connections'">2 · 配置 API 并绑定预设</button>
+      <button @click="tab = 'tasks'">3 · 创建任务并选择 API</button>
+      <button @click="tab = 'groups'">4 · 规则组关联任务</button>
+      <button @click="tab = 'selection'">5 · 启用规则组并保存</button>
+    </div>
     <nav class="page-tabs" aria-label="任务配置分类">
       <button
         v-for="item in tabs"
@@ -40,7 +60,7 @@
         </div>
         <p class="hint">活动规则组用于常规链和附加事件；事件运行独立结算。点击保存后生效。</p>
         <button :class="{ selected: draft.activeGroupId === null }" @click="draft.activeGroupId = null">
-          不启用常规任务链
+          不启用任务规则组
         </button>
         <div class="task-grid">
           <article
@@ -51,11 +71,13 @@
           >
             <div class="card-header">
               <strong>{{ groupItem.name }}</strong
-              ><span v-if="draft.activeGroupId === groupItem.id" class="status-badge active">使用中</span>
+              ><span v-if="draft.activeGroupId === groupItem.id" class="status-badge active">草稿已选择</span>
             </div>
             <p class="comment-text">{{ groupItem.comment || '暂无备注' }}</p>
             <p v-for="item in groupTasks(groupItem)" :key="item.id" class="hint">
-              {{ item.name }} · 顺序 {{ item.order }} · 间隔 {{ item.triggerInterval }} 楼
+              {{ item.name }} · 顺序 {{ item.order }} · 间隔 {{ item.triggerInterval }} 楼 <br />{{
+                bindingSummary(item)
+              }}
             </p>
             <div class="toolbar">
               <button class="primary" @click="draft.activeGroupId = groupItem.id">选择</button
@@ -137,6 +159,7 @@
                     {{ item.enabled ? '启用' : '停用' }} · 顺序 {{ item.order }} · 间隔 {{ item.triggerInterval }} 楼 ·
                     {{ item.eventName || '常规触发' }}
                   </p>
+                  <p class="hint">{{ bindingSummary(item) }}</p>
                 </div>
                 <button
                   @click="
@@ -159,7 +182,9 @@
           <h3>API配置</h3>
           <button class="primary" @click="addConnection">+ 新建连接</button>
         </div>
-        <p class="hint">密钥单独保存在本地，不包含在配置或预设导出中；留空保留已存密钥。</p>
+        <p class="hint">
+          每套 API 配置绑定一个预设。任务选定 API 后，模型、提示词与采样预设一并确定；修改绑定会影响所有引用任务。
+        </p>
         <div class="list-editor">
           <aside class="list-sidebar">
             <button
@@ -171,6 +196,7 @@
             >
               <strong>{{ item.name }}</strong
               ><small>{{ item.model || '未配置模型' }}</small>
+              <small>预设：{{ presetName(item.presetId) }}</small>
             </button>
           </aside>
           <div class="list-content">
@@ -185,6 +211,11 @@
                     placeholder="https://example.com/v1" /></label
                 ><label>模型<input v-model="connection.model" /></label
                 ><label
+                  >绑定预设<select v-model="connection.presetId">
+                    <option :value="null">请选择预设</option>
+                    <option v-for="item in draft.presets" :key="item.id" :value="item.id">{{ item.name }}</option>
+                  </select></label
+                ><label
                   >更新本地密钥<input
                     v-model="secrets[connection.secretRef]"
                     type="password"
@@ -192,6 +223,41 @@
                     placeholder="留空保留已存密钥"
                 /></label>
               </div>
+              <div class="toolbar">
+                <button
+                  :disabled="!connection.presetId"
+                  @click="
+                    selectedPreset = connection.presetId!;
+                    tab = 'presets';
+                  "
+                >
+                  编辑绑定预设
+                </button>
+                <button @click="tab = 'presets'">导入 / 新建预设</button>
+              </div>
+              <p class="hint">
+                本地密钥留空会使用已保存密钥；测试与获取模型使用当前草稿，不必先保存。密钥不包含在配置导出中。
+              </p>
+              <p
+                v-if="
+                  draft.connections.some(item => item.id !== connection!.id && item.secretRef === connection!.secretRef)
+                "
+                class="hint"
+              >
+                此密钥由多个 API 配置共享，更新或清空会影响这些配置。
+              </p>
+              <ConnectionCheck
+                :key="connection.id"
+                :connection="connection"
+                :secret="connectionSecret"
+                :credential-revision="
+                  JSON.stringify([secrets[connection.secretRef], clearedSecrets.has(connection.secretRef), baseline])
+                "
+                @select="connection.model = $event"
+              />
+              <h4>引用此 API 的任务（{{ connectionTasks.length }}）</h4>
+              <p v-if="!connectionTasks.length" class="hint">暂无任务引用。创建任务后选择此 API 配置。</p>
+              <button v-for="item in connectionTasks" :key="item.id" @click="editTask(item.id)">{{ item.name }}</button>
               <div class="toolbar">
                 <button
                   @click="
@@ -215,9 +281,7 @@
             >导入酒馆原生预设<input type="file" accept=".json,application/json" @change="importPreset"
           /></label>
         </div>
-        <p class="hint">
-          预设是独立副本。修改酒馆原预设后需重新导入。只编辑下列原生字段，其他字段原样保留；未知扩展字段不代表受支持。
-        </p>
+        <p class="hint">先导入或新建预设，再到 API 配置中绑定。预设是独立副本，修改酒馆原预设后需重新导入。</p>
         <div class="list-editor">
           <aside class="list-sidebar">
             <button
@@ -234,6 +298,15 @@
           <div class="list-content">
             <div v-if="preset" class="card">
               <label>预设名称<input v-model="preset.name" /></label>
+              <p class="hint">
+                绑定此预设的 API：{{
+                  draft.connections
+                    .filter(item => item.presetId === preset!.id)
+                    .map(item => item.name)
+                    .join('、') || '尚未绑定，请到 API 配置中选择'
+                }}
+              </p>
+              <button @click="tab = 'connections'">前往 API 配置绑定</button>
               <div class="toolbar">
                 <button @click="duplicatePreset">复制预设</button
                 ><button @click="download(preset.name + '.json', preset.raw)">导出原生预设</button
@@ -317,6 +390,7 @@
               }}</span>
             </div>
             <p class="comment-text">{{ item.comment || '暂无备注' }}</p>
+            <p class="binding-summary">{{ bindingSummary(item) }}</p>
             <div class="usage-section">
               引用：<span v-for="usageGroup in taskUsage(item.id)" :key="usageGroup.id" class="usage-tag">{{
                 usageGroup.name
@@ -361,6 +435,7 @@
               </button>
             </nav>
             <div class="editor-body">
+              <p class="binding-summary">{{ bindingSummary(task) }}</p>
               <p v-if="error" class="error" role="alert">{{ error }}</p>
               <p v-if="notice" class="notice" role="status">{{ notice }}</p>
               <section v-show="taskTab === 'basic'">
@@ -372,15 +447,11 @@
                 <div class="fields">
                   <label>名称<input v-model="task.name" /></label><label>备注<input v-model="task.comment" /></label>
                   <label
-                    >连接<select v-model="task.connectionId">
-                      <option value="">请选择</option>
-                      <option v-for="item in draft.connections" :key="item.id" :value="item.id">{{ item.name }}</option>
-                    </select></label
-                  >
-                  <label
-                    >预设<select v-model="task.presetId">
-                      <option value="">请选择</option>
-                      <option v-for="item in draft.presets" :key="item.id" :value="item.id">{{ item.name }}</option>
+                    >API 配置<select v-model="task.connectionId">
+                      <option value="">请选择 API 配置</option>
+                      <option v-for="item in draft.connections" :key="item.id" :value="item.id">
+                        {{ item.name }} · {{ item.model || '未配置模型' }} · {{ presetName(item.presetId) }}
+                      </option>
                     </select></label
                   >
                   <label>附加事件名（可空）<input v-model="task.eventName" /></label
@@ -389,6 +460,16 @@
                   ><label>自动触发楼层间隔<input v-model.number="task.triggerInterval" type="number" min="1" /></label
                   ><label>失败重试次数<input v-model.number="task.retryCount" type="number" min="0" /></label>
                 </div>
+                <p class="hint">预设由所选 API 配置确定。更换模型或预设，请编辑 API 配置。</p>
+                <button
+                  @click="
+                    selectedConnection = task.connectionId;
+                    selectedTask = '';
+                    tab = 'connections';
+                  "
+                >
+                  编辑此 API 与预设绑定
+                </button>
                 <label>任务提示词<textarea v-model="task.prompt" rows="6" /></label>
               </section>
               <section v-show="taskTab === 'worldbook'">
@@ -599,6 +680,7 @@ import { computed, reactive, ref, watch } from 'vue';
 import { klona } from 'klona';
 import {
   ConfigSchema,
+  parseTaskSettings,
   ScanSchema,
   type TaskSettings,
   type TaskConfig,
@@ -614,12 +696,14 @@ import { useUiStore } from '@/MVU助手/stores/UIStore';
 import WorldbookPicker from './WorldbookPicker.vue';
 import RegexField from './RegexField.vue';
 import RegexWorkbench from './RegexWorkbench.vue';
+import ConnectionCheck from './ConnectionCheck.vue';
 import { Modal } from '@/MVU助手/utils/modal';
 
 const props = defineProps<{
   settings: TaskSettings;
   saveSettings: (settings: TaskSettings) => Promise<void>;
   setSecret: (reference: string, secret: string) => void;
+  getSecret: (reference: string) => string;
   deleteSecret: (reference: string) => void;
   configurationError?: string;
 }>();
@@ -664,6 +748,27 @@ const selectedBooks = computed(() =>
 );
 const group = computed(() => draft.value.groups.find(item => item.id === selectedGroup.value));
 const connection = computed(() => draft.value.connections.find(item => item.id === selectedConnection.value));
+const connectionTasks = computed(() => draft.value.tasks.filter(item => item.connectionId === connection.value?.id));
+const savedGroup = computed(() => props.settings.groups.find(item => item.id === props.settings.activeGroupId));
+const savedTasks = computed(() => props.settings.tasks.filter(item => savedGroup.value?.taskIds.includes(item.id)));
+function presetName(id: string | null, config = draft.value) {
+  return config.presets.find(item => item.id === id)?.name || '未绑定预设';
+}
+function bindingSummary(task: TaskConfig, config = draft.value) {
+  const api = config.connections.find(item => item.id === task.connectionId);
+  return api
+    ? `API：${api.name} · 模型：${api.model || '未配置'} · 预设：${presetName(api.presetId, config)}`
+    : '尚未选择 API 配置';
+}
+function editTask(id: string) {
+  selectedTask.value = id;
+  taskTab.value = 'basic';
+  tab.value = 'tasks';
+}
+function connectionSecret() {
+  const reference = connection.value!.secretRef;
+  return secrets[reference] || (clearedSecrets.has(reference) ? '' : props.getSecret(reference));
+}
 const filteredTasks = computed(() =>
   draft.value.tasks.filter(item =>
     (item.name + ' ' + item.comment).toLowerCase().includes(taskSearch.value.toLowerCase()),
@@ -861,7 +966,7 @@ async function importConfiguration(event: Event) {
   try {
     const file = await fileData(event);
     if (!file) return;
-    const config = ConfigSchema.parse(file.value);
+    const config = parseTaskSettings(file.value);
     config.presets.forEach(item => parseNativePreset(item.raw));
     if (!(await Modal.confirm('替换配置草稿', '导入将替换当前配置草稿；本地密钥不会导入。点击保存后生效。'))) return;
     clearSecretDrafts();
@@ -875,7 +980,7 @@ async function importConfiguration(event: Event) {
       '配置已导入草稿，请检查后保存；新引用的密钥需在连接页填写。' +
       (hadRegexContext ? '测试器字段关联已结束；如需应用，请重新从字段打开。' : '');
   } catch (cause) {
-    error.value = `导入失败（旧版配置不受支持）：${message(cause)}`;
+    error.value = `导入失败：${message(cause)}`;
   }
 }
 function addGroup() {
@@ -889,7 +994,7 @@ async function removeGroup(id: string) {
   if (draft.value.activeGroupId === id) draft.value.activeGroupId = null;
 }
 function addConnection() {
-  const item = { id: uid(), name: '新连接', comment: '', baseUrl: '', model: '', secretRef: uid() };
+  const item = { id: uid(), name: '新连接', comment: '', baseUrl: '', model: '', secretRef: uid(), presetId: null };
   draft.value.connections.push(item);
   selectedConnection.value = item.id;
 }
@@ -900,9 +1005,11 @@ async function removeConnection(id: string) {
   }
   if (!(await Modal.confirm('删除连接', '删除此连接？保存成功后会清理此连接不再使用的本地密钥。'))) return;
   const connection = draft.value.connections.find(item => item.id === id)!;
-  pendingDeletes.add(connection.secretRef);
-  delete secrets[connection.secretRef];
-  clearedSecrets.delete(connection.secretRef);
+  if (!draft.value.connections.some(item => item.id !== id && item.secretRef === connection.secretRef)) {
+    pendingDeletes.add(connection.secretRef);
+    delete secrets[connection.secretRef];
+    clearedSecrets.delete(connection.secretRef);
+  }
   draft.value.connections = draft.value.connections.filter(item => item.id !== id);
 }
 async function addPreset() {
@@ -972,8 +1079,8 @@ function duplicatePreset() {
   selectedPreset.value = copy.id;
 }
 async function removePreset(id: string) {
-  if (draft.value.tasks.some(item => item.presetId === id)) {
-    error.value = '此预设仍被任务引用，请先修改或删除相关任务。';
+  if (draft.value.connections.some(item => item.presetId === id)) {
+    error.value = '此预设仍被 API 配置绑定，请先修改对应 API 的预设绑定。';
     return;
   }
   if (await Modal.confirm('删除预设', '删除此插件预设副本？酒馆原预设不受影响。')) {
@@ -1036,8 +1143,7 @@ function addTask() {
     triggerInterval: 1,
     retryCount: 0,
     prompt: '',
-    connectionId: draft.value.connections[0]?.id ?? '',
-    presetId: draft.value.presets[0]?.id ?? '',
+    connectionId: '',
     candidateBooks: [],
     scan: ScanSchema.parse({}),
     regexRules: [],
@@ -1096,6 +1202,40 @@ function setTarget(write: WriteSpec, kind: string) {
   --text: #e5e7eb;
   --muted: #9ca3af;
   color-scheme: dark;
+}
+.effective-config {
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1px solid #818cf8;
+  border-left: 4px solid #6366f1;
+  border-radius: 8px;
+  background: var(--panel);
+}
+.binding-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.binding-row span,
+.binding-summary {
+  font-size: 13px;
+  line-height: 1.7;
+}
+.binding-summary {
+  background: var(--soft);
+  border-radius: 6px;
+  padding: 10px;
+}
+.setup-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 16px;
+}
+.setup-steps button {
+  font-size: 12px;
 }
 fieldset {
   border: 0;

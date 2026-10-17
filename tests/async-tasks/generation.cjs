@@ -25,7 +25,7 @@ function preset(label) { return { openai_max_context: 10000, openai_max_tokens: 
     { identifier: 'charDescription', name: 'character', role: 'system', marker: true }],
   prompt_order: [{ character_id: 100001, order: ['main', 'worldInfoBefore', 'charDescription', 'chatHistory'].map(identifier => ({ identifier, enabled: true })) }],
   extensions: { preserved: { anything: true } } }; }
-function task(label) { return TaskSchema.parse({ id: label, name: label, enabled: true, eventName: '', historyDepth: 2, prompt: `TASK_${label}`, connectionId: label, presetId: label,
+function task(label) { return TaskSchema.parse({ id: label, name: label, enabled: true, eventName: '', historyDepth: 2, prompt: `TASK_${label}`, connectionId: label,
   candidateBooks: [{ bookName: label, entryUids: [1], nameRegexes: [] }], scan: {}, regexRules: [], output: { mode: 'return' } }); }
 function entry(label, override = {}) { return { uid: 1, world: label, comment: label, content: `WORLD_${label}`, key: [], keysecondary: [], disable: true,
   constant: true, selective: true, selectiveLogic: 0, order: 100, position: 0, decorators: [], group: '', probability: 100, useProbability: true,
@@ -36,7 +36,7 @@ const host = { chat: [{ mes: 'SHARED_HISTORY', name: 'Player', is_user: true }],
 global.window = { parent: { location: { origin: 'https://host.invalid' }, SillyTavern: { getContext: () => host } } };
 const identity = { chatKey: JSON.stringify(['chat-1', '', 'Char.png']), chatId: 'chat-1', messageId: 0, swipeId: 0, raw: host.chat[0] };
 const settings = emptySettings();
-for (const label of ['A', 'B']) { settings.tasks.push(task(label)); settings.connections.push({ id: label, name: label, comment: '', baseUrl: `https://${label}.invalid/v1`, model: label, secretRef: label }); settings.presets.push({ id: label, name: label, raw: preset(label) }); }
+for (const label of ['A', 'B']) { settings.tasks.push(task(label)); settings.connections.push({ id: label, name: label, comment: '', baseUrl: `https://${label}.invalid/v1`, model: label, secretRef: label, presetId: label }); settings.presets.push({ id: label, name: label, raw: preset(label) }); }
 const tokenFetch = async (url, init) => {
   const body = JSON.parse(init.body);
   return { ok: true, json: async () => url.pathname.endsWith('/encode') ? { ids: Array.from({ length: body.text.length }) } : { token_count: JSON.stringify(body).length + 2 } };
@@ -67,6 +67,19 @@ async function main() {
   }
   assert.equal(host.chat[0].mes, 'SHARED_HISTORY');
   assert.equal((await host.loadWorldInfo('A')).entries[1].disable, true);
+  const rebound = structuredClone(settings);
+  rebound.connections[0].presetId = 'B';
+  const sharedTasks = [settings.tasks[0], TaskSchema.parse({ ...settings.tasks[0], id: 'same-api' })];
+  for (const sharedTask of sharedTasks) {
+    const context = await createGenerationContext('rebound', sharedTask, rebound, identity, new AbortController(), '', { sticky: {}, cooldown: {} });
+    assert.equal(context.preset.temp_openai, 0.8, 'all API consumers use its changed preset binding');
+    assert.equal(context.connection.model, 'A', 'changing preset preserves the selected API/model');
+  }
+  assert.equal(a.preset.temp_openai, 0.2, 'already prepared runs keep their captured preset');
+  for (const presetId of [null, 'absent']) {
+    const invalid = structuredClone(settings); invalid.connections[0].presetId = presetId;
+    await assert.rejects(createGenerationContext('missing', settings.tasks[0], invalid, identity, new AbortController(), '', { sticky: {}, cooldown: {} }), error => error.code === 'missing_config' && error.phase === 'prepare');
+  }
   global.fetch = (url, init) => tokenFetch(new URL(url), init);
   const c = await createGenerationContext('scan', settings.tasks[0], settings, identity, new AbortController(), '', { sticky: {}, cooldown: {} });
   const unmatched = entry('A', { disable: false, constant: false, key: ['NOT_IN_HISTORY'] });

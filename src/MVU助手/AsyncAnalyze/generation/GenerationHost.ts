@@ -104,7 +104,7 @@ export async function createGenerationContext(
   const ctx = hostContext();
   assertMessage(identity, controller.signal);
   const connection = settings.connections.find(item => item.id === task.connectionId);
-  const record = settings.presets.find(item => item.id === task.presetId);
+  const record = settings.presets.find(item => item.id === connection?.presetId);
   if (!connection || !record) throw new TaskFailure('missing_config', '连接或预设引用不存在', 'prepare');
   const preset = parseNativePreset(structuredClone(record.raw));
   const rawHistory = task.historyDepth === 0 ? [] : ctx.chat.slice(Math.max(0, identity.messageId - task.historyDepth + 1), identity.messageId + 1);

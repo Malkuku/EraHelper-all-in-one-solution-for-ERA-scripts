@@ -4,6 +4,7 @@
       :settings="store.settings"
       :save-settings="store.replaceSettings"
       :set-secret="store.setSecret"
+      :get-secret="store.getSecret"
       :delete-secret="store.deleteSecret"
       :configuration-error="store.configurationError"
     >
