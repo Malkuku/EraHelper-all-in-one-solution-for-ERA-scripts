@@ -25,8 +25,8 @@ function preset(label) { return { openai_max_context: 10000, openai_max_tokens: 
     { identifier: 'charDescription', name: 'character', role: 'system', marker: true }],
   prompt_order: [{ character_id: 100001, order: ['main', 'worldInfoBefore', 'charDescription', 'chatHistory'].map(identifier => ({ identifier, enabled: true })) }],
   extensions: { preserved: { anything: true } } }; }
-function task(label) { return TaskSchema.parse({ id: label, name: label, enabled: true, eventName: '', historyDepth: 2, prompt: `TASK_${label}`, connectionId: label,
-  candidateBooks: [{ bookName: label, entryUids: [1], nameRegexes: [] }], scan: {}, regexRules: [], output: { mode: 'return' } }); }
+function task(label) { return TaskSchema.parse({ id: label, name: label, enabled: true, eventName: 'fixture', historyDepth: 2, prompt: `TASK_${label}`, connectionId: label,
+  candidateBooks: [{ bookName: label, entryUids: [1], nameRegexes: [] }], scan: {}, regexRules: [], output: { writes: [{ id: 'broadcast', target: { kind: 'event' }, extract: [] }] } }); }
 function entry(label, override = {}) { return { uid: 1, world: label, comment: label, content: `WORLD_${label}`, key: [], keysecondary: [], disable: true,
   constant: true, selective: true, selectiveLogic: 0, order: 100, position: 0, decorators: [], group: '', probability: 100, useProbability: true,
   hash: 1, ...override }; }
@@ -264,8 +264,8 @@ async function editableConfigurationChecks() {
     ['invalid task regex', value => { value.tasks[0].regexRules = [{ id: 'bad', stage: 'response', pattern: '[', flags: '', replacement: '', enabled: true }]; }],
     ['invalid regex flags', value => { value.tasks[0].regexRules = [{ id: 'bad', stage: 'prompt', pattern: 'x', flags: 'gg', replacement: '', enabled: true }]; }],
     ['invalid candidate regex', value => { value.tasks[0].candidateBooks[0].nameRegexes = [{ pattern: '[', flags: '' }]; }],
-    ['invalid extraction regex', value => { value.tasks[0].output = { mode: 'write', writes: [{ id: 'write', target: { kind: 'message' }, extract: [{ pattern: '[', flags: '' }], operation: { kind: 'append' } }] }; }],
-    ['unfinished output', value => { value.tasks[0].output = { mode: 'write', writes: [] }; }],
+    ['invalid extraction regex', value => { value.tasks[0].output = { writes: [{ id: 'write', target: { kind: 'message' }, extract: [{ pattern: '[', flags: '' }], operation: { kind: 'append' } }] }; }],
+    ['unfinished output', value => { value.tasks[0].output = { writes: [] }; }],
   ];
   try {
     for (const [label, mutate] of cases) {

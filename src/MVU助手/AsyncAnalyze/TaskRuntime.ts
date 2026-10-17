@@ -4,7 +4,7 @@ import { taskLog, showTaskNotice } from './TaskDiagnostics';
 import { useTaskStore } from '../stores/TaskStore';
 import { bindMessage, currentChatKey, createGenerationContext, MessageIdentity, assertMessage } from './generation/GenerationHost';
 import { generateTask } from './generation/TaskGeneration';
-import { commitTask, Journal, releaseJournal, rollbackJournal, validateTaskOutput } from './TaskCommit';
+import { commitTask, discardBroadcasts, flushBroadcasts, Journal, releaseJournal, rollbackJournal, validateTaskOutput } from './TaskCommit';
 import { eventNameIsValid, RunResult, TaskConfig, TaskFailure, TaskResult, Trigger, UnrecoveredJournal, KatTaskAPI } from './TaskSchema';
 import { validateTaskReadiness } from './TaskConfiguration';
 import { readTaskHistory, resetTaskTriggerBaseline, rollbackTaskState, settleTaskState, StateUndo, timedSnapshot, stateSequenceHighWater, StateSaveFailure } from './TaskState';
@@ -99,6 +99,9 @@ async function undoRun(run: Run) {
   taskLog('warn', '开始回滚常规链', { runId: run.id, tasks: run.completed.map(item => item.result.taskId) });
   const errors: string[] = [...run.result.rollback.errors];
   for (const completed of [...run.completed].sort((a, b) => (b.journal.commitOrder ?? 0) - (a.journal.commitOrder ?? 0))) {
+    if (completed.journal.broadcasts?.some(item => ['delivered', 'delivery_failed'].includes(item.result.status))) {
+      run.result.warnings.push({ code: 'broadcast_cannot_rollback', message: '已送达或可能部分送达的广播无法撤回，重新计算可能再次交付；接收方应使用载荷标识去重', target: completed.result.taskId });
+    }
     const failures = await rollbackJournal(completed.journal, run.result.warnings);
     let stateFailure = false;
     try { await rollbackTaskState(completed.state, run.identity); } catch (error) { stateFailure = true; failures.push(String(error)); }
@@ -112,7 +115,7 @@ async function undoRun(run: Run) {
 async function executeTask(run: Run, task: TaskConfig, snapshot: ReturnType<ReturnType<typeof useTaskStore>['snapshot']>, result: TaskResult) {
   const started = Date.now();
   const logIdentity = { runId: run.id, requestId: run.result.requestId, taskId: task.id, taskName: task.name, messageId: run.identity.messageId };
-  taskLog('info', '开始执行任务', { ...logIdentity, order: task.order, output: task.output.mode, trigger: run.result.trigger });
+  taskLog('info', '开始执行任务', { ...logIdentity, order: task.order, targets: task.output.writes.map(write => write.target.kind), trigger: run.result.trigger });
   const journal: Journal = { runId: run.id, edits: [] };
   let phase: TaskFailure['phase'] = 'prepare';
   let savedState: StateUndo | undefined;
@@ -146,15 +149,17 @@ async function executeTask(run: Run, task: TaskConfig, snapshot: ReturnType<Retu
     }
     result.text = text;
     phase = 'commit';
-    taskLog('info', '开始提交任务结果', { ...logIdentity, output: task.output.mode });
+    taskLog('info', '开始提交任务结果', { ...logIdentity, targets: task.output.writes.map(write => write.target.kind) });
     await commitTask(task, text, run.identity, journal, result, run.result, run.controller.signal);
     assertMessage(run.identity, run.controller.signal);
     savedState = await settleTaskState(task.id, run.identity, beforeState, generated!.timedState, run.id, run.sequence);
     assertMessage(run.identity, run.controller.signal);
     run.completed.push({ journal, state: savedState, result });
     result.status = 'succeeded';
+    if (run.result.trigger.kind === 'event') await flushBroadcasts(journal, result, run.result, run.identity, run.controller.signal);
     taskLog('info', '任务执行成功', { ...logIdentity, elapsedMs: Date.now() - started, writes: result.writes });
   } catch (error) {
+    discardBroadcasts(journal, '所属任务未提交成功，未广播');
     const cancelled = run.controller.signal.aborted;
     result.status = cancelled ? 'cancelled' : 'failed';
     result.error = cancelled ? { code: 'cancelled', message: '所属运行已取消或失败', phase } : errorOf(error, phase);
@@ -236,6 +241,7 @@ export async function runTaskChain(options: { messageId: number; trigger: Trigge
       const previous = latestChains.get(identity.chatKey);
       if (previous && previous.identity.raw === identity.raw && previous.identity.swipeId === identity.swipeId) {
         await undoRun(previous);
+        result.warnings.push(...previous.result.warnings.filter(warning => warning.code === 'broadcast_cannot_rollback'));
         assertMessage(identity, run.controller.signal);
         if (previous.result.rollback.errors.length) {
           result.rollback = structuredClone(previous.result.rollback);
@@ -287,12 +293,18 @@ export async function runTaskChain(options: { messageId: number; trigger: Trigge
       if (options.trigger.kind !== 'event') await undoRun(run);
       result.status = run.cancelled ? 'cancelled' : 'failed';
     } else {
+      if (options.trigger.kind !== 'event') {
+        // All text/MVU writes and task states are durable before any explicit result delivery.
+        for (const completed of run.completed) await flushBroadcasts(completed.journal, completed.result, result, identity, run.controller.signal);
+      }
       const succeeded = result.tasks.filter(task => task.status === 'succeeded').length;
       const failed = result.tasks.filter(task => ['failed', 'rollback_failed'].includes(task.status)).length;
-      result.status = failed ? (succeeded ? 'partial' : 'failed') : succeeded ? 'succeeded' : 'skipped';
+      result.status = run.cancelled ? 'cancelled' : failed ? (succeeded ? 'partial' : 'failed') : succeeded ? 'succeeded' : 'skipped';
+      if (run.cancelled && run.completed.some(item => item.journal.broadcasts?.some(broadcast => ['delivered', 'delivery_failed'].includes(broadcast.result.status))))
+        result.warnings.push({ code: 'broadcast_cannot_rollback', message: '取消发生在提交后的广播交付阶段，写入和状态已保留；已送达或可能部分送达的广播无法撤回' });
       if (!result.tasks.length) result.reason = 'no_matching_tasks';
     }
-    if (regular && result.status === 'succeeded') {
+    if (regular && run.completed.length && !run.failed && result.rollback.status === 'not_needed') {
       const previous = latestChains.get(identity.chatKey);
       previous?.completed.forEach(item => releaseJournal(item.journal));
       latestChains.set(identity.chatKey, run);

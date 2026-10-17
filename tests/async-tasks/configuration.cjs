@@ -81,11 +81,30 @@ async function main() {
   assert.equal(store.getSecret('reference-B'), 'PLUGIN_SECRET_B', 'inactive link credentials survive save/reload');
   const v2 = { ...structuredClone(config), schemaVersion: 2, connections: config.connections.map(({ activeLinkId, links, ...api }) => ({ ...api, baseUrl: links[0].baseUrl, model: links[0].model, secretRef: links[0].secretRef })) };
   const upgradedV2 = parseTaskSettings(v2);
-  assert.equal(upgradedV2.schemaVersion, 3);
+  assert.equal(upgradedV2.schemaVersion, 4);
   assert.equal(upgradedV2.connections[0].links[0].secretRef, 'reference-A');
   assert.equal(upgradedV2.connections[0].activeLinkId, upgradedV2.connections[0].links[0].id);
   assert.equal(Object.hasOwn(upgradedV2.connections[0], 'model'), false);
   assert.throws(() => ConfigSchema.parse({ ...config, connections: [{ ...config.connections[0], links: [config.connections[0].links[0], config.connections[0].links[0]] }] }), /重复/);
+  const historicalTask = TaskSchema.parse({ id: 'history', name: 'history', enabled: true, eventName: '', prompt: '', connectionId: 'connection', candidateBooks: [], scan: {}, regexRules: [], output: { writes: [] } });
+  for (const mode of ['return', 'event_result']) {
+    const v3 = { ...structuredClone(config), schemaVersion: 3, tasks: [{ ...historicalTask, output: { mode } }] };
+    const migratedOutput = parseTaskSettings(v3);
+    assert.equal(migratedOutput.schemaVersion, 4);
+    assert.deepEqual(migratedOutput.tasks[0].output, { writes: [] }, 'old mistaken modes require explicit user selection');
+    assert.equal(v3.tasks[0].output.mode, mode, 'migration never mutates source');
+  }
+  for (const mode of ['return', 'event_result']) {
+    for (const schemaVersion of [1, 2]) {
+      const old = { ...structuredClone(v2), schemaVersion, tasks: [{ ...historicalTask, presetId: 'preset', output: { mode } }] };
+      const upgraded = parseTaskSettings(old);
+      assert.deepEqual(upgraded.tasks[0].output, { writes: [] }, `v${schemaVersion} ${mode} requires explicit target selection`);
+      assert.equal(Object.hasOwn(upgraded.tasks[0].output, 'mode'), false);
+    }
+  }
+  const oldWrite = { id: 'message', target: { kind: 'message' }, extract: [], operation: { kind: 'append' } };
+  const migratedWrite = parseTaskSettings({ ...structuredClone(config), schemaVersion: 3, tasks: [{ ...historicalTask, output: { mode: 'write', writes: [oldWrite] } }] });
+  assert.deepEqual(migratedWrite.tasks[0].output, { writes: [oldWrite] });
   const switched = structuredClone(config);
   switched.connections[0].activeLinkId = 'backup';
   await store.replaceSettings(switched); await store.load();
@@ -100,18 +119,19 @@ async function main() {
   assert.equal(parseRegexPresets([{ name: '坏表达式', regex: '/[/g' }])[0].pattern, '[', 'an unfinished expression can be imported for editing');
 
   // v3 has multiple links and one preset binding per API; incomplete referenced resources are editable too.
-  const boundTask = TaskSchema.parse({ id: 'bound-task', name: 'bound-task', enabled: true, eventName: '', prompt: '', connectionId: 'connection', candidateBooks: [], scan: {}, regexRules: [], output: { mode: 'return' } });
-  const sharedResultConfig = { ...config, tasks: [{ ...boundTask, eventName: 'frontend:event', output: { mode: 'event_result' } }] };
+  const boundTask = TaskSchema.parse({ id: 'bound-task', name: 'bound-task', enabled: true, eventName: '', prompt: '', connectionId: 'connection', candidateBooks: [], scan: {}, regexRules: [], output: { writes: [{ id: 'broadcast', target: { kind: 'event' }, extract: [] }] } });
+  const sharedResultConfig = { ...config, tasks: [{ ...boundTask, eventName: 'frontend:event', output: { writes: [{ id: 'broadcast', target: { kind: 'event' }, extract: [{ pattern: '<final>.*?</final>', flags: 'gs' }] }] } }] };
   await store.replaceSettings(sharedResultConfig); await store.load();
-  assert.equal(store.snapshot().tasks[0].output.mode, 'event_result', 'shared event result mode survives saving and loading');
+  assert.deepEqual(store.snapshot().tasks[0].output.writes[0].target, { kind: 'event' }, 'event target has no separate event name and survives saving/loading');
   assert.equal(JSON.parse(JSON.stringify(store.snapshot())).tasks[0].eventName, 'frontend:event');
+  assert.deepEqual(store.snapshot().tasks[0].output, sharedResultConfig.tasks[0].output, 'per-write extraction survives persisted broadcast target reload');
   assert.equal(Object.hasOwn(boundTask, 'presetId'), false);
   assert.equal(ConfigSchema.parse({ ...config, connections: [{ ...config.connections[0], presetId: null }] }).connections[0].presetId, null);
   assert.equal(ConfigSchema.parse({ ...config, tasks: [boundTask], connections: [{ ...config.connections[0], presetId: null }] }).tasks.length, 1);
   assert.equal(ConfigSchema.parse({ ...config, connections: [{ ...config.connections[0], presetId: 'absent' }] }).connections[0].presetId, 'absent');
   assert.equal(ConfigSchema.parse({ ...config, tasks: [{ ...boundTask, connectionId: 'absent' }] }).tasks[0].connectionId, 'absent');
   const unfinished = structuredClone(config);
-  unfinished.tasks = [{ ...boundTask, name: '', connectionId: '', eventName: 'loop:result', regexRules: [{ id: 'unfinished', stage: 'response', pattern: '[', flags: 'gg', replacement: '', enabled: true }], output: { mode: 'write', writes: [] } }];
+  unfinished.tasks = [{ ...boundTask, name: '', connectionId: '', eventName: 'loop:result', regexRules: [{ id: 'unfinished', stage: 'response', pattern: '[', flags: 'gg', replacement: '', enabled: true }], output: { writes: [] } }];
   unfinished.connections = [{ ...config.connections[0], name: '', activeLinkId: null, links: [], presetId: null }];
   unfinished.presets = [{ ...config.presets[0], name: '', raw: { openai_max_context: 0, openai_max_tokens: 0 } }];
   unfinished.regexPresets = [{ ...config.regexPresets[0], name: '', pattern: '[', flags: 'gg' }];
@@ -126,9 +146,9 @@ async function main() {
     presets: [...config.presets, { id: 'other-preset', name: '另一预设', raw: { temperature: 0.7 } }],
     connections: [config.connections[0], { ...config.connections[0], id: 'connection:preset:other-preset', name: '未使用 API' }].map(({ presetId, activeLinkId, links, ...connection }) => ({ ...connection, baseUrl: links[0].baseUrl, model: links[0].model, secretRef: links[0].secretRef })),
     tasks: [
-      { ...boundTask, id: 'original-a', presetId: 'preset' },
-      { ...boundTask, id: 'original-b', presetId: 'other-preset' },
-      { ...boundTask, id: 'same-pair', presetId: 'other-preset' },
+      { ...boundTask, output: { mode: 'write', writes: boundTask.output.writes }, id: 'original-a', presetId: 'preset' },
+      { ...boundTask, output: { mode: 'write', writes: boundTask.output.writes }, id: 'original-b', presetId: 'other-preset' },
+      { ...boundTask, output: { mode: 'write', writes: boundTask.output.writes }, id: 'same-pair', presetId: 'other-preset' },
     ],
     groups: [{ id: 'migrated-group', name: '迁移规则组', comment: '', taskIds: ['original-a', 'original-b', 'same-pair'] }], activeGroupId: 'migrated-group',
   };
@@ -137,7 +157,7 @@ async function main() {
   await store.load();
   assert.equal(store.configurationError, '');
   const migrated = store.snapshot();
-  assert.equal(migrated.schemaVersion, 3);
+  assert.equal(migrated.schemaVersion, 4);
   assert.equal(migrated.connections.length, 3, 'one API used by two presets must split, retaining unused API');
   assert.equal(new Set(migrated.connections.map(connection => connection.id)).size, 3, 'split IDs cannot collide with existing APIs');
   assert.equal(migrated.connections.find(connection => connection.name === '未使用 API').presetId, null);
@@ -155,7 +175,7 @@ async function main() {
   assert.deepEqual(legacy, original, 'loading migration cannot mutate its input');
   await store.replaceSettings(migrated); await store.load();
   assert.deepEqual(store.snapshot(), migrated, 'v2 binding and upgraded task routing survive persistence/reload');
-  assert.equal(variables.async_task_config.schemaVersion, 3);
+  assert.equal(variables.async_task_config.schemaVersion, 4);
   assert.deepEqual(parseTaskSettings(original), migrated, 'repeated v1 imports preserve deterministic routing');
   assert.throws(() => parseTaskSettings({ ...original, tasks: [{ ...original.tasks[0], presetId: 'absent' }] }), /预设不存在/);
   assert.throws(() => parseTaskSettings({ ...original, tasks: [...original.tasks, { ...original.tasks[0], id: 'dangling', connectionId: 'connection:preset:other-preset:1' }] }), /API.*不存在|连接.*不存在/, 'a dangling v1 reference cannot be captured by a generated split ID');
@@ -231,6 +251,6 @@ async function main() {
   await store.load();
   assert(store.configurationError.includes('无效'));
   assert.deepEqual(variables.unrelated, unrelated);
-  console.log('PASS: v3 multiple-link credential retention, v1/v2 pair-preserving migration/reload and dangling/duplicate rejection, reusable regex library, scoped plaintext cleanup, secret references/namespaces and explicit corruption errors');
+  console.log('PASS: v4 output migration, multiple-link credential retention, v1/v2 pair-preserving migration/reload and dangling/duplicate rejection, reusable regex library, scoped plaintext cleanup, secret references/namespaces and explicit corruption errors');
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

@@ -1,6 +1,6 @@
 import { withTargetLocks } from '../utils/TargetLocks';
 import { MessageIdentity, assertMessage } from './generation/GenerationHost';
-import { matchTaskRegex, RunResult, TaskConfig, TaskFailure, TaskResult, WriteResult, WriteSpec } from './TaskSchema';
+import { eventOutputChannel, EventWritePayload, matchTaskRegex, RunResult, TaskConfig, TaskFailure, TaskResult, TextWriteSpec, WriteResult, WriteSpec } from './TaskSchema';
 
 type TextTarget = { kind: 'message' } | { kind: 'worldbook'; book: string; uid: number };
 type TextEdit = { kind: 'text'; key: string; target: TextTarget; identity: MessageIdentity; start: number; before: string; after: string; overlapped: boolean; result: WriteResult; owner: string;
@@ -10,7 +10,8 @@ type ValueEdit = { kind: 'mvu'; identity: MessageIdentity; path: string[]; befor
 type CreateEdit = { kind: 'created'; identity: MessageIdentity; book: string; uid: number; initial: WorldbookEntry; result: WriteResult };
 type CreateAttempt = { kind: 'create_pending'; identity: MessageIdentity; book: string; name: string; beforeUids: number[]; result: WriteResult };
 export type JournalEdit = TextEdit | ValueEdit | CreateEdit | CreateAttempt;
-export type Journal = { runId: string; edits: JournalEdit[]; commitOrder?: number };
+export type Journal = { runId: string; edits: JournalEdit[]; commitOrder?: number;
+  broadcasts?: { eventName: string; payload: EventWritePayload; result: WriteResult }[] };
 const trackedTextEdits = new Set<TextEdit>();
 const trackedMvuEdits = new Set<ValueEdit>();
 const trustedTargetContent = new Map<string, string>();
@@ -55,11 +56,11 @@ function extract(text: string, write: WriteSpec): string {
 }
 export function validateTaskOutput(task: TaskConfig, text: string) {
   if (!text.trim()) throw new TaskFailure('empty_result', '任务结果为空', 'extract');
-  if (task.output.mode === 'write') for (const write of task.output.writes) {
+  for (const write of task.output.writes) {
     if (!extract(text, write).trim()) throw new TaskFailure('empty_result', `写入 ${write.id} 的提取内容为空`, 'extract');
   }
 }
-function editsFor(text: string, content: string, write: WriteSpec) {
+function editsFor(text: string, content: string, write: TextWriteSpec) {
   if (write.operation.kind === 'append') return [{ start: text.length, before: '', after: (text ? '\n' : '') + content }];
   const matches = matchTaskRegex(text, write.operation.regex);
   if (!matches.length) throw new TaskFailure('conflict', `写入 ${write.id} 的目标替换条件已失效`, 'commit');
@@ -114,7 +115,7 @@ async function writeText(target: TextTarget, identity: MessageIdentity, text: st
     return entries.map(entry => entry.uid === target.uid ? { ...entry, content: text } : entry);
   });
 }
-async function worldTarget(write: WriteSpec & { target: Extract<WriteSpec['target'], { kind: 'worldbook' }> }, identity: MessageIdentity, journal: Journal, result: WriteResult): Promise<TextTarget> {
+async function worldTarget(write: TextWriteSpec & { target: Extract<TextWriteSpec['target'], { kind: 'worldbook' }> }, identity: MessageIdentity, journal: Journal, result: WriteResult): Promise<TextTarget> {
   const target = write.target;
   result.target = `${bookKey(target.bookName)}:${target.entryUid ?? target.entryName}`;
   const entries = await getWorldbook(target.bookName);
@@ -138,12 +139,11 @@ async function worldTarget(write: WriteSpec & { target: Extract<WriteSpec['targe
   return { kind: 'worldbook', book: target.bookName, uid: entry.uid };
 }
 export async function commitTask(task: TaskConfig, text: string, identity: MessageIdentity, journal: Journal, taskResult: TaskResult, runResult: RunResult, signal: AbortSignal) {
-  if (task.output.mode === 'return' || task.output.mode === 'event_result') return;
   const writes = task.output.writes;
   const prepared = writes.map(write => ({ write, content: extract(text, write) }));
   if (prepared.some(item => !item.content.trim())) throw new TaskFailure('empty_result', '提取内容为空，未执行写入', 'extract');
   if (writes.some(write => write.target.kind === 'message')) await waitGlobalInitialized('Mvu');
-  const keys = writes.map(write => write.target.kind === 'message' ? messageKey(identity) : bookKey(write.target.bookName));
+  const keys = writes.flatMap(write => write.target.kind === 'event' ? [] : [write.target.kind === 'message' ? messageKey(identity) : bookKey(write.target.bookName)]);
   await withTargetLocks(keys, async () => {
     assertMessage(identity, signal);
     journal.commitOrder = ++commitSequence;
@@ -159,13 +159,23 @@ export async function commitTask(task: TaskConfig, text: string, identity: Messa
       assertMessage(identity, signal);
       const writeResult: WriteResult = { writeId: write.id, target: '', status: 'failed' };
       taskResult.writes.push(writeResult);
+      if (write.target.kind === 'event') {
+        const eventName = eventOutputChannel(task.eventName);
+        writeResult.target = `event:${eventName}`;
+        writeResult.status = 'pending';
+        (journal.broadcasts ??= []).push({ eventName, result: writeResult, payload: {
+          version: 1, scriptId: getScriptId(), runId: runResult.runId, requestId: runResult.requestId,
+          taskId: task.id, writeId: write.id, chatId: identity.chatId, messageId: identity.messageId, swipeId: identity.swipeId, text: content,
+        } });
+        continue;
+      }
       const target: TextTarget = write.target.kind === 'message' ? { kind: 'message' } : await worldTarget(write as any, identity, journal, writeResult);
       const key = targetKey(identity, target);
       writeResult.target = key;
       let latest = await readText(target, identity);
       observeTarget(key, latest);
       const created = target.kind === 'worldbook' && journal.edits.some(edit => edit.kind === 'created' && edit.result === writeResult);
-      const edits = created ? [{ start: 0, before: '', after: content }] : editsFor(latest, content, write);
+      const edits = created ? [{ start: 0, before: '', after: content }] : editsFor(latest, content, write as TextWriteSpec);
       for (const edit of edits) {
         assertMessage(identity, signal);
         const after = latest.slice(0, edit.start) + edit.after + latest.slice(edit.start + edit.before.length);
@@ -208,6 +218,7 @@ export async function commitTask(task: TaskConfig, text: string, identity: Messa
   }
 }
 export async function rollbackJournal(journal: Journal, warnings: RunResult['warnings']): Promise<string[]> {
+  discardBroadcasts(journal, '所属任务或运行未提交成功，未广播');
   const errors: string[] = [];
   const edits = [...journal.edits].reverse();
   const failedEdits = new Set<JournalEdit>();
@@ -272,6 +283,34 @@ export async function rollbackJournal(journal: Journal, warnings: RunResult['war
   }
   journal.edits = journal.edits.filter(edit => failedEdits.has(edit));
   return errors;
+}
+export function discardBroadcasts(journal: Journal, reason: string) {
+  for (const broadcast of journal.broadcasts ?? []) if (broadcast.result.status === 'pending') {
+    broadcast.result.status = 'not_delivered'; broadcast.result.error = reason;
+  }
+}
+/** Delivery is irreversible and deliberately outside generation retry and rollback. */
+export async function flushBroadcasts(journal: Journal, taskResult: TaskResult, runResult: RunResult, identity: MessageIdentity, signal: AbortSignal) {
+  for (const broadcast of journal.broadcasts ?? []) {
+    if (broadcast.result.status !== 'pending') continue;
+    try { assertMessage(identity, signal); }
+    catch {
+      discardBroadcasts(journal, '广播交付前运行已取消或消息身份已变化');
+      taskResult.status = 'failed';
+      taskResult.error = { code: 'broadcast_delivery_stopped', message: '写入与状态已提交，广播交付因取消或消息身份变化停止；已送达广播无法撤回', phase: 'commit' };
+      runResult.warnings.push({ code: 'broadcast_delivery_stopped', message: taskResult.error.message });
+      break;
+    }
+    try {
+      await eventEmit(broadcast.eventName, structuredClone(broadcast.payload));
+      broadcast.result.status = 'delivered';
+    } catch (error) {
+      const message = `广播监听器执行失败，可能已部分送达，已送达内容无法撤回；未重试生成：${error instanceof Error ? error.message : String(error)}`;
+      broadcast.result.status = 'delivery_failed'; broadcast.result.error = message;
+      taskResult.status = 'failed'; taskResult.error = { code: 'broadcast_delivery_failed', message, phase: 'commit' };
+      runResult.warnings.push({ code: 'broadcast_delivery_failed', message, target: broadcast.result.target });
+    }
+  }
 }
 export function releaseJournal(journal: Journal) {
   for (const edit of journal.edits) {

@@ -831,70 +831,78 @@
                   </section>
                   <section v-show="taskTab === 'output'">
                     <h4>结果处理</h4>
-                    <label
-                      ><span class="field-label"
-                        >输出方式<Tooltip
-                          content="仅返回保留运行结果；写入目标可更新正文或世界书；事件结果广播将结果发送给监听该事件的其它前端。" /></span
-                      ><select
-                        aria-label="输出方式"
-                        :value="task.output.mode"
-                        @change="setOutput(($event.target as HTMLSelectElement).value)"
-                      >
-                        <option value="return">仅返回结果</option>
-                        <option value="write">写入目标</option>
-                        <option value="event_result">事件结果广播</option>
-                      </select></label
-                    >
-                    <PromptTools
-                      v-if="task.output.mode === 'event_result'"
-                      variant="event"
-                      :event-name="task.eventName"
-                      :task-id="task.id"
-                    />
-                    <p v-if="task.output.mode === 'event_result'" class="hint">
-                      支持所有触发方式。事件执行广播到“事件名:result”，其它执行广播到“kat_task_chain:result”，附带完整响应
-                      text、请求、任务和楼层标识。结果不持久存储。
+                    <p class="hint">
+                      模型响应先经过响应阶段正则，再按各目标的提取规则处理。可同时写入正文、世界书和广播事件。
                     </p>
-                    <template v-if="task.output.mode === 'write'"
-                      ><p class="hint">写入成功才视为任务成功；世界书按 UID 定位，目标不存在时自动创建并启用。</p>
-                      <button @click="task.output.writes.push(newWrite())">+ 添加写入</button>
-                      <div v-for="(write, writeIndex) in task.output.writes" :key="write.id" class="card">
-                        <div class="toolbar">
-                          <label
-                            ><span class="field-label"
-                              >目标<Tooltip
-                                content="当前正文消息写入本轮目标消息；世界书按条目 UID 定位，缺失目标会按配置名称创建并启用条目。" /></span
-                            ><select
-                              aria-label="目标"
-                              :value="write.target.kind"
-                              @change="setTarget(write, ($event.target as HTMLSelectElement).value)"
-                            >
-                              <option value="message">当前正文消息</option>
-                              <option value="worldbook">世界书条目</option>
-                            </select></label
-                          ><button @click="move(task.output.writes, writeIndex, -1)">上移</button
-                          ><button @click="move(task.output.writes, writeIndex, 1)">下移</button
-                          ><button class="danger" @click="task.output.writes.splice(writeIndex, 1)">删除写入</button>
-                        </div>
-                        <WorldbookPicker
-                          v-if="write.target.kind === 'worldbook'"
-                          v-model:book-name="write.target.bookName"
-                          v-model:entry-uid="write.target.entryUid"
-                          v-model:entry-name="write.target.entryName"
-                          single
-                        />
-                        <p class="hint">提取规则分别匹配完整响应，命中结果按列表顺序换行拼接；空列表使用完整响应。</p>
-                        <div v-for="(extract, index) in write.extract" :key="index" class="regex-row">
-                          <RegexField
-                            v-model="write.extract[index]"
-                            purpose="extract"
-                            :presets="draft.regexPresets"
-                            label="响应提取正则"
-                            @test="openRegex"
-                          /><button @click="write.extract.splice(index, 1)">删除</button>
-                        </div>
-                        <button @click="write.extract.push({ pattern: '', flags: '' })">+ 提取正则</button>
+                    <p v-if="!task.output.writes.length" class="warning" role="status">
+                      尚未配置结果目标，请添加写入后再运行。旧版“仅返回结果 / 事件结果广播”配置需要重新选择目标。
+                    </p>
+                    <button @click="task.output.writes.push(newWrite())">+ 添加写入</button>
+                    <div v-for="(write, writeIndex) in task.output.writes" :key="write.id" class="card">
+                      <div class="toolbar">
                         <label
+                          ><span class="field-label"
+                            >目标<Tooltip
+                              content="正文和世界书保存处理后的文本；事件广播把同样经过处理和提取的文本发送给约定事件的接收方。一个任务可配置多个目标。" /></span
+                          ><select
+                            aria-label="目标"
+                            :value="write.target.kind"
+                            @change="setTarget(write, ($event.target as HTMLSelectElement).value)"
+                          >
+                            <option value="message">当前正文消息</option>
+                            <option value="worldbook">世界书条目</option>
+                            <option value="event">事件广播</option>
+                          </select></label
+                        ><button @click="move(task.output.writes, writeIndex, -1)">上移</button
+                        ><button @click="move(task.output.writes, writeIndex, 1)">下移</button
+                        ><button class="danger" @click="task.output.writes.splice(writeIndex, 1)">删除写入</button>
+                      </div>
+                      <WorldbookPicker
+                        v-if="write.target.kind === 'worldbook'"
+                        v-model:book-name="write.target.bookName"
+                        v-model:entry-uid="write.target.entryUid"
+                        v-model:entry-name="write.target.entryName"
+                        single
+                      />
+                      <template v-if="write.target.kind === 'event'">
+                        <label
+                          ><span class="field-label"
+                            >附加事件名<Tooltip
+                              content="与基本设置共用同一个任务事件名。广播频道自动加上 :output 后缀，不需要另配接收事件名。"
+                          /></span>
+                          <input
+                            v-model="task.eventName"
+                            aria-label="广播使用的附加事件名"
+                            placeholder="先填写任务附加事件名"
+                          />
+                        </label>
+                        <p class="hint" role="status">
+                          {{
+                            task.eventName
+                              ? '广播频道：' + eventOutputChannel(task.eventName)
+                              : '请先填写附加事件名，广播频道将自动使用该名称加 :output。'
+                          }}
+                        </p>
+                        <p class="hint">
+                          成功提交后广播提取结果。广播不保存、不重放，已送达内容无法撤回；重新计算可能再次发送，接收方应去重。
+                        </p>
+                        <PromptTools variant="event" />
+                      </template>
+                      <p class="hint">
+                        提取规则分别匹配响应阶段正则处理后的全文，命中结果按列表顺序换行拼接；空列表使用处理后的全文。
+                      </p>
+                      <div v-for="(extract, index) in write.extract" :key="index" class="regex-row">
+                        <RegexField
+                          v-model="write.extract[index]"
+                          purpose="extract"
+                          :presets="draft.regexPresets"
+                          label="响应提取正则"
+                          @test="openRegex"
+                        /><button @click="write.extract.splice(index, 1)">删除</button>
+                      </div>
+                      <button @click="write.extract.push({ pattern: '', flags: '' })">+ 提取正则</button>
+                      <template v-if="'operation' in write"
+                        ><label
                           ><span class="field-label"
                             >写入操作<Tooltip
                               content="追加会把提取结果写在目标末尾；正则替换会在目标内容中寻找匹配片段，并替换成提取结果。" /></span
@@ -921,8 +929,8 @@
                             @test="openRegex"
                           />
                         </div>
-                      </div>
-                    </template>
+                      </template>
+                    </div>
                   </section>
                 </div>
                 <footer class="editor-footer">
@@ -995,6 +1003,7 @@ import '../../design.scss';
 import { klona } from 'klona';
 import {
   ConfigSchema,
+  eventOutputChannel,
   parseTaskSettings,
   ScanSchema,
   type TaskSettings,
@@ -1697,7 +1706,7 @@ function addTask() {
     candidateBooks: [],
     scan: ScanSchema.parse({}),
     regexRules: [],
-    output: { mode: 'return' },
+    output: { writes: [] },
   };
   draft.value.tasks.push(config);
   selectedTask.value = config.id;
@@ -1722,16 +1731,17 @@ function addRegex() {
 function newWrite(): WriteSpec {
   return { id: uid(), target: { kind: 'message' }, extract: [], operation: { kind: 'append' } };
 }
-function setOutput(mode: string) {
-  task.value!.output =
-    mode === 'write'
-      ? { mode: 'write', writes: [newWrite()] }
-      : mode === 'event_result'
-        ? { mode: 'event_result' }
-        : { mode: 'return' };
-}
 function setTarget(write: WriteSpec, kind: string) {
-  write.target = kind === 'worldbook' ? { kind: 'worldbook', bookName: '', entryName: '' } : { kind: 'message' };
+  const index = task.value!.output.writes.indexOf(write);
+  const base = { id: write.id, extract: write.extract };
+  task.value!.output.writes[index] =
+    kind === 'event'
+      ? { ...base, target: { kind: 'event' } }
+      : {
+          ...base,
+          target: kind === 'worldbook' ? { kind: 'worldbook', bookName: '', entryName: '' } : { kind: 'message' },
+          operation: 'operation' in write ? write.operation : { kind: 'append' },
+        };
 }
 </script>
 

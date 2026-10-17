@@ -43,7 +43,7 @@ export const ScanSchema = z.object({
   matchWholeWords: z.boolean().default(false), useGroupScoring: z.boolean().default(false), maxRecursionSteps: integer.default(0),
 });
 export type ScanSettings = z.infer<typeof ScanSchema>;
-export const WriteSchema = z.object({
+export const TextWriteSchema = z.object({
   id: z.string().min(1),
   target: z.discriminatedUnion('kind', [z.object({ kind: z.literal('message') }), z.object({
     kind: z.literal('worldbook'), bookName: z.string(), entryUid: integer.optional(), entryName: z.string(),
@@ -51,7 +51,17 @@ export const WriteSchema = z.object({
   extract: z.array(RegexSpecSchema),
   operation: z.discriminatedUnion('kind', [z.object({ kind: z.literal('append') }), z.object({ kind: z.literal('replace'), regex: RegexSpecSchema })]),
 });
+export type TextWriteSpec = z.infer<typeof TextWriteSchema>;
+export const EventWriteSchema = z.object({
+  id: z.string().min(1), target: z.object({ kind: z.literal('event') }), extract: z.array(RegexSpecSchema),
+});
+export const eventOutputChannel = (eventName: string) => `${eventName}:output`;
+export const WriteSchema = z.union([TextWriteSchema, EventWriteSchema]);
 export type WriteSpec = z.infer<typeof WriteSchema>;
+export type EventWritePayload = {
+  version: 1; scriptId: string; runId: string; requestId: string; taskId: string; writeId: string;
+  chatId: string; messageId: number; swipeId: number; text: string;
+};
 export const INTERNAL_EVENTS = new Set(['kat_task_chain:result', 'kat_task_chain:rerun', 'kat_task_run:cancel']);
 export const eventNameIsValid = (name: string) => name === '' || (name === name.trim() && !name.endsWith(':result') && !INTERNAL_EVENTS.has(name)
   && !(typeof tavern_events !== 'undefined' && Object.values(tavern_events).includes(name as never))
@@ -68,9 +78,9 @@ export const TaskSchema = z.object({
   regexRules: z.array(RegexSpecSchema.safeExtend({
     id: z.string().min(1), stage: z.enum(['history', 'worldinfo', 'prompt', 'response']), replacement: z.string(), enabled: z.boolean(),
   })),
-  output: z.discriminatedUnion('mode', [z.object({ mode: z.literal('return') }), z.object({ mode: z.literal('event_result') }), z.object({ mode: z.literal('write'), writes: z.array(WriteSchema) })]),
+  output: z.object({ writes: z.array(WriteSchema) }),
 }).superRefine((task, ctx) => {
-  for (const [field, list] of [['regexRules', task.regexRules], ['writes', task.output.mode === 'write' ? task.output.writes : []]] as const) {
+  for (const [field, list] of [['regexRules', task.regexRules], ['writes', task.output.writes]] as const) {
     const ids = list.map(item => item.id);
     if (new Set(ids).size !== ids.length) ctx.addIssue({ code: 'custom', path: field === 'writes' ? ['output', field] : [field], message: 'ID 重复' });
   }
@@ -79,7 +89,7 @@ export type TaskConfig = z.infer<typeof TaskSchema>;
 export const ApiLinkSchema = z.object({ id: z.string().min(1), name: z.string(), baseUrl: z.string(), model: z.string(), secretRef: z.string().min(1) });
 export type ApiLink = z.infer<typeof ApiLinkSchema>;
 export const ConfigSchema = z.object({
-  schemaVersion: z.literal(3), activeGroupId: z.string().nullable(), automatic: z.object({ minReceivedChars: integer.default(300) }),
+  schemaVersion: z.literal(4), activeGroupId: z.string().nullable(), automatic: z.object({ minReceivedChars: integer.default(300) }),
   groups: z.array(z.object({ id: z.string().min(1), name: z.string(), comment: z.string(), taskIds: z.array(z.string()) })),
   tasks: z.array(TaskSchema),
   regexPresets: z.array(RegexPresetSchema).default([]),
@@ -107,13 +117,22 @@ export const ConfigSchema = z.object({
   }
 });
 export type TaskSettings = z.infer<typeof ConfigSchema>;
-export const emptySettings = (): TaskSettings => ({ schemaVersion: 3, activeGroupId: null, automatic: { minReceivedChars: 300 }, groups: [], tasks: [], connections: [], presets: [], regexPresets: [] });
-/** Upgrade independent-task v1/v2 only; v3 is the sole internal representation. */
+export const emptySettings = (): TaskSettings => ({ schemaVersion: 4, activeGroupId: null, automatic: { minReceivedChars: 300 }, groups: [], tasks: [], connections: [], presets: [], regexPresets: [] });
+/** Upgrade persisted v1/v2/v3 at this sole boundary; v4 is the internal model. */
 export function parseTaskSettings(value: unknown): TaskSettings {
   const version = value && typeof value === 'object' ? (value as { schemaVersion?: unknown }).schemaVersion : undefined;
+  const upgradeOutputs = (config: Record<string, unknown>) => ConfigSchema.parse({ ...config, schemaVersion: 4,
+    tasks: z.array(z.object({ output: z.discriminatedUnion('mode', [
+      z.object({ mode: z.literal('return') }), z.object({ mode: z.literal('event_result') }),
+      z.object({ mode: z.literal('write'), writes: z.array(WriteSchema) }),
+    ]) }).passthrough()).parse(config.tasks).map(task => ({ ...task,
+      output: { writes: task.output.mode === 'write' ? task.output.writes : [] },
+    })),
+  });
+  if (version === 3) return upgradeOutputs(value as Record<string, unknown>);
   const upgradeLinks = (config: Record<string, unknown>) => {
     const connections = z.array(z.object({ id: z.string(), name: z.string(), baseUrl: z.string(), model: z.string(), secretRef: z.string().min(1) }).passthrough()).parse(config.connections);
-    return ConfigSchema.parse({ ...config, schemaVersion: 3, connections: connections.map(({ baseUrl, model, secretRef, ...connection }) => ({
+    return upgradeOutputs({ ...config, connections: connections.map(({ baseUrl, model, secretRef, ...connection }) => ({
       ...connection, activeLinkId: connection.id + ':link', links: [{ id: connection.id + ':link', name: connection.name || '链接 1', baseUrl, model, secretRef }],
     })) });
   };
@@ -156,7 +175,7 @@ export type RequestDiagnostic = {
   httpStatus?: number; statusText?: string; backendCode?: string; backendType?: string; response?: string;
 };
 export type TaskError = { code: string; message: string; phase: 'prepare' | 'scan' | 'template' | 'request' | 'extract' | 'commit' | 'rollback'; details?: RequestDiagnostic };
-export type WriteResult = { writeId: string; target: string; status: 'committed' | 'failed' | 'rolled_back' | 'rollback_failed'; error?: string };
+export type WriteResult = { writeId: string; target: string; status: 'committed' | 'failed' | 'rolled_back' | 'rollback_failed' | 'pending' | 'delivered' | 'delivery_failed' | 'not_delivered'; error?: string };
 export type TaskResult = {
   taskId: string; taskName: string; status: 'succeeded' | 'failed' | 'cancelled' | 'skipped' | 'rolled_back' | 'rollback_failed';
   attempts: number; text?: string; error?: TaskError; writes: WriteResult[];

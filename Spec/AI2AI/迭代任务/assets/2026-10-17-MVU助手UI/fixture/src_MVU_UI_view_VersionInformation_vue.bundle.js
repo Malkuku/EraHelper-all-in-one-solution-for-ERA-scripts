@@ -157,6 +157,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var vue__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vue */ "./node_modules/.pnpm/vue@3.5.26_typescript@6.0.0-dev.20250807/node_modules/vue/dist/vue.runtime.esm-bundler.js");
 /* harmony import */ var _MVU_stores_UIStore__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @/MVU助手/stores/UIStore */ "./src/MVU助手/stores/UIStore.ts");
+/* harmony import */ var _release_json__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../release.json */ "./src/MVU助手/release.json");
+
 
 
 
@@ -166,7 +168,7 @@ __webpack_require__.r(__webpack_exports__);
         __expose();
         const uiStore = (0,_MVU_stores_UIStore__WEBPACK_IMPORTED_MODULE_1__.useUiStore)();
         // 当前版本号
-        const currentVersion = (0,vue__WEBPACK_IMPORTED_MODULE_0__.ref)('v1.1.0');
+        const currentVersion = `v${_release_json__WEBPACK_IMPORTED_MODULE_2__.version}`;
         // 作者信息
         const author = (0,vue__WEBPACK_IMPORTED_MODULE_0__.ref)({
             name: 'cat987',
@@ -174,6 +176,11 @@ __webpack_require__.r(__webpack_exports__);
         });
         // 版本更新历史记录
         const versionHistory = (0,vue__WEBPACK_IMPORTED_MODULE_0__.ref)([
+            {
+                version: currentVersion,
+                date: _release_json__WEBPACK_IMPORTED_MODULE_2__.date,
+                changes: _release_json__WEBPACK_IMPORTED_MODULE_2__.changes,
+            },
             {
                 version: 'v1.1.0',
                 date: '2026-03-25',
@@ -219,13 +226,11 @@ const _hoisted_1 = { class: "section" };
 const _hoisted_2 = { class: "author-info" };
 const _hoisted_3 = ["href"];
 const _hoisted_4 = { class: "section" };
-const _hoisted_5 = { class: "version-badge" };
-const _hoisted_6 = { class: "section" };
-const _hoisted_7 = { class: "history-list" };
-const _hoisted_8 = { class: "history-header" };
-const _hoisted_9 = { class: "version-number" };
-const _hoisted_10 = { class: "version-date" };
-const _hoisted_11 = { class: "changes-list" };
+const _hoisted_5 = { class: "history-list" };
+const _hoisted_6 = { class: "history-header" };
+const _hoisted_7 = { class: "version-number" };
+const _hoisted_8 = { class: "version-date" };
+const _hoisted_9 = { class: "changes-list" };
 function render(_ctx, _cache, $props, $setup, $data, $options) {
     return ((0,vue__WEBPACK_IMPORTED_MODULE_0__.openBlock)(), (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementBlock)("div", {
         class: (0,vue__WEBPACK_IMPORTED_MODULE_0__.normalizeClass)(["version-container", { 'dark-mode': $setup.uiStore.darkMode }])
@@ -244,26 +249,31 @@ function render(_ctx, _cache, $props, $setup, $data, $options) {
                 }, (0,vue__WEBPACK_IMPORTED_MODULE_0__.toDisplayString)($setup.author.github), 9 /* TEXT, PROPS */, _hoisted_3)
             ])
         ]),
-        (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("div", _hoisted_4, [
+        (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("div", { class: "section" }, [
             _cache[4] || (_cache[4] = (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("h2", { class: "section-title" }, "当前版本", -1 /* CACHED */)),
             (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("p", null, [
-                (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("span", _hoisted_5, (0,vue__WEBPACK_IMPORTED_MODULE_0__.toDisplayString)($setup.currentVersion), 1 /* TEXT */)
+                (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("span", { class: "version-badge" }, (0,vue__WEBPACK_IMPORTED_MODULE_0__.toDisplayString)($setup.currentVersion))
             ])
         ]),
-        _cache[6] || (_cache[6] = (0,vue__WEBPACK_IMPORTED_MODULE_0__.createStaticVNode)("<div class=\"section\" data-v-67f9437d><h2 class=\"section-title\" data-v-67f9437d>免责声明</h2><ul class=\"notes-list\" data-v-67f9437d><li data-v-67f9437d> 本插件仅供个人学习与技术交流使用，严禁用于任何商业目的或非法活动。使用者需自行承担因使用本插件而产生的一切风险与法律责任，开发者对此不承担任何责任。 </li></ul><h2 class=\"section-title\" data-v-67f9437d>注意事项</h2><ul class=\"notes-list\" data-v-67f9437d><li data-v-67f9437d>目前版本仍处于早期测试阶段,可能会存在较多bug,请注意保存好自己的数据</li><li data-v-67f9437d>在使用[文件导入导出]功能时,请确认好文件的来源,以避免受到恶意攻击</li><li data-v-67f9437d>当前移动端的适配还尚不完善,请尽量使用PC端进行开发</li></ul></div>", 1)),
-        (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("div", _hoisted_6, [
+        _cache[6] || (_cache[6] = (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("div", { class: "section" }, [
+            (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("h2", { class: "section-title" }, "免责声明"),
+            (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("ul", { class: "notes-list" }, [
+                (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("li", null, " 本插件仅供个人学习与技术交流使用，严禁用于任何商业目的或非法活动。使用者需自行承担因使用本插件而产生的一切风险与法律责任，开发者对此不承担任何责任。 ")
+            ])
+        ], -1 /* CACHED */)),
+        (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("div", _hoisted_4, [
             _cache[5] || (_cache[5] = (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("h2", { class: "section-title" }, "更新日志", -1 /* CACHED */)),
-            (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("div", _hoisted_7, [
+            (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("div", _hoisted_5, [
                 ((0,vue__WEBPACK_IMPORTED_MODULE_0__.openBlock)(true), (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementBlock)(vue__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,vue__WEBPACK_IMPORTED_MODULE_0__.renderList)($setup.versionHistory, (item) => {
                     return ((0,vue__WEBPACK_IMPORTED_MODULE_0__.openBlock)(), (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementBlock)("article", {
                         key: item.version,
                         class: "history-item"
                     }, [
-                        (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("header", _hoisted_8, [
-                            (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("h3", _hoisted_9, (0,vue__WEBPACK_IMPORTED_MODULE_0__.toDisplayString)(item.version), 1 /* TEXT */),
-                            (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("time", _hoisted_10, (0,vue__WEBPACK_IMPORTED_MODULE_0__.toDisplayString)(item.date), 1 /* TEXT */)
+                        (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("header", _hoisted_6, [
+                            (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("h3", _hoisted_7, (0,vue__WEBPACK_IMPORTED_MODULE_0__.toDisplayString)(item.version), 1 /* TEXT */),
+                            (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("time", _hoisted_8, (0,vue__WEBPACK_IMPORTED_MODULE_0__.toDisplayString)(item.date), 1 /* TEXT */)
                         ]),
-                        (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("ul", _hoisted_11, [
+                        (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("ul", _hoisted_9, [
                             ((0,vue__WEBPACK_IMPORTED_MODULE_0__.openBlock)(true), (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementBlock)(vue__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,vue__WEBPACK_IMPORTED_MODULE_0__.renderList)(item.changes, (change, index) => {
                                 return ((0,vue__WEBPACK_IMPORTED_MODULE_0__.openBlock)(), (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementBlock)("li", { key: index }, (0,vue__WEBPACK_IMPORTED_MODULE_0__.toDisplayString)(change), 1 /* TEXT */));
                             }), 128 /* KEYED_FRAGMENT */))
@@ -348,6 +358,16 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var _node_modules_pnpm_ts_loader_9_5_4_typescript_1325e46b45641fb4b445955fad1b3b9a_node_modules_ts_loader_index_js_clonedRuleSet_1_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_templateLoader_js_ruleSet_1_rules_2_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_index_js_ruleSet_1_rules_5_use_0_VersionInformation_vue_vue_type_template_id_67f9437d_scoped_true_ts_true__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../../node_modules/.pnpm/ts-loader@9.5.4_typescript@_1325e46b45641fb4b445955fad1b3b9a/node_modules/ts-loader/index.js??clonedRuleSet-1!../../../../node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/templateLoader.js??ruleSet[1].rules[2]!../../../../node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./VersionInformation.vue?vue&type=template&id=67f9437d&scoped=true&ts=true */ "./node_modules/.pnpm/ts-loader@9.5.4_typescript@_1325e46b45641fb4b445955fad1b3b9a/node_modules/ts-loader/index.js??clonedRuleSet-1!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/templateLoader.js??ruleSet[1].rules[2]!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/view/VersionInformation.vue?vue&type=template&id=67f9437d&scoped=true&ts=true");
 
+
+/***/ },
+
+/***/ "./src/MVU助手/release.json"
+/*!********************************!*\
+  !*** ./src/MVU助手/release.json ***!
+  \********************************/
+(module) {
+
+module.exports = /*#__PURE__*/JSON.parse('{"version":"2.0.0","date":"2026-10-17","changes":["重构独立任务生成：任务独立组装提示词，同组任务可并发执行，不切换酒馆主聊天的预设与连接","API 配置绑定预设，支持多个链接分别保存地址、模型与本地密钥，并提供连接检测与模型选择","重整任务工作台，支持保存未完成配置、解除资源引用、世界书选择与正则预览","完善事件触发、单任务测试与结果广播，提供可复制的前端联动规则","新增常驻任务状态通知与过程日志，运行记录展示请求错误、数据写入影响及回滚残留","增强变量编辑的草稿保留、导入导出、目标校验及并发提交保护","统一浅色与深色主题，调整窄屏布局、字段提示及键盘交互","移除角色数据版本更新，角色卡自行负责数据迁移；"]}');
 
 /***/ }
 

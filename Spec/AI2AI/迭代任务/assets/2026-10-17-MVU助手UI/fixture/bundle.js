@@ -18,10 +18,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _MVU_UI_router_router__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @/MVU助手/UI/router/router */ "./src/MVU助手/UI/router/router.ts");
 /* harmony import */ var _MVU_stores_UIStore__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @/MVU助手/stores/UIStore */ "./src/MVU助手/stores/UIStore.ts");
 /* harmony import */ var _MVU_stores_TaskStore__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! @/MVU助手/stores/TaskStore */ "./src/MVU助手/stores/TaskStore.ts");
-/* harmony import */ var _MVU_stores_UseVersionControlStore__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! @/MVU助手/stores/UseVersionControlStore */ "./src/MVU助手/stores/UseVersionControlStore.ts");
-/* harmony import */ var _MVU_AsyncAnalyze_TaskSchema__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! @/MVU助手/AsyncAnalyze/TaskSchema */ "./src/MVU助手/AsyncAnalyze/TaskSchema.ts");
-/* harmony import */ var _MVU_AsyncAnalyze_TaskRuntime__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! @/MVU助手/AsyncAnalyze/TaskRuntime */ "./src/MVU助手/AsyncAnalyze/TaskRuntime.ts");
-
+/* harmony import */ var _MVU_AsyncAnalyze_TaskSchema__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! @/MVU助手/AsyncAnalyze/TaskSchema */ "./src/MVU助手/AsyncAnalyze/TaskSchema.ts");
+/* harmony import */ var _MVU_AsyncAnalyze_TaskRuntime__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! @/MVU助手/AsyncAnalyze/TaskRuntime */ "./src/MVU助手/AsyncAnalyze/TaskRuntime.ts");
 
 
 
@@ -54,10 +52,10 @@ w.getWorldbookNames = () => { if (w.hostFail)
     throw Error('宿主模拟失败'); return ['角色资料', '场景设定']; };
 w.getWorldbook = async (name) => { if (w.hostFail)
     throw Error('宿主模拟失败'); return name === '角色资料' ? [{ uid: 7, name: '角色甲', content: '甲内容' }, { uid: 12, name: '角色乙', content: '乙内容' }, { uid: 13, name: '版本记录', content: w.rules }] : [{ uid: 99, name: '场景一', content: '场景内容' }]; };
-const config = (0,_MVU_AsyncAnalyze_TaskSchema__WEBPACK_IMPORTED_MODULE_8__.emptySettings)();
+const config = (0,_MVU_AsyncAnalyze_TaskSchema__WEBPACK_IMPORTED_MODULE_7__.emptySettings)();
 config.presets = [{ id: 'preset', name: '验收预设', raw: { openai_max_context: 8192, openai_max_tokens: 300, prompts: [], prompt_order: [{ character_id: 100001, order: [] }] } }];
-config.connections = [{ id: 'api', name: '验收 API', comment: '', baseUrl: 'https://example.invalid/v1', model: '验收模型', secretRef: 'secret', presetId: 'preset' }];
-config.tasks = [{ id: 'task', name: '验收任务', comment: '', enabled: true, eventName: '', order: 0, historyDepth: 2, triggerInterval: 1, retryCount: 0, prompt: '原任务提示词', connectionId: 'api', candidateBooks: [], scan: _MVU_AsyncAnalyze_TaskSchema__WEBPACK_IMPORTED_MODULE_8__.ScanSchema.parse({}), regexRules: [], output: { mode: 'return' } }];
+config.connections = [{ id: 'api', name: '验收 API', comment: '', activeLinkId: 'link', links: [{ id: 'link', name: '默认链接', baseUrl: 'https://example.invalid/v1', model: '验收模型', secretRef: 'secret' }], presetId: 'preset' }];
+config.tasks = [{ id: 'task', name: '验收任务', comment: '', enabled: true, eventName: '', order: 0, historyDepth: 2, triggerInterval: 1, retryCount: 0, prompt: '原任务提示词', connectionId: 'api', candidateBooks: [], scan: _MVU_AsyncAnalyze_TaskSchema__WEBPACK_IMPORTED_MODULE_7__.ScanSchema.parse({}), regexRules: [], output: { writes: [] } }];
 config.groups = [{ id: 'group', name: '验收组', comment: '', taskIds: ['task'] }];
 config.activeGroupId = 'group';
 w.scriptVariables = { async_task_config: config, era_data_rule: { version_control: { enable: true, lore_name: '版本记录' } } };
@@ -74,9 +72,7 @@ const ui = (0,_MVU_stores_UIStore__WEBPACK_IMPORTED_MODULE_5__.useUiStore)(pinia
 ui.showUI = true;
 const tasks = (0,_MVU_stores_TaskStore__WEBPACK_IMPORTED_MODULE_6__.useTaskStore)(pinia);
 await tasks.load();
-const version = (0,_MVU_stores_UseVersionControlStore__WEBPACK_IMPORTED_MODULE_7__.UseVersionControlStore)(pinia);
-await version.loadSettings();
-w.test = { ui, tasks, version, router: _MVU_UI_router_router__WEBPACK_IMPORTED_MODULE_4__.router, taskRunResults: _MVU_AsyncAnalyze_TaskRuntime__WEBPACK_IMPORTED_MODULE_9__.taskRunResults, activeTaskRuns: _MVU_AsyncAnalyze_TaskRuntime__WEBPACK_IMPORTED_MODULE_9__.activeTaskRuns };
+w.test = { ui, tasks, router: _MVU_UI_router_router__WEBPACK_IMPORTED_MODULE_4__.router, taskRunResults: _MVU_AsyncAnalyze_TaskRuntime__WEBPACK_IMPORTED_MODULE_8__.taskRunResults, activeTaskRuns: _MVU_AsyncAnalyze_TaskRuntime__WEBPACK_IMPORTED_MODULE_8__.activeTaskRuns, runTaskChain: _MVU_AsyncAnalyze_TaskRuntime__WEBPACK_IMPORTED_MODULE_8__.runTaskChain };
 await _MVU_UI_router_router__WEBPACK_IMPORTED_MODULE_4__.router.isReady();
 app.mount('#app');
 w.ready = true;
@@ -21191,6 +21187,7 @@ ___CSS_LOADER_EXPORT___.push([module.id, `.mvu-workspace {
   --mvu-soft: #f6f8fb;
   --mvu-line: #d7dfea;
   --mvu-control-line: #7c8ca3;
+  --mvu-input-bg: #f0f4fa;
   --mvu-text: #172338;
   --mvu-muted: #53637b;
   --mvu-accent: #4b4de0;
@@ -21213,6 +21210,7 @@ ___CSS_LOADER_EXPORT___.push([module.id, `.mvu-workspace {
   --mvu-soft: #111a28;
   --mvu-line: #3e4c62;
   --mvu-control-line: #8393ab;
+  --mvu-input-bg: #0c1624;
   --mvu-text: #e9eef7;
   --mvu-muted: #b2bfd1;
   --mvu-accent: #a6a7ff;
@@ -21232,6 +21230,12 @@ ___CSS_LOADER_EXPORT___.push([module.id, `.mvu-workspace {
 .mvu-workspace textarea,
 .mvu-workspace select {
   font: inherit;
+}
+.mvu-workspace .field-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
 }
 .mvu-workspace button {
   min-height: 40px;
@@ -21258,11 +21262,47 @@ ___CSS_LOADER_EXPORT___.push([module.id, `.mvu-workspace {
 .mvu-workspace select {
   min-height: 40px;
   border-radius: 8px;
-  border: 1px solid var(--mvu-control-line);
-  color: var(--mvu-text);
-  background: var(--mvu-panel);
+  border: 1px solid var(--mvu-control-line) !important;
+  color: var(--mvu-text) !important;
+  background: var(--mvu-input-bg) !important;
   padding: 8px 10px;
   max-width: 100%;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+.mvu-workspace input:not([type=checkbox]):not([type=radio]):not([type=file])::placeholder,
+.mvu-workspace textarea::placeholder,
+.mvu-workspace select::placeholder {
+  color: var(--mvu-muted);
+  opacity: 1;
+}
+.mvu-workspace input:not([type=checkbox]):not([type=radio]):not([type=file]):hover:not(:disabled):not([readonly]),
+.mvu-workspace textarea:hover:not(:disabled):not([readonly]),
+.mvu-workspace select:hover:not(:disabled):not([readonly]) {
+  border-color: var(--mvu-accent) !important;
+}
+.mvu-workspace input:not([type=checkbox]):not([type=radio]):not([type=file]):focus,
+.mvu-workspace textarea:focus,
+.mvu-workspace select:focus {
+  border-color: var(--mvu-accent) !important;
+  outline: 2px solid var(--mvu-focus);
+  outline-offset: 2px;
+}
+.mvu-workspace input:not([type=checkbox]):not([type=radio]):not([type=file]):disabled, .mvu-workspace input:not([type=checkbox]):not([type=radio]):not([type=file])[readonly],
+.mvu-workspace textarea:disabled,
+.mvu-workspace textarea[readonly],
+.mvu-workspace select:disabled,
+.mvu-workspace select[readonly] {
+  background: var(--mvu-soft) !important;
+  color: var(--mvu-muted) !important;
+  box-shadow: none;
+}
+.mvu-workspace input:not([type=checkbox]):not([type=radio]):not([type=file]):disabled,
+.mvu-workspace textarea:disabled,
+.mvu-workspace select:disabled {
+  cursor: not-allowed;
 }
 .mvu-workspace textarea {
   line-height: 1.6;
@@ -21282,6 +21322,178 @@ ___CSS_LOADER_EXPORT___.push([module.id, `.mvu-workspace {
     transition: none !important;
     scroll-behavior: auto !important;
   }
+}`, ""]);
+// Exports
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/css-loader@7.1.2_webpack@5.104.1/node_modules/css-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/stylePostLoader.js!./node_modules/.pnpm/sass-loader@16.0.6_sass@1.97.2_webpack@5.104.1/node_modules/sass-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/components/AsyncAnalyze/RunLog.vue?vue&type=style&index=0&id=25a7eb60&scoped=true&lang=css"
+/*!**********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/css-loader@7.1.2_webpack@5.104.1/node_modules/css-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/stylePostLoader.js!./node_modules/.pnpm/sass-loader@16.0.6_sass@1.97.2_webpack@5.104.1/node_modules/sass-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/components/AsyncAnalyze/RunLog.vue?vue&type=style&index=0&id=25a7eb60&scoped=true&lang=css ***!
+  \**********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_runtime_noSourceMaps_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../../../node_modules/.pnpm/css-loader@7.1.2_webpack@5.104.1/node_modules/css-loader/dist/runtime/noSourceMaps.js */ "./node_modules/.pnpm/css-loader@7.1.2_webpack@5.104.1/node_modules/css-loader/dist/runtime/noSourceMaps.js");
+/* harmony import */ var _node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_runtime_noSourceMaps_js__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_runtime_noSourceMaps_js__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../../../node_modules/.pnpm/css-loader@7.1.2_webpack@5.104.1/node_modules/css-loader/dist/runtime/api.js */ "./node_modules/.pnpm/css-loader@7.1.2_webpack@5.104.1/node_modules/css-loader/dist/runtime/api.js");
+/* harmony import */ var _node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1__);
+// Imports
+
+
+var ___CSS_LOADER_EXPORT___ = _node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default()((_node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_runtime_noSourceMaps_js__WEBPACK_IMPORTED_MODULE_0___default()));
+// Module
+___CSS_LOADER_EXPORT___.push([module.id, `.mvu-run-log[data-v-25a7eb60] {
+  margin-top: 10px;
+  font-size: 12px;
+}
+summary[data-v-25a7eb60] {
+  cursor: pointer;
+  padding: 6px 0;
+}
+article[data-v-25a7eb60] {
+  margin-top: 12px;
+}
+pre[data-v-25a7eb60] {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 280px;
+  overflow: auto;
+  font-size: 12px;
+  font-weight: 400;
+}`, ""]);
+// Exports
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/css-loader@7.1.2_webpack@5.104.1/node_modules/css-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/stylePostLoader.js!./node_modules/.pnpm/sass-loader@16.0.6_sass@1.97.2_webpack@5.104.1/node_modules/sass-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/components/AsyncAnalyze/TaskNotifications.vue?vue&type=style&index=0&id=0fede79c&scoped=true&lang=css"
+/*!*********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/css-loader@7.1.2_webpack@5.104.1/node_modules/css-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/stylePostLoader.js!./node_modules/.pnpm/sass-loader@16.0.6_sass@1.97.2_webpack@5.104.1/node_modules/sass-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/components/AsyncAnalyze/TaskNotifications.vue?vue&type=style&index=0&id=0fede79c&scoped=true&lang=css ***!
+  \*********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_runtime_noSourceMaps_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../../../node_modules/.pnpm/css-loader@7.1.2_webpack@5.104.1/node_modules/css-loader/dist/runtime/noSourceMaps.js */ "./node_modules/.pnpm/css-loader@7.1.2_webpack@5.104.1/node_modules/css-loader/dist/runtime/noSourceMaps.js");
+/* harmony import */ var _node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_runtime_noSourceMaps_js__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_runtime_noSourceMaps_js__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../../../node_modules/.pnpm/css-loader@7.1.2_webpack@5.104.1/node_modules/css-loader/dist/runtime/api.js */ "./node_modules/.pnpm/css-loader@7.1.2_webpack@5.104.1/node_modules/css-loader/dist/runtime/api.js");
+/* harmony import */ var _node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1__);
+// Imports
+
+
+var ___CSS_LOADER_EXPORT___ = _node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default()((_node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_runtime_noSourceMaps_js__WEBPACK_IMPORTED_MODULE_0___default()));
+// Module
+___CSS_LOADER_EXPORT___.push([module.id, `.mvu-task-notifications[data-v-0fede79c] {
+  position: fixed;
+  inset: 16px auto auto 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  width: min(420px, 100vw - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #eef2ff;
+  font: 14px/1.5 sans-serif;
+  z-index: 2147483647;
+  overflow-wrap: anywhere;
+}
+section[data-v-0fede79c] {
+  position: relative;
+  padding: 10px 12px;
+  margin-top: 8px;
+  border: 1px solid #8995bb;
+  border-radius: 10px;
+  background: #242938;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3333333333);
+}
+section.success[data-v-0fede79c] {
+  border-color: #72d9ac;
+}
+section.error[data-v-0fede79c] {
+  border-color: #ff939d;
+}
+section.warning[data-v-0fede79c] {
+  border-color: #f4cd79;
+}
+.notice-heading[data-v-0fede79c] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  list-style: none;
+  min-height: 26px;
+  padding-right: 30px;
+}
+.notice-heading[data-v-0fede79c]::-webkit-details-marker {
+  display: none;
+}
+.notice-heading strong[data-v-0fede79c] {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.expand-label[data-v-0fede79c],
+.collapse-label[data-v-0fede79c] {
+  flex-shrink: 0;
+  color: #c5cde5;
+  font-size: 12px;
+}
+.notice-details:not([open]) .collapse-label[data-v-0fede79c],
+.notice-details[open] .expand-label[data-v-0fede79c] {
+  display: none;
+}
+.close-notice[data-v-0fede79c] {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 0 6px;
+}
+p[data-v-0fede79c] {
+  margin: 8px 0;
+}
+button[data-v-0fede79c] {
+  cursor: pointer;
+  border: 1px solid #8995bb;
+  border-radius: 5px;
+  background: #343e57;
+  color: #fff;
+  padding: 4px 10px;
+  font: inherit;
+}
+.spinner[data-v-0fede79c] {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #8995bb;
+  border-top-color: #fff;
+  border-radius: 50%;
+  margin-right: 8px;
+  animation: spin-0fede79c 1s linear infinite;
+}
+@keyframes spin-0fede79c {
+to {
+    transform: rotate(360deg);
+}
+}
+@media (prefers-reduced-motion: reduce) {
+.spinner[data-v-0fede79c] {
+    animation: none;
+}
 }`, ""]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
@@ -41362,6 +41574,112 @@ function storeToRefs(store) {
 
 /***/ },
 
+/***/ "./node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/cjs.js!./node_modules/.pnpm/css-loader@7.1.2_webpack@5.104.1/node_modules/css-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/stylePostLoader.js!./node_modules/.pnpm/sass-loader@16.0.6_sass@1.97.2_webpack@5.104.1/node_modules/sass-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/components/AsyncAnalyze/RunLog.vue?vue&type=style&index=0&id=25a7eb60&scoped=true&lang=css"
+/*!********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/cjs.js!./node_modules/.pnpm/css-loader@7.1.2_webpack@5.104.1/node_modules/css-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/stylePostLoader.js!./node_modules/.pnpm/sass-loader@16.0.6_sass@1.97.2_webpack@5.104.1/node_modules/sass-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/components/AsyncAnalyze/RunLog.vue?vue&type=style&index=0&id=25a7eb60&scoped=true&lang=css ***!
+  \********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! !../../../../../node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js */ "./node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js");
+/* harmony import */ var _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_styleDomAPI_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! !../../../../../node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/runtime/styleDomAPI.js */ "./node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/runtime/styleDomAPI.js");
+/* harmony import */ var _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_styleDomAPI_js__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_styleDomAPI_js__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_insertBySelector_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! !../../../../../node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/runtime/insertBySelector.js */ "./node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/runtime/insertBySelector.js");
+/* harmony import */ var _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_insertBySelector_js__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(_node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_insertBySelector_js__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_setAttributesWithoutAttributes_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! !../../../../../node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/runtime/setAttributesWithoutAttributes.js */ "./node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/runtime/setAttributesWithoutAttributes.js");
+/* harmony import */ var _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_setAttributesWithoutAttributes_js__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(_node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_setAttributesWithoutAttributes_js__WEBPACK_IMPORTED_MODULE_3__);
+/* harmony import */ var _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_insertStyleElement_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! !../../../../../node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/runtime/insertStyleElement.js */ "./node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/runtime/insertStyleElement.js");
+/* harmony import */ var _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_insertStyleElement_js__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(_node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_insertStyleElement_js__WEBPACK_IMPORTED_MODULE_4__);
+/* harmony import */ var _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_styleTagTransform_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! !../../../../../node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/runtime/styleTagTransform.js */ "./node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/runtime/styleTagTransform.js");
+/* harmony import */ var _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_styleTagTransform_js__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(_node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_styleTagTransform_js__WEBPACK_IMPORTED_MODULE_5__);
+/* harmony import */ var _node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_cjs_js_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_stylePostLoader_js_node_modules_pnpm_sass_loader_16_0_6_sass_1_97_2_webpack_5_104_1_node_modules_sass_loader_dist_cjs_js_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_index_js_ruleSet_1_rules_5_use_0_RunLog_vue_vue_type_style_index_0_id_25a7eb60_scoped_true_lang_css__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! !!../../../../../node_modules/.pnpm/css-loader@7.1.2_webpack@5.104.1/node_modules/css-loader/dist/cjs.js!../../../../../node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/stylePostLoader.js!../../../../../node_modules/.pnpm/sass-loader@16.0.6_sass@1.97.2_webpack@5.104.1/node_modules/sass-loader/dist/cjs.js!../../../../../node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./RunLog.vue?vue&type=style&index=0&id=25a7eb60&scoped=true&lang=css */ "./node_modules/.pnpm/css-loader@7.1.2_webpack@5.104.1/node_modules/css-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/stylePostLoader.js!./node_modules/.pnpm/sass-loader@16.0.6_sass@1.97.2_webpack@5.104.1/node_modules/sass-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/components/AsyncAnalyze/RunLog.vue?vue&type=style&index=0&id=25a7eb60&scoped=true&lang=css");
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+
+var options = {};
+
+options.styleTagTransform = (_node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_styleTagTransform_js__WEBPACK_IMPORTED_MODULE_5___default());
+options.setAttributes = (_node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_setAttributesWithoutAttributes_js__WEBPACK_IMPORTED_MODULE_3___default());
+options.insert = _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_insertBySelector_js__WEBPACK_IMPORTED_MODULE_2___default().bind(null, "head");
+options.domAPI = (_node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_styleDomAPI_js__WEBPACK_IMPORTED_MODULE_1___default());
+options.insertStyleElement = (_node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_insertStyleElement_js__WEBPACK_IMPORTED_MODULE_4___default());
+
+var update = _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0___default()(_node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_cjs_js_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_stylePostLoader_js_node_modules_pnpm_sass_loader_16_0_6_sass_1_97_2_webpack_5_104_1_node_modules_sass_loader_dist_cjs_js_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_index_js_ruleSet_1_rules_5_use_0_RunLog_vue_vue_type_style_index_0_id_25a7eb60_scoped_true_lang_css__WEBPACK_IMPORTED_MODULE_6__["default"], options);
+
+
+
+
+       /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_cjs_js_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_stylePostLoader_js_node_modules_pnpm_sass_loader_16_0_6_sass_1_97_2_webpack_5_104_1_node_modules_sass_loader_dist_cjs_js_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_index_js_ruleSet_1_rules_5_use_0_RunLog_vue_vue_type_style_index_0_id_25a7eb60_scoped_true_lang_css__WEBPACK_IMPORTED_MODULE_6__["default"] && _node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_cjs_js_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_stylePostLoader_js_node_modules_pnpm_sass_loader_16_0_6_sass_1_97_2_webpack_5_104_1_node_modules_sass_loader_dist_cjs_js_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_index_js_ruleSet_1_rules_5_use_0_RunLog_vue_vue_type_style_index_0_id_25a7eb60_scoped_true_lang_css__WEBPACK_IMPORTED_MODULE_6__["default"].locals ? _node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_cjs_js_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_stylePostLoader_js_node_modules_pnpm_sass_loader_16_0_6_sass_1_97_2_webpack_5_104_1_node_modules_sass_loader_dist_cjs_js_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_index_js_ruleSet_1_rules_5_use_0_RunLog_vue_vue_type_style_index_0_id_25a7eb60_scoped_true_lang_css__WEBPACK_IMPORTED_MODULE_6__["default"].locals : undefined);
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/cjs.js!./node_modules/.pnpm/css-loader@7.1.2_webpack@5.104.1/node_modules/css-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/stylePostLoader.js!./node_modules/.pnpm/sass-loader@16.0.6_sass@1.97.2_webpack@5.104.1/node_modules/sass-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/components/AsyncAnalyze/TaskNotifications.vue?vue&type=style&index=0&id=0fede79c&scoped=true&lang=css"
+/*!*******************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/cjs.js!./node_modules/.pnpm/css-loader@7.1.2_webpack@5.104.1/node_modules/css-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/stylePostLoader.js!./node_modules/.pnpm/sass-loader@16.0.6_sass@1.97.2_webpack@5.104.1/node_modules/sass-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/components/AsyncAnalyze/TaskNotifications.vue?vue&type=style&index=0&id=0fede79c&scoped=true&lang=css ***!
+  \*******************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! !../../../../../node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js */ "./node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js");
+/* harmony import */ var _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_styleDomAPI_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! !../../../../../node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/runtime/styleDomAPI.js */ "./node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/runtime/styleDomAPI.js");
+/* harmony import */ var _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_styleDomAPI_js__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_styleDomAPI_js__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_insertBySelector_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! !../../../../../node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/runtime/insertBySelector.js */ "./node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/runtime/insertBySelector.js");
+/* harmony import */ var _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_insertBySelector_js__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(_node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_insertBySelector_js__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_setAttributesWithoutAttributes_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! !../../../../../node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/runtime/setAttributesWithoutAttributes.js */ "./node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/runtime/setAttributesWithoutAttributes.js");
+/* harmony import */ var _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_setAttributesWithoutAttributes_js__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(_node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_setAttributesWithoutAttributes_js__WEBPACK_IMPORTED_MODULE_3__);
+/* harmony import */ var _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_insertStyleElement_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! !../../../../../node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/runtime/insertStyleElement.js */ "./node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/runtime/insertStyleElement.js");
+/* harmony import */ var _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_insertStyleElement_js__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(_node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_insertStyleElement_js__WEBPACK_IMPORTED_MODULE_4__);
+/* harmony import */ var _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_styleTagTransform_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! !../../../../../node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/runtime/styleTagTransform.js */ "./node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/runtime/styleTagTransform.js");
+/* harmony import */ var _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_styleTagTransform_js__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(_node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_styleTagTransform_js__WEBPACK_IMPORTED_MODULE_5__);
+/* harmony import */ var _node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_cjs_js_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_stylePostLoader_js_node_modules_pnpm_sass_loader_16_0_6_sass_1_97_2_webpack_5_104_1_node_modules_sass_loader_dist_cjs_js_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_index_js_ruleSet_1_rules_5_use_0_TaskNotifications_vue_vue_type_style_index_0_id_0fede79c_scoped_true_lang_css__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! !!../../../../../node_modules/.pnpm/css-loader@7.1.2_webpack@5.104.1/node_modules/css-loader/dist/cjs.js!../../../../../node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/stylePostLoader.js!../../../../../node_modules/.pnpm/sass-loader@16.0.6_sass@1.97.2_webpack@5.104.1/node_modules/sass-loader/dist/cjs.js!../../../../../node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./TaskNotifications.vue?vue&type=style&index=0&id=0fede79c&scoped=true&lang=css */ "./node_modules/.pnpm/css-loader@7.1.2_webpack@5.104.1/node_modules/css-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/stylePostLoader.js!./node_modules/.pnpm/sass-loader@16.0.6_sass@1.97.2_webpack@5.104.1/node_modules/sass-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/components/AsyncAnalyze/TaskNotifications.vue?vue&type=style&index=0&id=0fede79c&scoped=true&lang=css");
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+
+var options = {};
+
+options.styleTagTransform = (_node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_styleTagTransform_js__WEBPACK_IMPORTED_MODULE_5___default());
+options.setAttributes = (_node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_setAttributesWithoutAttributes_js__WEBPACK_IMPORTED_MODULE_3___default());
+options.insert = _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_insertBySelector_js__WEBPACK_IMPORTED_MODULE_2___default().bind(null, "head");
+options.domAPI = (_node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_styleDomAPI_js__WEBPACK_IMPORTED_MODULE_1___default());
+options.insertStyleElement = (_node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_insertStyleElement_js__WEBPACK_IMPORTED_MODULE_4___default());
+
+var update = _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0___default()(_node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_cjs_js_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_stylePostLoader_js_node_modules_pnpm_sass_loader_16_0_6_sass_1_97_2_webpack_5_104_1_node_modules_sass_loader_dist_cjs_js_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_index_js_ruleSet_1_rules_5_use_0_TaskNotifications_vue_vue_type_style_index_0_id_0fede79c_scoped_true_lang_css__WEBPACK_IMPORTED_MODULE_6__["default"], options);
+
+
+
+
+       /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_cjs_js_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_stylePostLoader_js_node_modules_pnpm_sass_loader_16_0_6_sass_1_97_2_webpack_5_104_1_node_modules_sass_loader_dist_cjs_js_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_index_js_ruleSet_1_rules_5_use_0_TaskNotifications_vue_vue_type_style_index_0_id_0fede79c_scoped_true_lang_css__WEBPACK_IMPORTED_MODULE_6__["default"] && _node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_cjs_js_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_stylePostLoader_js_node_modules_pnpm_sass_loader_16_0_6_sass_1_97_2_webpack_5_104_1_node_modules_sass_loader_dist_cjs_js_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_index_js_ruleSet_1_rules_5_use_0_TaskNotifications_vue_vue_type_style_index_0_id_0fede79c_scoped_true_lang_css__WEBPACK_IMPORTED_MODULE_6__["default"].locals ? _node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_cjs_js_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_stylePostLoader_js_node_modules_pnpm_sass_loader_16_0_6_sass_1_97_2_webpack_5_104_1_node_modules_sass_loader_dist_cjs_js_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_index_js_ruleSet_1_rules_5_use_0_TaskNotifications_vue_vue_type_style_index_0_id_0fede79c_scoped_true_lang_css__WEBPACK_IMPORTED_MODULE_6__["default"].locals : undefined);
+
+
+/***/ },
+
 /***/ "./node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/cjs.js!./node_modules/.pnpm/css-loader@7.1.2_webpack@5.104.1/node_modules/css-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/stylePostLoader.js!./node_modules/.pnpm/sass-loader@16.0.6_sass@1.97.2_webpack@5.104.1/node_modules/sass-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/view/Layout.vue?vue&type=style&index=0&id=871ce81a&scoped=true&lang=scss"
 /*!**************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
   !*** ./node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/cjs.js!./node_modules/.pnpm/css-loader@7.1.2_webpack@5.104.1/node_modules/css-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/stylePostLoader.js!./node_modules/.pnpm/sass-loader@16.0.6_sass@1.97.2_webpack@5.104.1/node_modules/sass-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/view/Layout.vue?vue&type=style&index=0&id=871ce81a&scoped=true&lang=scss ***!
@@ -41754,13 +42072,114 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var vue__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vue */ "./node_modules/.pnpm/vue@3.5.26_typescript@6.0.0-dev.20250807/node_modules/vue/dist/vue.runtime.esm-bundler.js");
 /* harmony import */ var _MVU_UI_components_Dialog_CustomModal_vue__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @/MVU助手/UI/components/Dialog/CustomModal.vue */ "./src/MVU助手/UI/components/Dialog/CustomModal.vue");
+/* harmony import */ var _components_AsyncAnalyze_TaskNotifications_vue__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./components/AsyncAnalyze/TaskNotifications.vue */ "./src/MVU助手/UI/components/AsyncAnalyze/TaskNotifications.vue");
+
 
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (/*@__PURE__*/(0,vue__WEBPACK_IMPORTED_MODULE_0__.defineComponent)({
     __name: 'App',
     setup(__props, { expose: __expose }) {
         __expose();
-        const __returned__ = { CustomModal: _MVU_UI_components_Dialog_CustomModal_vue__WEBPACK_IMPORTED_MODULE_1__["default"] };
+        const __returned__ = { CustomModal: _MVU_UI_components_Dialog_CustomModal_vue__WEBPACK_IMPORTED_MODULE_1__["default"], TaskNotifications: _components_AsyncAnalyze_TaskNotifications_vue__WEBPACK_IMPORTED_MODULE_2__["default"] };
+        Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true });
+        return __returned__;
+    }
+}));
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/ts-loader@9.5.4_typescript@_1325e46b45641fb4b445955fad1b3b9a/node_modules/ts-loader/index.js??clonedRuleSet-1!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/components/AsyncAnalyze/RunLog.vue?vue&type=script&setup=true&lang=ts"
+/*!***********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/ts-loader@9.5.4_typescript@_1325e46b45641fb4b445955fad1b3b9a/node_modules/ts-loader/index.js??clonedRuleSet-1!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/components/AsyncAnalyze/RunLog.vue?vue&type=script&setup=true&lang=ts ***!
+  \***********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var vue__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vue */ "./node_modules/.pnpm/vue@3.5.26_typescript@6.0.0-dev.20250807/node_modules/vue/dist/vue.runtime.esm-bundler.js");
+/* harmony import */ var _AsyncAnalyze_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../AsyncAnalyze/TaskDiagnostics */ "./src/MVU助手/AsyncAnalyze/TaskDiagnostics.ts");
+
+
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (/*@__PURE__*/(0,vue__WEBPACK_IMPORTED_MODULE_0__.defineComponent)({
+    __name: 'RunLog',
+    props: {
+        runId: { type: String, required: true }
+    },
+    setup(__props, { expose: __expose }) {
+        __expose();
+        const props = __props;
+        const logs = (0,vue__WEBPACK_IMPORTED_MODULE_0__.computed)(() => _AsyncAnalyze_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_1__.taskRunLogs.get(props.runId) ?? []);
+        const __returned__ = { props, logs };
+        Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true });
+        return __returned__;
+    }
+}));
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/ts-loader@9.5.4_typescript@_1325e46b45641fb4b445955fad1b3b9a/node_modules/ts-loader/index.js??clonedRuleSet-1!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/components/AsyncAnalyze/TaskNotifications.vue?vue&type=script&setup=true&lang=ts"
+/*!**********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/ts-loader@9.5.4_typescript@_1325e46b45641fb4b445955fad1b3b9a/node_modules/ts-loader/index.js??clonedRuleSet-1!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/components/AsyncAnalyze/TaskNotifications.vue?vue&type=script&setup=true&lang=ts ***!
+  \**********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var vue__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vue */ "./node_modules/.pnpm/vue@3.5.26_typescript@6.0.0-dev.20250807/node_modules/vue/dist/vue.runtime.esm-bundler.js");
+/* harmony import */ var _AsyncAnalyze_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../AsyncAnalyze/TaskDiagnostics */ "./src/MVU助手/AsyncAnalyze/TaskDiagnostics.ts");
+/* harmony import */ var _AsyncAnalyze_TaskRuntime__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../AsyncAnalyze/TaskRuntime */ "./src/MVU助手/AsyncAnalyze/TaskRuntime.ts");
+/* harmony import */ var _RunLog_vue__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./RunLog.vue */ "./src/MVU助手/UI/components/AsyncAnalyze/RunLog.vue");
+
+
+
+
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (/*@__PURE__*/(0,vue__WEBPACK_IMPORTED_MODULE_0__.defineComponent)({
+    __name: 'TaskNotifications',
+    setup(__props, { expose: __expose }) {
+        __expose();
+        const anchor = (0,vue__WEBPACK_IMPORTED_MODULE_0__.ref)(null);
+        const panel = (0,vue__WEBPACK_IMPORTED_MODULE_0__.ref)(null);
+        const hoveredRunId = (0,vue__WEBPACK_IMPORTED_MODULE_0__.ref)(null);
+        const focusedRunId = (0,vue__WEBPACK_IMPORTED_MODULE_0__.ref)(null);
+        const expanded = (0,vue__WEBPACK_IMPORTED_MODULE_0__.ref)(new Set());
+        function toggleDetails(runId, event) {
+            if (event.target.open)
+                expanded.value.add(runId);
+            else
+                expanded.value.delete(runId);
+        }
+        function leaveFocus(event) {
+            if (!event.currentTarget.contains(event.relatedTarget))
+                focusedRunId.value = null;
+        }
+        (0,vue__WEBPACK_IMPORTED_MODULE_0__.watchEffect)(onCleanup => {
+            const timers = [];
+            for (const notice of _AsyncAnalyze_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_1__.taskNotices.values()) {
+                if (notice.running ||
+                    notice.level !== 'success' ||
+                    expanded.value.has(notice.runId) ||
+                    hoveredRunId.value === notice.runId ||
+                    focusedRunId.value === notice.runId)
+                    continue;
+                timers.push(setTimeout(() => _AsyncAnalyze_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_1__.taskNotices.delete(notice.runId), 3000));
+            }
+            onCleanup(() => timers.forEach(clearTimeout));
+        });
+        (0,vue__WEBPACK_IMPORTED_MODULE_0__.watch)(panel, element => {
+            if (element && !element.matches(':popover-open'))
+                element.showPopover();
+        }, { flush: 'post' });
+        const __returned__ = { anchor, panel, hoveredRunId, focusedRunId, expanded, toggleDetails, leaveFocus, get taskNotices() { return _AsyncAnalyze_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_1__.taskNotices; }, get cancelTaskRun() { return _AsyncAnalyze_TaskRuntime__WEBPACK_IMPORTED_MODULE_2__.cancelTaskRun; }, RunLog: _RunLog_vue__WEBPACK_IMPORTED_MODULE_3__["default"] };
         Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true });
         return __returned__;
     }
@@ -41864,7 +42283,6 @@ __webpack_require__.r(__webpack_exports__);
         const pages = [
             { path: '/AsyncAnalyze', label: '任务工作台' },
             { path: '/EraDataEdit', label: '变量编辑' },
-            { path: '/VersionUpdater', label: '数据更新' },
             { path: '/Version', label: '关于' },
         ];
         const close = () => {
@@ -41902,7 +42320,144 @@ function render(_ctx, _cache, $props, $setup, $data, $options) {
     return ((0,vue__WEBPACK_IMPORTED_MODULE_0__.openBlock)(), (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementBlock)(vue__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, [
         (0,vue__WEBPACK_IMPORTED_MODULE_0__.createVNode)(_component_RouterView),
         (0,vue__WEBPACK_IMPORTED_MODULE_0__.createCommentVNode)(" 引入自定义弹窗组件 (建议放在 App.vue 全局，如果只在此处用则放这里) "),
-        (0,vue__WEBPACK_IMPORTED_MODULE_0__.createVNode)($setup["CustomModal"])
+        (0,vue__WEBPACK_IMPORTED_MODULE_0__.createVNode)($setup["CustomModal"]),
+        (0,vue__WEBPACK_IMPORTED_MODULE_0__.createVNode)($setup["TaskNotifications"])
+    ], 64 /* STABLE_FRAGMENT */));
+}
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/ts-loader@9.5.4_typescript@_1325e46b45641fb4b445955fad1b3b9a/node_modules/ts-loader/index.js??clonedRuleSet-1!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/templateLoader.js??ruleSet[1].rules[2]!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/components/AsyncAnalyze/RunLog.vue?vue&type=template&id=25a7eb60&scoped=true&ts=true"
+/*!********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/ts-loader@9.5.4_typescript@_1325e46b45641fb4b445955fad1b3b9a/node_modules/ts-loader/index.js??clonedRuleSet-1!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/templateLoader.js??ruleSet[1].rules[2]!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/components/AsyncAnalyze/RunLog.vue?vue&type=template&id=25a7eb60&scoped=true&ts=true ***!
+  \********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   render: () => (/* binding */ render)
+/* harmony export */ });
+/* harmony import */ var vue__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vue */ "./node_modules/.pnpm/vue@3.5.26_typescript@6.0.0-dev.20250807/node_modules/vue/dist/vue.runtime.esm-bundler.js");
+
+const _hoisted_1 = { class: "mvu-run-log" };
+const _hoisted_2 = { key: 0 };
+function render(_ctx, _cache, $props, $setup, $data, $options) {
+    return ((0,vue__WEBPACK_IMPORTED_MODULE_0__.openBlock)(), (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementBlock)("details", _hoisted_1, [
+        (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("summary", null, "过程日志 / 请求 / 原始输出（" + (0,vue__WEBPACK_IMPORTED_MODULE_0__.toDisplayString)($setup.logs.length) + "）", 1 /* TEXT */),
+        (!$setup.logs.length)
+            ? ((0,vue__WEBPACK_IMPORTED_MODULE_0__.openBlock)(), (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementBlock)("p", _hoisted_2, "本次运行没有可用的会话日志；脚本重载前的日志无法恢复。"))
+            : (0,vue__WEBPACK_IMPORTED_MODULE_0__.createCommentVNode)("v-if", true),
+        ((0,vue__WEBPACK_IMPORTED_MODULE_0__.openBlock)(true), (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementBlock)(vue__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,vue__WEBPACK_IMPORTED_MODULE_0__.renderList)($setup.logs, (entry, index) => {
+            return ((0,vue__WEBPACK_IMPORTED_MODULE_0__.openBlock)(), (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementBlock)("article", { key: index }, [
+                (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("strong", null, (0,vue__WEBPACK_IMPORTED_MODULE_0__.toDisplayString)(entry.time) + " · " + (0,vue__WEBPACK_IMPORTED_MODULE_0__.toDisplayString)(entry.message), 1 /* TEXT */),
+                (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("pre", null, (0,vue__WEBPACK_IMPORTED_MODULE_0__.toDisplayString)(entry.text), 1 /* TEXT */)
+            ]));
+        }), 128 /* KEYED_FRAGMENT */))
+    ]));
+}
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/ts-loader@9.5.4_typescript@_1325e46b45641fb4b445955fad1b3b9a/node_modules/ts-loader/index.js??clonedRuleSet-1!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/templateLoader.js??ruleSet[1].rules[2]!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/components/AsyncAnalyze/TaskNotifications.vue?vue&type=template&id=0fede79c&scoped=true&ts=true"
+/*!*******************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/ts-loader@9.5.4_typescript@_1325e46b45641fb4b445955fad1b3b9a/node_modules/ts-loader/index.js??clonedRuleSet-1!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/templateLoader.js??ruleSet[1].rules[2]!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/components/AsyncAnalyze/TaskNotifications.vue?vue&type=template&id=0fede79c&scoped=true&ts=true ***!
+  \*******************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   render: () => (/* binding */ render)
+/* harmony export */ });
+/* harmony import */ var vue__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vue */ "./node_modules/.pnpm/vue@3.5.26_typescript@6.0.0-dev.20250807/node_modules/vue/dist/vue.runtime.esm-bundler.js");
+
+const _hoisted_1 = { ref: "anchor" };
+const _hoisted_2 = {
+    key: 0,
+    ref: "panel",
+    class: "mvu-task-notifications",
+    "aria-label": "任务状态通知",
+    popover: "manual"
+};
+const _hoisted_3 = ["onMouseenter", "onFocusin"];
+const _hoisted_4 = ["onToggle"];
+const _hoisted_5 = { class: "notice-heading" };
+const _hoisted_6 = {
+    role: "status",
+    "aria-live": "polite"
+};
+const _hoisted_7 = {
+    key: 0,
+    class: "spinner",
+    "aria-hidden": "true"
+};
+const _hoisted_8 = { key: 0 };
+const _hoisted_9 = ["onClick"];
+const _hoisted_10 = ["onClick"];
+function render(_ctx, _cache, $props, $setup, $data, $options) {
+    return ((0,vue__WEBPACK_IMPORTED_MODULE_0__.openBlock)(), (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementBlock)(vue__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, [
+        (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("div", _hoisted_1, null, 512 /* NEED_PATCH */),
+        ($setup.anchor)
+            ? ((0,vue__WEBPACK_IMPORTED_MODULE_0__.openBlock)(), (0,vue__WEBPACK_IMPORTED_MODULE_0__.createBlock)(vue__WEBPACK_IMPORTED_MODULE_0__.Teleport, {
+                key: 0,
+                to: $setup.anchor.ownerDocument.body
+            }, [
+                ($setup.taskNotices.size)
+                    ? ((0,vue__WEBPACK_IMPORTED_MODULE_0__.openBlock)(), (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementBlock)("aside", _hoisted_2, [
+                        ((0,vue__WEBPACK_IMPORTED_MODULE_0__.openBlock)(true), (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementBlock)(vue__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,vue__WEBPACK_IMPORTED_MODULE_0__.renderList)($setup.taskNotices.values(), (notice) => {
+                            return ((0,vue__WEBPACK_IMPORTED_MODULE_0__.openBlock)(), (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementBlock)("section", {
+                                key: notice.runId,
+                                class: (0,vue__WEBPACK_IMPORTED_MODULE_0__.normalizeClass)(notice.level),
+                                onMouseenter: ($event) => ($setup.hoveredRunId = notice.runId),
+                                onMouseleave: _cache[0] || (_cache[0] = ($event) => ($setup.hoveredRunId = null)),
+                                onFocusin: ($event) => ($setup.focusedRunId = notice.runId),
+                                onFocusout: $setup.leaveFocus
+                            }, [
+                                (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("details", {
+                                    class: "notice-details",
+                                    onToggle: ($event) => ($setup.toggleDetails(notice.runId, $event))
+                                }, [
+                                    (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("summary", _hoisted_5, [
+                                        (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("strong", _hoisted_6, [
+                                            (notice.running)
+                                                ? ((0,vue__WEBPACK_IMPORTED_MODULE_0__.openBlock)(), (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementBlock)("span", _hoisted_7))
+                                                : (0,vue__WEBPACK_IMPORTED_MODULE_0__.createCommentVNode)("v-if", true),
+                                            (0,vue__WEBPACK_IMPORTED_MODULE_0__.createTextVNode)((0,vue__WEBPACK_IMPORTED_MODULE_0__.toDisplayString)(notice.title), 1 /* TEXT */)
+                                        ]),
+                                        _cache[1] || (_cache[1] = (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("span", { class: "expand-label" }, "展开", -1 /* CACHED */)),
+                                        _cache[2] || (_cache[2] = (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("span", { class: "collapse-label" }, "收起", -1 /* CACHED */))
+                                    ]),
+                                    (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementVNode)("p", null, (0,vue__WEBPACK_IMPORTED_MODULE_0__.toDisplayString)(notice.message), 1 /* TEXT */),
+                                    (notice.running)
+                                        ? ((0,vue__WEBPACK_IMPORTED_MODULE_0__.openBlock)(), (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementBlock)("p", _hoisted_8, "处理中，结果返回后会在此更新；取消后将等待清理完成。"))
+                                        : (0,vue__WEBPACK_IMPORTED_MODULE_0__.createCommentVNode)("v-if", true),
+                                    (notice.running)
+                                        ? ((0,vue__WEBPACK_IMPORTED_MODULE_0__.openBlock)(), (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementBlock)("button", {
+                                            key: 1,
+                                            onClick: ($event) => ($setup.cancelTaskRun(notice.runId))
+                                        }, "取消此运行", 8 /* PROPS */, _hoisted_9))
+                                        : (0,vue__WEBPACK_IMPORTED_MODULE_0__.createCommentVNode)("v-if", true),
+                                    (0,vue__WEBPACK_IMPORTED_MODULE_0__.createVNode)($setup["RunLog"], {
+                                        "run-id": notice.runId
+                                    }, null, 8 /* PROPS */, ["run-id"])
+                                ], 40 /* PROPS, NEED_HYDRATION */, _hoisted_4),
+                                (!notice.running)
+                                    ? ((0,vue__WEBPACK_IMPORTED_MODULE_0__.openBlock)(), (0,vue__WEBPACK_IMPORTED_MODULE_0__.createElementBlock)("button", {
+                                        key: 0,
+                                        class: "close-notice",
+                                        "aria-label": "关闭此通知",
+                                        onClick: ($event) => ($setup.taskNotices.delete(notice.runId))
+                                    }, " × ", 8 /* PROPS */, _hoisted_10))
+                                    : (0,vue__WEBPACK_IMPORTED_MODULE_0__.createCommentVNode)("v-if", true)
+                            ], 42 /* CLASS, PROPS, NEED_HYDRATION */, _hoisted_3));
+                        }), 128 /* KEYED_FRAGMENT */))
+                    ], 512 /* NEED_PATCH */))
+                    : (0,vue__WEBPACK_IMPORTED_MODULE_0__.createCommentVNode)("v-if", true)
+            ], 8 /* PROPS */, ["to"]))
+            : (0,vue__WEBPACK_IMPORTED_MODULE_0__.createCommentVNode)("v-if", true)
     ], 64 /* STABLE_FRAGMENT */));
 }
 
@@ -45206,6 +45761,9215 @@ const compile = () => {
   }
 };
 
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/compose-collection.js"
+/*!****************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/compose-collection.js ***!
+  \****************************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   composeCollection: () => (/* binding */ composeCollection)
+/* harmony export */ });
+/* harmony import */ var _nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../nodes/identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../nodes/Scalar.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Scalar.js");
+/* harmony import */ var _nodes_YAMLMap_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../nodes/YAMLMap.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/YAMLMap.js");
+/* harmony import */ var _nodes_YAMLSeq_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../nodes/YAMLSeq.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/YAMLSeq.js");
+/* harmony import */ var _resolve_block_map_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./resolve-block-map.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-block-map.js");
+/* harmony import */ var _resolve_block_seq_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./resolve-block-seq.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-block-seq.js");
+/* harmony import */ var _resolve_flow_collection_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./resolve-flow-collection.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-flow-collection.js");
+
+
+
+
+
+
+
+
+function resolveCollection(CN, ctx, token, onError, tagName, tag) {
+    const coll = token.type === 'block-map'
+        ? (0,_resolve_block_map_js__WEBPACK_IMPORTED_MODULE_4__.resolveBlockMap)(CN, ctx, token, onError, tag)
+        : token.type === 'block-seq'
+            ? (0,_resolve_block_seq_js__WEBPACK_IMPORTED_MODULE_5__.resolveBlockSeq)(CN, ctx, token, onError, tag)
+            : (0,_resolve_flow_collection_js__WEBPACK_IMPORTED_MODULE_6__.resolveFlowCollection)(CN, ctx, token, onError, tag);
+    const Coll = coll.constructor;
+    // If we got a tagName matching the class, or the tag name is '!',
+    // then use the tagName from the node class used to create it.
+    if (tagName === '!' || tagName === Coll.tagName) {
+        coll.tag = Coll.tagName;
+        return coll;
+    }
+    if (tagName)
+        coll.tag = tagName;
+    return coll;
+}
+function composeCollection(CN, ctx, token, props, onError) {
+    const tagToken = props.tag;
+    const tagName = !tagToken
+        ? null
+        : ctx.directives.tagName(tagToken.source, msg => onError(tagToken, 'TAG_RESOLVE_FAILED', msg));
+    if (token.type === 'block-seq') {
+        const { anchor, newlineAfterProp: nl } = props;
+        const lastProp = anchor && tagToken
+            ? anchor.offset > tagToken.offset
+                ? anchor
+                : tagToken
+            : (anchor ?? tagToken);
+        if (lastProp && (!nl || nl.offset < lastProp.offset)) {
+            const message = 'Missing newline after block sequence props';
+            onError(lastProp, 'MISSING_CHAR', message);
+        }
+    }
+    const expType = token.type === 'block-map'
+        ? 'map'
+        : token.type === 'block-seq'
+            ? 'seq'
+            : token.start.source === '{'
+                ? 'map'
+                : 'seq';
+    // shortcut: check if it's a generic YAMLMap or YAMLSeq
+    // before jumping into the custom tag logic.
+    if (!tagToken ||
+        !tagName ||
+        tagName === '!' ||
+        (tagName === _nodes_YAMLMap_js__WEBPACK_IMPORTED_MODULE_2__.YAMLMap.tagName && expType === 'map') ||
+        (tagName === _nodes_YAMLSeq_js__WEBPACK_IMPORTED_MODULE_3__.YAMLSeq.tagName && expType === 'seq')) {
+        return resolveCollection(CN, ctx, token, onError, tagName);
+    }
+    let tag = ctx.schema.tags.find(t => t.tag === tagName && t.collection === expType);
+    if (!tag) {
+        const kt = ctx.schema.knownTags[tagName];
+        if (kt?.collection === expType) {
+            ctx.schema.tags.push(Object.assign({}, kt, { default: false }));
+            tag = kt;
+        }
+        else {
+            if (kt) {
+                onError(tagToken, 'BAD_COLLECTION_TYPE', `${kt.tag} used for ${expType} collection, but expects ${kt.collection ?? 'scalar'}`, true);
+            }
+            else {
+                onError(tagToken, 'TAG_RESOLVE_FAILED', `Unresolved tag: ${tagName}`, true);
+            }
+            return resolveCollection(CN, ctx, token, onError, tagName);
+        }
+    }
+    const coll = resolveCollection(CN, ctx, token, onError, tagName, tag);
+    const res = tag.resolve?.(coll, msg => onError(tagToken, 'TAG_RESOLVE_FAILED', msg), ctx.options) ?? coll;
+    const node = (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isNode)(res)
+        ? res
+        : new _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_1__.Scalar(res);
+    node.range = coll.range;
+    node.tag = tagName;
+    if (tag?.format)
+        node.format = tag.format;
+    return node;
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/compose-doc.js"
+/*!*********************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/compose-doc.js ***!
+  \*********************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   composeDoc: () => (/* binding */ composeDoc)
+/* harmony export */ });
+/* harmony import */ var _doc_Document_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../doc/Document.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/doc/Document.js");
+/* harmony import */ var _compose_node_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./compose-node.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/compose-node.js");
+/* harmony import */ var _resolve_end_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./resolve-end.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-end.js");
+/* harmony import */ var _resolve_props_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./resolve-props.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-props.js");
+
+
+
+
+
+function composeDoc(options, directives, { offset, start, value, end }, onError) {
+    const opts = Object.assign({ _directives: directives }, options);
+    const doc = new _doc_Document_js__WEBPACK_IMPORTED_MODULE_0__.Document(undefined, opts);
+    const ctx = {
+        atKey: false,
+        atRoot: true,
+        directives: doc.directives,
+        options: doc.options,
+        schema: doc.schema
+    };
+    const props = (0,_resolve_props_js__WEBPACK_IMPORTED_MODULE_3__.resolveProps)(start, {
+        indicator: 'doc-start',
+        next: value ?? end?.[0],
+        offset,
+        onError,
+        parentIndent: 0,
+        startOnNewline: true
+    });
+    if (props.found) {
+        doc.directives.docStart = true;
+        if (value &&
+            (value.type === 'block-map' || value.type === 'block-seq') &&
+            !props.hasNewline)
+            onError(props.end, 'MISSING_CHAR', 'Block collection cannot start on same line with directives-end marker');
+    }
+    // @ts-expect-error If Contents is set, let's trust the user
+    doc.contents = value
+        ? (0,_compose_node_js__WEBPACK_IMPORTED_MODULE_1__.composeNode)(ctx, value, props, onError)
+        : (0,_compose_node_js__WEBPACK_IMPORTED_MODULE_1__.composeEmptyNode)(ctx, props.end, start, null, props, onError);
+    const contentEnd = doc.contents.range[2];
+    const re = (0,_resolve_end_js__WEBPACK_IMPORTED_MODULE_2__.resolveEnd)(end, contentEnd, false, onError);
+    if (re.comment)
+        doc.comment = re.comment;
+    doc.range = [offset, contentEnd, re.offset];
+    return doc;
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/compose-node.js"
+/*!**********************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/compose-node.js ***!
+  \**********************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   composeEmptyNode: () => (/* binding */ composeEmptyNode),
+/* harmony export */   composeNode: () => (/* binding */ composeNode)
+/* harmony export */ });
+/* harmony import */ var _nodes_Alias_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../nodes/Alias.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Alias.js");
+/* harmony import */ var _nodes_identity_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../nodes/identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _compose_collection_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./compose-collection.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/compose-collection.js");
+/* harmony import */ var _compose_scalar_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./compose-scalar.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/compose-scalar.js");
+/* harmony import */ var _resolve_end_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./resolve-end.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-end.js");
+/* harmony import */ var _util_empty_scalar_position_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./util-empty-scalar-position.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/util-empty-scalar-position.js");
+
+
+
+
+
+
+
+const CN = { composeNode, composeEmptyNode };
+function composeNode(ctx, token, props, onError) {
+    const atKey = ctx.atKey;
+    const { spaceBefore, comment, anchor, tag } = props;
+    let node;
+    let isSrcToken = true;
+    switch (token.type) {
+        case 'alias':
+            node = composeAlias(ctx, token, onError);
+            if (anchor || tag)
+                onError(token, 'ALIAS_PROPS', 'An alias node must not specify any properties');
+            break;
+        case 'scalar':
+        case 'single-quoted-scalar':
+        case 'double-quoted-scalar':
+        case 'block-scalar':
+            node = (0,_compose_scalar_js__WEBPACK_IMPORTED_MODULE_3__.composeScalar)(ctx, token, tag, onError);
+            if (anchor)
+                node.anchor = anchor.source.substring(1);
+            break;
+        case 'block-map':
+        case 'block-seq':
+        case 'flow-collection':
+            node = (0,_compose_collection_js__WEBPACK_IMPORTED_MODULE_2__.composeCollection)(CN, ctx, token, props, onError);
+            if (anchor)
+                node.anchor = anchor.source.substring(1);
+            break;
+        default: {
+            const message = token.type === 'error'
+                ? token.message
+                : `Unsupported token (type: ${token.type})`;
+            onError(token, 'UNEXPECTED_TOKEN', message);
+            node = composeEmptyNode(ctx, token.offset, undefined, null, props, onError);
+            isSrcToken = false;
+        }
+    }
+    if (anchor && node.anchor === '')
+        onError(anchor, 'BAD_ALIAS', 'Anchor cannot be an empty string');
+    if (atKey &&
+        ctx.options.stringKeys &&
+        (!(0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_1__.isScalar)(node) ||
+            typeof node.value !== 'string' ||
+            (node.tag && node.tag !== 'tag:yaml.org,2002:str'))) {
+        const msg = 'With stringKeys, all keys must be strings';
+        onError(tag ?? token, 'NON_STRING_KEY', msg);
+    }
+    if (spaceBefore)
+        node.spaceBefore = true;
+    if (comment) {
+        if (token.type === 'scalar' && token.source === '')
+            node.comment = comment;
+        else
+            node.commentBefore = comment;
+    }
+    // @ts-expect-error Type checking misses meaning of isSrcToken
+    if (ctx.options.keepSourceTokens && isSrcToken)
+        node.srcToken = token;
+    return node;
+}
+function composeEmptyNode(ctx, offset, before, pos, { spaceBefore, comment, anchor, tag, end }, onError) {
+    const token = {
+        type: 'scalar',
+        offset: (0,_util_empty_scalar_position_js__WEBPACK_IMPORTED_MODULE_5__.emptyScalarPosition)(offset, before, pos),
+        indent: -1,
+        source: ''
+    };
+    const node = (0,_compose_scalar_js__WEBPACK_IMPORTED_MODULE_3__.composeScalar)(ctx, token, tag, onError);
+    if (anchor) {
+        node.anchor = anchor.source.substring(1);
+        if (node.anchor === '')
+            onError(anchor, 'BAD_ALIAS', 'Anchor cannot be an empty string');
+    }
+    if (spaceBefore)
+        node.spaceBefore = true;
+    if (comment) {
+        node.comment = comment;
+        node.range[2] = end;
+    }
+    return node;
+}
+function composeAlias({ options }, { offset, source, end }, onError) {
+    const alias = new _nodes_Alias_js__WEBPACK_IMPORTED_MODULE_0__.Alias(source.substring(1));
+    if (alias.source === '')
+        onError(offset, 'BAD_ALIAS', 'Alias cannot be an empty string');
+    if (alias.source.endsWith(':'))
+        onError(offset + source.length - 1, 'BAD_ALIAS', 'Alias ending in : is ambiguous', true);
+    const valueEnd = offset + source.length;
+    const re = (0,_resolve_end_js__WEBPACK_IMPORTED_MODULE_4__.resolveEnd)(end, valueEnd, options.strict, onError);
+    alias.range = [offset, valueEnd, re.offset];
+    if (re.comment)
+        alias.comment = re.comment;
+    return alias;
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/compose-scalar.js"
+/*!************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/compose-scalar.js ***!
+  \************************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   composeScalar: () => (/* binding */ composeScalar)
+/* harmony export */ });
+/* harmony import */ var _nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../nodes/identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../nodes/Scalar.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Scalar.js");
+/* harmony import */ var _resolve_block_scalar_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./resolve-block-scalar.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-block-scalar.js");
+/* harmony import */ var _resolve_flow_scalar_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./resolve-flow-scalar.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-flow-scalar.js");
+
+
+
+
+
+function composeScalar(ctx, token, tagToken, onError) {
+    const { value, type, comment, range } = token.type === 'block-scalar'
+        ? (0,_resolve_block_scalar_js__WEBPACK_IMPORTED_MODULE_2__.resolveBlockScalar)(ctx, token, onError)
+        : (0,_resolve_flow_scalar_js__WEBPACK_IMPORTED_MODULE_3__.resolveFlowScalar)(token, ctx.options.strict, onError);
+    const tagName = tagToken
+        ? ctx.directives.tagName(tagToken.source, msg => onError(tagToken, 'TAG_RESOLVE_FAILED', msg))
+        : null;
+    let tag;
+    if (ctx.options.stringKeys && ctx.atKey) {
+        tag = ctx.schema[_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.SCALAR];
+    }
+    else if (tagName)
+        tag = findScalarTagByName(ctx.schema, value, tagName, tagToken, onError);
+    else if (token.type === 'scalar')
+        tag = findScalarTagByTest(ctx, value, token, onError);
+    else
+        tag = ctx.schema[_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.SCALAR];
+    let scalar;
+    try {
+        const res = tag.resolve(value, msg => onError(tagToken ?? token, 'TAG_RESOLVE_FAILED', msg), ctx.options);
+        scalar = (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isScalar)(res) ? res : new _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_1__.Scalar(res);
+    }
+    catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        onError(tagToken ?? token, 'TAG_RESOLVE_FAILED', msg);
+        scalar = new _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_1__.Scalar(value);
+    }
+    scalar.range = range;
+    scalar.source = value;
+    if (type)
+        scalar.type = type;
+    if (tagName)
+        scalar.tag = tagName;
+    if (tag.format)
+        scalar.format = tag.format;
+    if (comment)
+        scalar.comment = comment;
+    return scalar;
+}
+function findScalarTagByName(schema, value, tagName, tagToken, onError) {
+    if (tagName === '!')
+        return schema[_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.SCALAR]; // non-specific tag
+    const matchWithTest = [];
+    for (const tag of schema.tags) {
+        if (!tag.collection && tag.tag === tagName) {
+            if (tag.default && tag.test)
+                matchWithTest.push(tag);
+            else
+                return tag;
+        }
+    }
+    for (const tag of matchWithTest)
+        if (tag.test?.test(value))
+            return tag;
+    const kt = schema.knownTags[tagName];
+    if (kt && !kt.collection) {
+        // Ensure that the known tag is available for stringifying,
+        // but does not get used by default.
+        schema.tags.push(Object.assign({}, kt, { default: false, test: undefined }));
+        return kt;
+    }
+    onError(tagToken, 'TAG_RESOLVE_FAILED', `Unresolved tag: ${tagName}`, tagName !== 'tag:yaml.org,2002:str');
+    return schema[_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.SCALAR];
+}
+function findScalarTagByTest({ atKey, directives, schema }, value, token, onError) {
+    const tag = schema.tags.find(tag => (tag.default === true || (atKey && tag.default === 'key')) &&
+        tag.test?.test(value)) || schema[_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.SCALAR];
+    if (schema.compat) {
+        const compat = schema.compat.find(tag => tag.default && tag.test?.test(value)) ??
+            schema[_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.SCALAR];
+        if (tag.tag !== compat.tag) {
+            const ts = directives.tagString(tag.tag);
+            const cs = directives.tagString(compat.tag);
+            const msg = `Value may be parsed as either ${ts} or ${cs}`;
+            onError(token, 'TAG_RESOLVE_FAILED', msg, true);
+        }
+    }
+    return tag;
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/composer.js"
+/*!******************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/composer.js ***!
+  \******************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Composer: () => (/* binding */ Composer)
+/* harmony export */ });
+/* harmony import */ var _doc_directives_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../doc/directives.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/doc/directives.js");
+/* harmony import */ var _doc_Document_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../doc/Document.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/doc/Document.js");
+/* harmony import */ var _errors_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../errors.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/errors.js");
+/* harmony import */ var _nodes_identity_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../nodes/identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _compose_doc_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./compose-doc.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/compose-doc.js");
+/* harmony import */ var _resolve_end_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./resolve-end.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-end.js");
+
+
+
+
+
+
+
+function getErrorPos(src) {
+    if (typeof src === 'number')
+        return [src, src + 1];
+    if (Array.isArray(src))
+        return src.length === 2 ? src : [src[0], src[1]];
+    const { offset, source } = src;
+    return [offset, offset + (typeof source === 'string' ? source.length : 1)];
+}
+function parsePrelude(prelude) {
+    let comment = '';
+    let atComment = false;
+    let afterEmptyLine = false;
+    for (let i = 0; i < prelude.length; ++i) {
+        const source = prelude[i];
+        switch (source[0]) {
+            case '#':
+                comment +=
+                    (comment === '' ? '' : afterEmptyLine ? '\n\n' : '\n') +
+                        (source.substring(1) || ' ');
+                atComment = true;
+                afterEmptyLine = false;
+                break;
+            case '%':
+                if (prelude[i + 1]?.[0] !== '#')
+                    i += 1;
+                atComment = false;
+                break;
+            default:
+                // This may be wrong after doc-end, but in that case it doesn't matter
+                if (!atComment)
+                    afterEmptyLine = true;
+                atComment = false;
+        }
+    }
+    return { comment, afterEmptyLine };
+}
+/**
+ * Compose a stream of CST nodes into a stream of YAML Documents.
+ *
+ * ```ts
+ * import { Composer, Parser } from 'yaml'
+ *
+ * const src: string = ...
+ * const tokens = new Parser().parse(src)
+ * const docs = new Composer().compose(tokens)
+ * ```
+ */
+class Composer {
+    constructor(options = {}) {
+        this.doc = null;
+        this.atDirectives = false;
+        this.prelude = [];
+        this.errors = [];
+        this.warnings = [];
+        this.onError = (source, code, message, warning) => {
+            const pos = getErrorPos(source);
+            if (warning)
+                this.warnings.push(new _errors_js__WEBPACK_IMPORTED_MODULE_2__.YAMLWarning(pos, code, message));
+            else
+                this.errors.push(new _errors_js__WEBPACK_IMPORTED_MODULE_2__.YAMLParseError(pos, code, message));
+        };
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+        this.directives = new _doc_directives_js__WEBPACK_IMPORTED_MODULE_0__.Directives({ version: options.version || '1.2' });
+        this.options = options;
+    }
+    decorate(doc, afterDoc) {
+        const { comment, afterEmptyLine } = parsePrelude(this.prelude);
+        //console.log({ dc: doc.comment, prelude, comment })
+        if (comment) {
+            const dc = doc.contents;
+            if (afterDoc) {
+                doc.comment = doc.comment ? `${doc.comment}\n${comment}` : comment;
+            }
+            else if (afterEmptyLine || doc.directives.docStart || !dc) {
+                doc.commentBefore = comment;
+            }
+            else if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_3__.isCollection)(dc) && !dc.flow && dc.items.length > 0) {
+                let it = dc.items[0];
+                if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_3__.isPair)(it))
+                    it = it.key;
+                const cb = it.commentBefore;
+                it.commentBefore = cb ? `${comment}\n${cb}` : comment;
+            }
+            else {
+                const cb = dc.commentBefore;
+                dc.commentBefore = cb ? `${comment}\n${cb}` : comment;
+            }
+        }
+        if (afterDoc) {
+            Array.prototype.push.apply(doc.errors, this.errors);
+            Array.prototype.push.apply(doc.warnings, this.warnings);
+        }
+        else {
+            doc.errors = this.errors;
+            doc.warnings = this.warnings;
+        }
+        this.prelude = [];
+        this.errors = [];
+        this.warnings = [];
+    }
+    /**
+     * Current stream status information.
+     *
+     * Mostly useful at the end of input for an empty stream.
+     */
+    streamInfo() {
+        return {
+            comment: parsePrelude(this.prelude).comment,
+            directives: this.directives,
+            errors: this.errors,
+            warnings: this.warnings
+        };
+    }
+    /**
+     * Compose tokens into documents.
+     *
+     * @param forceDoc - If the stream contains no document, still emit a final document including any comments and directives that would be applied to a subsequent document.
+     * @param endOffset - Should be set if `forceDoc` is also set, to set the document range end and to indicate errors correctly.
+     */
+    *compose(tokens, forceDoc = false, endOffset = -1) {
+        for (const token of tokens)
+            yield* this.next(token);
+        yield* this.end(forceDoc, endOffset);
+    }
+    /** Advance the composer by one CST token. */
+    *next(token) {
+        switch (token.type) {
+            case 'directive':
+                this.directives.add(token.source, (offset, message, warning) => {
+                    const pos = getErrorPos(token);
+                    pos[0] += offset;
+                    this.onError(pos, 'BAD_DIRECTIVE', message, warning);
+                });
+                this.prelude.push(token.source);
+                this.atDirectives = true;
+                break;
+            case 'document': {
+                const doc = (0,_compose_doc_js__WEBPACK_IMPORTED_MODULE_4__.composeDoc)(this.options, this.directives, token, this.onError);
+                if (this.atDirectives && !doc.directives.docStart)
+                    this.onError(token, 'MISSING_CHAR', 'Missing directives-end/doc-start indicator line');
+                this.decorate(doc, false);
+                if (this.doc)
+                    yield this.doc;
+                this.doc = doc;
+                this.atDirectives = false;
+                break;
+            }
+            case 'byte-order-mark':
+            case 'space':
+                break;
+            case 'comment':
+            case 'newline':
+                this.prelude.push(token.source);
+                break;
+            case 'error': {
+                const msg = token.source
+                    ? `${token.message}: ${JSON.stringify(token.source)}`
+                    : token.message;
+                const error = new _errors_js__WEBPACK_IMPORTED_MODULE_2__.YAMLParseError(getErrorPos(token), 'UNEXPECTED_TOKEN', msg);
+                if (this.atDirectives || !this.doc)
+                    this.errors.push(error);
+                else
+                    this.doc.errors.push(error);
+                break;
+            }
+            case 'doc-end': {
+                if (!this.doc) {
+                    const msg = 'Unexpected doc-end without preceding document';
+                    this.errors.push(new _errors_js__WEBPACK_IMPORTED_MODULE_2__.YAMLParseError(getErrorPos(token), 'UNEXPECTED_TOKEN', msg));
+                    break;
+                }
+                this.doc.directives.docEnd = true;
+                const end = (0,_resolve_end_js__WEBPACK_IMPORTED_MODULE_5__.resolveEnd)(token.end, token.offset + token.source.length, this.doc.options.strict, this.onError);
+                this.decorate(this.doc, true);
+                if (end.comment) {
+                    const dc = this.doc.comment;
+                    this.doc.comment = dc ? `${dc}\n${end.comment}` : end.comment;
+                }
+                this.doc.range[2] = end.offset;
+                break;
+            }
+            default:
+                this.errors.push(new _errors_js__WEBPACK_IMPORTED_MODULE_2__.YAMLParseError(getErrorPos(token), 'UNEXPECTED_TOKEN', `Unsupported token ${token.type}`));
+        }
+    }
+    /**
+     * Call at end of input to yield any remaining document.
+     *
+     * @param forceDoc - If the stream contains no document, still emit a final document including any comments and directives that would be applied to a subsequent document.
+     * @param endOffset - Should be set if `forceDoc` is also set, to set the document range end and to indicate errors correctly.
+     */
+    *end(forceDoc = false, endOffset = -1) {
+        if (this.doc) {
+            this.decorate(this.doc, true);
+            yield this.doc;
+            this.doc = null;
+        }
+        else if (forceDoc) {
+            const opts = Object.assign({ _directives: this.directives }, this.options);
+            const doc = new _doc_Document_js__WEBPACK_IMPORTED_MODULE_1__.Document(undefined, opts);
+            if (this.atDirectives)
+                this.onError(endOffset, 'MISSING_CHAR', 'Missing directives-end indicator line');
+            doc.range = [0, endOffset, endOffset];
+            this.decorate(doc, false);
+            yield doc;
+        }
+    }
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-block-map.js"
+/*!***************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-block-map.js ***!
+  \***************************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   resolveBlockMap: () => (/* binding */ resolveBlockMap)
+/* harmony export */ });
+/* harmony import */ var _nodes_Pair_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../nodes/Pair.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Pair.js");
+/* harmony import */ var _nodes_YAMLMap_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../nodes/YAMLMap.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/YAMLMap.js");
+/* harmony import */ var _resolve_props_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./resolve-props.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-props.js");
+/* harmony import */ var _util_contains_newline_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./util-contains-newline.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/util-contains-newline.js");
+/* harmony import */ var _util_flow_indent_check_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./util-flow-indent-check.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/util-flow-indent-check.js");
+/* harmony import */ var _util_map_includes_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./util-map-includes.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/util-map-includes.js");
+
+
+
+
+
+
+
+const startColMsg = 'All mapping items must start at the same column';
+function resolveBlockMap({ composeNode, composeEmptyNode }, ctx, bm, onError, tag) {
+    const NodeClass = tag?.nodeClass ?? _nodes_YAMLMap_js__WEBPACK_IMPORTED_MODULE_1__.YAMLMap;
+    const map = new NodeClass(ctx.schema);
+    if (ctx.atRoot)
+        ctx.atRoot = false;
+    let offset = bm.offset;
+    let commentEnd = null;
+    for (const collItem of bm.items) {
+        const { start, key, sep, value } = collItem;
+        // key properties
+        const keyProps = (0,_resolve_props_js__WEBPACK_IMPORTED_MODULE_2__.resolveProps)(start, {
+            indicator: 'explicit-key-ind',
+            next: key ?? sep?.[0],
+            offset,
+            onError,
+            parentIndent: bm.indent,
+            startOnNewline: true
+        });
+        const implicitKey = !keyProps.found;
+        if (implicitKey) {
+            if (key) {
+                if (key.type === 'block-seq')
+                    onError(offset, 'BLOCK_AS_IMPLICIT_KEY', 'A block sequence may not be used as an implicit map key');
+                else if ('indent' in key && key.indent !== bm.indent)
+                    onError(offset, 'BAD_INDENT', startColMsg);
+            }
+            if (!keyProps.anchor && !keyProps.tag && !sep) {
+                commentEnd = keyProps.end;
+                if (keyProps.comment) {
+                    if (map.comment)
+                        map.comment += '\n' + keyProps.comment;
+                    else
+                        map.comment = keyProps.comment;
+                }
+                continue;
+            }
+            if (keyProps.newlineAfterProp || (0,_util_contains_newline_js__WEBPACK_IMPORTED_MODULE_3__.containsNewline)(key)) {
+                onError(key ?? start[start.length - 1], 'MULTILINE_IMPLICIT_KEY', 'Implicit keys need to be on a single line');
+            }
+        }
+        else if (keyProps.found?.indent !== bm.indent) {
+            onError(offset, 'BAD_INDENT', startColMsg);
+        }
+        // key value
+        ctx.atKey = true;
+        const keyStart = keyProps.end;
+        const keyNode = key
+            ? composeNode(ctx, key, keyProps, onError)
+            : composeEmptyNode(ctx, keyStart, start, null, keyProps, onError);
+        if (ctx.schema.compat)
+            (0,_util_flow_indent_check_js__WEBPACK_IMPORTED_MODULE_4__.flowIndentCheck)(bm.indent, key, onError);
+        ctx.atKey = false;
+        if ((0,_util_map_includes_js__WEBPACK_IMPORTED_MODULE_5__.mapIncludes)(ctx, map.items, keyNode))
+            onError(keyStart, 'DUPLICATE_KEY', 'Map keys must be unique');
+        // value properties
+        const valueProps = (0,_resolve_props_js__WEBPACK_IMPORTED_MODULE_2__.resolveProps)(sep ?? [], {
+            indicator: 'map-value-ind',
+            next: value,
+            offset: keyNode.range[2],
+            onError,
+            parentIndent: bm.indent,
+            startOnNewline: !key || key.type === 'block-scalar'
+        });
+        offset = valueProps.end;
+        if (valueProps.found) {
+            if (implicitKey) {
+                if (value?.type === 'block-map' && !valueProps.hasNewline)
+                    onError(offset, 'BLOCK_AS_IMPLICIT_KEY', 'Nested mappings are not allowed in compact mappings');
+                if (ctx.options.strict &&
+                    keyProps.start < valueProps.found.offset - 1024)
+                    onError(keyNode.range, 'KEY_OVER_1024_CHARS', 'The : indicator must be at most 1024 chars after the start of an implicit block mapping key');
+            }
+            // value value
+            const valueNode = value
+                ? composeNode(ctx, value, valueProps, onError)
+                : composeEmptyNode(ctx, offset, sep, null, valueProps, onError);
+            if (ctx.schema.compat)
+                (0,_util_flow_indent_check_js__WEBPACK_IMPORTED_MODULE_4__.flowIndentCheck)(bm.indent, value, onError);
+            offset = valueNode.range[2];
+            const pair = new _nodes_Pair_js__WEBPACK_IMPORTED_MODULE_0__.Pair(keyNode, valueNode);
+            if (ctx.options.keepSourceTokens)
+                pair.srcToken = collItem;
+            map.items.push(pair);
+        }
+        else {
+            // key with no value
+            if (implicitKey)
+                onError(keyNode.range, 'MISSING_CHAR', 'Implicit map keys need to be followed by map values');
+            if (valueProps.comment) {
+                if (keyNode.comment)
+                    keyNode.comment += '\n' + valueProps.comment;
+                else
+                    keyNode.comment = valueProps.comment;
+            }
+            const pair = new _nodes_Pair_js__WEBPACK_IMPORTED_MODULE_0__.Pair(keyNode);
+            if (ctx.options.keepSourceTokens)
+                pair.srcToken = collItem;
+            map.items.push(pair);
+        }
+    }
+    if (commentEnd && commentEnd < offset)
+        onError(commentEnd, 'IMPOSSIBLE', 'Map comment with trailing content');
+    map.range = [bm.offset, offset, commentEnd ?? offset];
+    return map;
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-block-scalar.js"
+/*!******************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-block-scalar.js ***!
+  \******************************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   resolveBlockScalar: () => (/* binding */ resolveBlockScalar)
+/* harmony export */ });
+/* harmony import */ var _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../nodes/Scalar.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Scalar.js");
+
+
+function resolveBlockScalar(ctx, scalar, onError) {
+    const start = scalar.offset;
+    const header = parseBlockScalarHeader(scalar, ctx.options.strict, onError);
+    if (!header)
+        return { value: '', type: null, comment: '', range: [start, start, start] };
+    const type = header.mode === '>' ? _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar.BLOCK_FOLDED : _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar.BLOCK_LITERAL;
+    const lines = scalar.source ? splitLines(scalar.source) : [];
+    // determine the end of content & start of chomping
+    let chompStart = lines.length;
+    for (let i = lines.length - 1; i >= 0; --i) {
+        const content = lines[i][1];
+        if (content === '' || content === '\r')
+            chompStart = i;
+        else
+            break;
+    }
+    // shortcut for empty contents
+    if (chompStart === 0) {
+        const value = header.chomp === '+' && lines.length > 0
+            ? '\n'.repeat(Math.max(1, lines.length - 1))
+            : '';
+        let end = start + header.length;
+        if (scalar.source)
+            end += scalar.source.length;
+        return { value, type, comment: header.comment, range: [start, end, end] };
+    }
+    // find the indentation level to trim from start
+    let trimIndent = scalar.indent + header.indent;
+    let offset = scalar.offset + header.length;
+    let contentStart = 0;
+    for (let i = 0; i < chompStart; ++i) {
+        const [indent, content] = lines[i];
+        if (content === '' || content === '\r') {
+            if (header.indent === 0 && indent.length > trimIndent)
+                trimIndent = indent.length;
+        }
+        else {
+            if (indent.length < trimIndent) {
+                const message = 'Block scalars with more-indented leading empty lines must use an explicit indentation indicator';
+                onError(offset + indent.length, 'MISSING_CHAR', message);
+            }
+            if (header.indent === 0)
+                trimIndent = indent.length;
+            contentStart = i;
+            if (trimIndent === 0 && !ctx.atRoot) {
+                const message = 'Block scalar values in collections must be indented';
+                onError(offset, 'BAD_INDENT', message);
+            }
+            break;
+        }
+        offset += indent.length + content.length + 1;
+    }
+    // include trailing more-indented empty lines in content
+    for (let i = lines.length - 1; i >= chompStart; --i) {
+        if (lines[i][0].length > trimIndent)
+            chompStart = i + 1;
+    }
+    let value = '';
+    let sep = '';
+    let prevMoreIndented = false;
+    // leading whitespace is kept intact
+    for (let i = 0; i < contentStart; ++i)
+        value += lines[i][0].slice(trimIndent) + '\n';
+    for (let i = contentStart; i < chompStart; ++i) {
+        let [indent, content] = lines[i];
+        offset += indent.length + content.length + 1;
+        const crlf = content[content.length - 1] === '\r';
+        if (crlf)
+            content = content.slice(0, -1);
+        /* istanbul ignore if already caught in lexer */
+        if (content && indent.length < trimIndent) {
+            const src = header.indent
+                ? 'explicit indentation indicator'
+                : 'first line';
+            const message = `Block scalar lines must not be less indented than their ${src}`;
+            onError(offset - content.length - (crlf ? 2 : 1), 'BAD_INDENT', message);
+            indent = '';
+        }
+        if (type === _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar.BLOCK_LITERAL) {
+            value += sep + indent.slice(trimIndent) + content;
+            sep = '\n';
+        }
+        else if (indent.length > trimIndent || content[0] === '\t') {
+            // more-indented content within a folded block
+            if (sep === ' ')
+                sep = '\n';
+            else if (!prevMoreIndented && sep === '\n')
+                sep = '\n\n';
+            value += sep + indent.slice(trimIndent) + content;
+            sep = '\n';
+            prevMoreIndented = true;
+        }
+        else if (content === '') {
+            // empty line
+            if (sep === '\n')
+                value += '\n';
+            else
+                sep = '\n';
+        }
+        else {
+            value += sep + content;
+            sep = ' ';
+            prevMoreIndented = false;
+        }
+    }
+    switch (header.chomp) {
+        case '-':
+            break;
+        case '+':
+            for (let i = chompStart; i < lines.length; ++i)
+                value += '\n' + lines[i][0].slice(trimIndent);
+            if (value[value.length - 1] !== '\n')
+                value += '\n';
+            break;
+        default:
+            value += '\n';
+    }
+    const end = start + header.length + scalar.source.length;
+    return { value, type, comment: header.comment, range: [start, end, end] };
+}
+function parseBlockScalarHeader({ offset, props }, strict, onError) {
+    /* istanbul ignore if should not happen */
+    if (props[0].type !== 'block-scalar-header') {
+        onError(props[0], 'IMPOSSIBLE', 'Block scalar header not found');
+        return null;
+    }
+    const { source } = props[0];
+    const mode = source[0];
+    let indent = 0;
+    let chomp = '';
+    let error = -1;
+    for (let i = 1; i < source.length; ++i) {
+        const ch = source[i];
+        if (!chomp && (ch === '-' || ch === '+'))
+            chomp = ch;
+        else {
+            const n = Number(ch);
+            if (!indent && n)
+                indent = n;
+            else if (error === -1)
+                error = offset + i;
+        }
+    }
+    if (error !== -1)
+        onError(error, 'UNEXPECTED_TOKEN', `Block scalar header includes extra characters: ${source}`);
+    let hasSpace = false;
+    let comment = '';
+    let length = source.length;
+    for (let i = 1; i < props.length; ++i) {
+        const token = props[i];
+        switch (token.type) {
+            case 'space':
+                hasSpace = true;
+            // fallthrough
+            case 'newline':
+                length += token.source.length;
+                break;
+            case 'comment':
+                if (strict && !hasSpace) {
+                    const message = 'Comments must be separated from other tokens by white space characters';
+                    onError(token, 'MISSING_CHAR', message);
+                }
+                length += token.source.length;
+                comment = token.source.substring(1);
+                break;
+            case 'error':
+                onError(token, 'UNEXPECTED_TOKEN', token.message);
+                length += token.source.length;
+                break;
+            /* istanbul ignore next should not happen */
+            default: {
+                const message = `Unexpected token in block scalar header: ${token.type}`;
+                onError(token, 'UNEXPECTED_TOKEN', message);
+                const ts = token.source;
+                if (ts && typeof ts === 'string')
+                    length += ts.length;
+            }
+        }
+    }
+    return { mode, indent, chomp, comment, length };
+}
+/** @returns Array of lines split up as `[indent, content]` */
+function splitLines(source) {
+    const split = source.split(/\n( *)/);
+    const first = split[0];
+    const m = first.match(/^( *)/);
+    const line0 = m?.[1]
+        ? [m[1], first.slice(m[1].length)]
+        : ['', first];
+    const lines = [line0];
+    for (let i = 1; i < split.length; i += 2)
+        lines.push([split[i], split[i + 1]]);
+    return lines;
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-block-seq.js"
+/*!***************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-block-seq.js ***!
+  \***************************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   resolveBlockSeq: () => (/* binding */ resolveBlockSeq)
+/* harmony export */ });
+/* harmony import */ var _nodes_YAMLSeq_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../nodes/YAMLSeq.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/YAMLSeq.js");
+/* harmony import */ var _resolve_props_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./resolve-props.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-props.js");
+/* harmony import */ var _util_flow_indent_check_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./util-flow-indent-check.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/util-flow-indent-check.js");
+
+
+
+
+function resolveBlockSeq({ composeNode, composeEmptyNode }, ctx, bs, onError, tag) {
+    const NodeClass = tag?.nodeClass ?? _nodes_YAMLSeq_js__WEBPACK_IMPORTED_MODULE_0__.YAMLSeq;
+    const seq = new NodeClass(ctx.schema);
+    if (ctx.atRoot)
+        ctx.atRoot = false;
+    if (ctx.atKey)
+        ctx.atKey = false;
+    let offset = bs.offset;
+    let commentEnd = null;
+    for (const { start, value } of bs.items) {
+        const props = (0,_resolve_props_js__WEBPACK_IMPORTED_MODULE_1__.resolveProps)(start, {
+            indicator: 'seq-item-ind',
+            next: value,
+            offset,
+            onError,
+            parentIndent: bs.indent,
+            startOnNewline: true
+        });
+        if (!props.found) {
+            if (props.anchor || props.tag || value) {
+                if (value?.type === 'block-seq')
+                    onError(props.end, 'BAD_INDENT', 'All sequence items must start at the same column');
+                else
+                    onError(offset, 'MISSING_CHAR', 'Sequence item without - indicator');
+            }
+            else {
+                commentEnd = props.end;
+                if (props.comment)
+                    seq.comment = props.comment;
+                continue;
+            }
+        }
+        const node = value
+            ? composeNode(ctx, value, props, onError)
+            : composeEmptyNode(ctx, props.end, start, null, props, onError);
+        if (ctx.schema.compat)
+            (0,_util_flow_indent_check_js__WEBPACK_IMPORTED_MODULE_2__.flowIndentCheck)(bs.indent, value, onError);
+        offset = node.range[2];
+        seq.items.push(node);
+    }
+    seq.range = [bs.offset, offset, commentEnd ?? offset];
+    return seq;
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-end.js"
+/*!*********************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-end.js ***!
+  \*********************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   resolveEnd: () => (/* binding */ resolveEnd)
+/* harmony export */ });
+function resolveEnd(end, offset, reqSpace, onError) {
+    let comment = '';
+    if (end) {
+        let hasSpace = false;
+        let sep = '';
+        for (const token of end) {
+            const { source, type } = token;
+            switch (type) {
+                case 'space':
+                    hasSpace = true;
+                    break;
+                case 'comment': {
+                    if (reqSpace && !hasSpace)
+                        onError(token, 'MISSING_CHAR', 'Comments must be separated from other tokens by white space characters');
+                    const cb = source.substring(1) || ' ';
+                    if (!comment)
+                        comment = cb;
+                    else
+                        comment += sep + cb;
+                    sep = '';
+                    break;
+                }
+                case 'newline':
+                    if (comment)
+                        sep += source;
+                    hasSpace = true;
+                    break;
+                default:
+                    onError(token, 'UNEXPECTED_TOKEN', `Unexpected ${type} at node end`);
+            }
+            offset += source.length;
+        }
+    }
+    return { comment, offset };
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-flow-collection.js"
+/*!*********************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-flow-collection.js ***!
+  \*********************************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   resolveFlowCollection: () => (/* binding */ resolveFlowCollection)
+/* harmony export */ });
+/* harmony import */ var _nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../nodes/identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _nodes_Pair_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../nodes/Pair.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Pair.js");
+/* harmony import */ var _nodes_YAMLMap_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../nodes/YAMLMap.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/YAMLMap.js");
+/* harmony import */ var _nodes_YAMLSeq_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../nodes/YAMLSeq.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/YAMLSeq.js");
+/* harmony import */ var _resolve_end_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./resolve-end.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-end.js");
+/* harmony import */ var _resolve_props_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./resolve-props.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-props.js");
+/* harmony import */ var _util_contains_newline_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./util-contains-newline.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/util-contains-newline.js");
+/* harmony import */ var _util_map_includes_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./util-map-includes.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/util-map-includes.js");
+
+
+
+
+
+
+
+
+
+const blockMsg = 'Block collections are not allowed within flow collections';
+const isBlock = (token) => token && (token.type === 'block-map' || token.type === 'block-seq');
+function resolveFlowCollection({ composeNode, composeEmptyNode }, ctx, fc, onError, tag) {
+    const isMap = fc.start.source === '{';
+    const fcName = isMap ? 'flow map' : 'flow sequence';
+    const NodeClass = (tag?.nodeClass ?? (isMap ? _nodes_YAMLMap_js__WEBPACK_IMPORTED_MODULE_2__.YAMLMap : _nodes_YAMLSeq_js__WEBPACK_IMPORTED_MODULE_3__.YAMLSeq));
+    const coll = new NodeClass(ctx.schema);
+    coll.flow = true;
+    const atRoot = ctx.atRoot;
+    if (atRoot)
+        ctx.atRoot = false;
+    if (ctx.atKey)
+        ctx.atKey = false;
+    let offset = fc.offset + fc.start.source.length;
+    for (let i = 0; i < fc.items.length; ++i) {
+        const collItem = fc.items[i];
+        const { start, key, sep, value } = collItem;
+        const props = (0,_resolve_props_js__WEBPACK_IMPORTED_MODULE_5__.resolveProps)(start, {
+            flow: fcName,
+            indicator: 'explicit-key-ind',
+            next: key ?? sep?.[0],
+            offset,
+            onError,
+            parentIndent: fc.indent,
+            startOnNewline: false
+        });
+        if (!props.found) {
+            if (!props.anchor && !props.tag && !sep && !value) {
+                if (i === 0 && props.comma)
+                    onError(props.comma, 'UNEXPECTED_TOKEN', `Unexpected , in ${fcName}`);
+                else if (i < fc.items.length - 1)
+                    onError(props.start, 'UNEXPECTED_TOKEN', `Unexpected empty item in ${fcName}`);
+                if (props.comment) {
+                    if (coll.comment)
+                        coll.comment += '\n' + props.comment;
+                    else
+                        coll.comment = props.comment;
+                }
+                offset = props.end;
+                continue;
+            }
+            if (!isMap && ctx.options.strict && (0,_util_contains_newline_js__WEBPACK_IMPORTED_MODULE_6__.containsNewline)(key))
+                onError(key, // checked by containsNewline()
+                'MULTILINE_IMPLICIT_KEY', 'Implicit keys of flow sequence pairs need to be on a single line');
+        }
+        if (i === 0) {
+            if (props.comma)
+                onError(props.comma, 'UNEXPECTED_TOKEN', `Unexpected , in ${fcName}`);
+        }
+        else {
+            if (!props.comma)
+                onError(props.start, 'MISSING_CHAR', `Missing , between ${fcName} items`);
+            if (props.comment) {
+                let prevItemComment = '';
+                loop: for (const st of start) {
+                    switch (st.type) {
+                        case 'comma':
+                        case 'space':
+                            break;
+                        case 'comment':
+                            prevItemComment = st.source.substring(1);
+                            break loop;
+                        default:
+                            break loop;
+                    }
+                }
+                if (prevItemComment) {
+                    let prev = coll.items[coll.items.length - 1];
+                    if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isPair)(prev))
+                        prev = prev.value ?? prev.key;
+                    if (prev.comment)
+                        prev.comment += '\n' + prevItemComment;
+                    else
+                        prev.comment = prevItemComment;
+                    props.comment = props.comment.substring(prevItemComment.length + 1);
+                }
+            }
+        }
+        if (!isMap && !sep && !props.found) {
+            // item is a value in a seq
+            // → key & sep are empty, start does not include ? or :
+            const valueNode = value
+                ? composeNode(ctx, value, props, onError)
+                : composeEmptyNode(ctx, props.end, sep, null, props, onError);
+            coll.items.push(valueNode);
+            offset = valueNode.range[2];
+            if (isBlock(value))
+                onError(valueNode.range, 'BLOCK_IN_FLOW', blockMsg);
+        }
+        else {
+            // item is a key+value pair
+            // key value
+            ctx.atKey = true;
+            const keyStart = props.end;
+            const keyNode = key
+                ? composeNode(ctx, key, props, onError)
+                : composeEmptyNode(ctx, keyStart, start, null, props, onError);
+            if (isBlock(key))
+                onError(keyNode.range, 'BLOCK_IN_FLOW', blockMsg);
+            ctx.atKey = false;
+            // value properties
+            const valueProps = (0,_resolve_props_js__WEBPACK_IMPORTED_MODULE_5__.resolveProps)(sep ?? [], {
+                flow: fcName,
+                indicator: 'map-value-ind',
+                next: value,
+                offset: keyNode.range[2],
+                onError,
+                parentIndent: fc.indent,
+                startOnNewline: false
+            });
+            if (valueProps.found) {
+                if (!isMap && !props.found && ctx.options.strict) {
+                    if (sep)
+                        for (const st of sep) {
+                            if (st === valueProps.found)
+                                break;
+                            if (st.type === 'newline') {
+                                onError(st, 'MULTILINE_IMPLICIT_KEY', 'Implicit keys of flow sequence pairs need to be on a single line');
+                                break;
+                            }
+                        }
+                    if (props.start < valueProps.found.offset - 1024)
+                        onError(valueProps.found, 'KEY_OVER_1024_CHARS', 'The : indicator must be at most 1024 chars after the start of an implicit flow sequence key');
+                }
+            }
+            else if (value) {
+                if ('source' in value && value.source?.[0] === ':')
+                    onError(value, 'MISSING_CHAR', `Missing space after : in ${fcName}`);
+                else
+                    onError(valueProps.start, 'MISSING_CHAR', `Missing , or : between ${fcName} items`);
+            }
+            // value value
+            const valueNode = value
+                ? composeNode(ctx, value, valueProps, onError)
+                : valueProps.found
+                    ? composeEmptyNode(ctx, valueProps.end, sep, null, valueProps, onError)
+                    : null;
+            if (valueNode) {
+                if (isBlock(value))
+                    onError(valueNode.range, 'BLOCK_IN_FLOW', blockMsg);
+            }
+            else if (valueProps.comment) {
+                if (keyNode.comment)
+                    keyNode.comment += '\n' + valueProps.comment;
+                else
+                    keyNode.comment = valueProps.comment;
+            }
+            const pair = new _nodes_Pair_js__WEBPACK_IMPORTED_MODULE_1__.Pair(keyNode, valueNode);
+            if (ctx.options.keepSourceTokens)
+                pair.srcToken = collItem;
+            if (isMap) {
+                const map = coll;
+                if ((0,_util_map_includes_js__WEBPACK_IMPORTED_MODULE_7__.mapIncludes)(ctx, map.items, keyNode))
+                    onError(keyStart, 'DUPLICATE_KEY', 'Map keys must be unique');
+                map.items.push(pair);
+            }
+            else {
+                const map = new _nodes_YAMLMap_js__WEBPACK_IMPORTED_MODULE_2__.YAMLMap(ctx.schema);
+                map.flow = true;
+                map.items.push(pair);
+                const endRange = (valueNode ?? keyNode).range;
+                map.range = [keyNode.range[0], endRange[1], endRange[2]];
+                coll.items.push(map);
+            }
+            offset = valueNode ? valueNode.range[2] : valueProps.end;
+        }
+    }
+    const expectedEnd = isMap ? '}' : ']';
+    const [ce, ...ee] = fc.end;
+    let cePos = offset;
+    if (ce?.source === expectedEnd)
+        cePos = ce.offset + ce.source.length;
+    else {
+        const name = fcName[0].toUpperCase() + fcName.substring(1);
+        const msg = atRoot
+            ? `${name} must end with a ${expectedEnd}`
+            : `${name} in block collection must be sufficiently indented and end with a ${expectedEnd}`;
+        onError(offset, atRoot ? 'MISSING_CHAR' : 'BAD_INDENT', msg);
+        if (ce && ce.source.length !== 1)
+            ee.unshift(ce);
+    }
+    if (ee.length > 0) {
+        const end = (0,_resolve_end_js__WEBPACK_IMPORTED_MODULE_4__.resolveEnd)(ee, cePos, ctx.options.strict, onError);
+        if (end.comment) {
+            if (coll.comment)
+                coll.comment += '\n' + end.comment;
+            else
+                coll.comment = end.comment;
+        }
+        coll.range = [fc.offset, cePos, end.offset];
+    }
+    else {
+        coll.range = [fc.offset, cePos, cePos];
+    }
+    return coll;
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-flow-scalar.js"
+/*!*****************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-flow-scalar.js ***!
+  \*****************************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   resolveFlowScalar: () => (/* binding */ resolveFlowScalar)
+/* harmony export */ });
+/* harmony import */ var _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../nodes/Scalar.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Scalar.js");
+/* harmony import */ var _resolve_end_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./resolve-end.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-end.js");
+
+
+
+function resolveFlowScalar(scalar, strict, onError) {
+    const { offset, type, source, end } = scalar;
+    let _type;
+    let value;
+    const _onError = (rel, code, msg) => onError(offset + rel, code, msg);
+    switch (type) {
+        case 'scalar':
+            _type = _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar.PLAIN;
+            value = plainValue(source, _onError);
+            break;
+        case 'single-quoted-scalar':
+            _type = _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar.QUOTE_SINGLE;
+            value = singleQuotedValue(source, _onError);
+            break;
+        case 'double-quoted-scalar':
+            _type = _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar.QUOTE_DOUBLE;
+            value = doubleQuotedValue(source, _onError);
+            break;
+        /* istanbul ignore next should not happen */
+        default:
+            onError(scalar, 'UNEXPECTED_TOKEN', `Expected a flow scalar value, but found: ${type}`);
+            return {
+                value: '',
+                type: null,
+                comment: '',
+                range: [offset, offset + source.length, offset + source.length]
+            };
+    }
+    const valueEnd = offset + source.length;
+    const re = (0,_resolve_end_js__WEBPACK_IMPORTED_MODULE_1__.resolveEnd)(end, valueEnd, strict, onError);
+    return {
+        value,
+        type: _type,
+        comment: re.comment,
+        range: [offset, valueEnd, re.offset]
+    };
+}
+function plainValue(source, onError) {
+    let badChar = '';
+    switch (source[0]) {
+        /* istanbul ignore next should not happen */
+        case '\t':
+            badChar = 'a tab character';
+            break;
+        case ',':
+            badChar = 'flow indicator character ,';
+            break;
+        case '%':
+            badChar = 'directive indicator character %';
+            break;
+        case '|':
+        case '>': {
+            badChar = `block scalar indicator ${source[0]}`;
+            break;
+        }
+        case '@':
+        case '`': {
+            badChar = `reserved character ${source[0]}`;
+            break;
+        }
+    }
+    if (badChar)
+        onError(0, 'BAD_SCALAR_START', `Plain value cannot start with ${badChar}`);
+    return foldLines(source);
+}
+function singleQuotedValue(source, onError) {
+    if (source[source.length - 1] !== "'" || source.length === 1)
+        onError(source.length, 'MISSING_CHAR', "Missing closing 'quote");
+    return foldLines(source.slice(1, -1)).replace(/''/g, "'");
+}
+function foldLines(source) {
+    /**
+     * The negative lookbehind here and in the `re` RegExp is to
+     * prevent causing a polynomial search time in certain cases.
+     *
+     * The try-catch is for Safari, which doesn't support this yet:
+     * https://caniuse.com/js-regexp-lookbehind
+     */
+    let first, line;
+    try {
+        first = new RegExp('(.*?)(?<![ \t])[ \t]*\r?\n', 'sy');
+        line = new RegExp('[ \t]*(.*?)(?:(?<![ \t])[ \t]*)?\r?\n', 'sy');
+    }
+    catch {
+        first = /(.*?)[ \t]*\r?\n/sy;
+        line = /[ \t]*(.*?)[ \t]*\r?\n/sy;
+    }
+    let match = first.exec(source);
+    if (!match)
+        return source;
+    let res = match[1];
+    let sep = ' ';
+    let pos = first.lastIndex;
+    line.lastIndex = pos;
+    while ((match = line.exec(source))) {
+        if (match[1] === '') {
+            if (sep === '\n')
+                res += sep;
+            else
+                sep = '\n';
+        }
+        else {
+            res += sep + match[1];
+            sep = ' ';
+        }
+        pos = line.lastIndex;
+    }
+    const last = /[ \t]*(.*)/sy;
+    last.lastIndex = pos;
+    match = last.exec(source);
+    return res + sep + (match?.[1] ?? '');
+}
+function doubleQuotedValue(source, onError) {
+    let res = '';
+    for (let i = 1; i < source.length - 1; ++i) {
+        const ch = source[i];
+        if (ch === '\r' && source[i + 1] === '\n')
+            continue;
+        if (ch === '\n') {
+            const { fold, offset } = foldNewline(source, i);
+            res += fold;
+            i = offset;
+        }
+        else if (ch === '\\') {
+            let next = source[++i];
+            const cc = escapeCodes[next];
+            if (cc)
+                res += cc;
+            else if (next === '\n') {
+                // skip escaped newlines, but still trim the following line
+                next = source[i + 1];
+                while (next === ' ' || next === '\t')
+                    next = source[++i + 1];
+            }
+            else if (next === '\r' && source[i + 1] === '\n') {
+                // skip escaped CRLF newlines, but still trim the following line
+                next = source[++i + 1];
+                while (next === ' ' || next === '\t')
+                    next = source[++i + 1];
+            }
+            else if (next === 'x' || next === 'u' || next === 'U') {
+                const length = { x: 2, u: 4, U: 8 }[next];
+                res += parseCharCode(source, i + 1, length, onError);
+                i += length;
+            }
+            else {
+                const raw = source.substr(i - 1, 2);
+                onError(i - 1, 'BAD_DQ_ESCAPE', `Invalid escape sequence ${raw}`);
+                res += raw;
+            }
+        }
+        else if (ch === ' ' || ch === '\t') {
+            // trim trailing whitespace
+            const wsStart = i;
+            let next = source[i + 1];
+            while (next === ' ' || next === '\t')
+                next = source[++i + 1];
+            if (next !== '\n' && !(next === '\r' && source[i + 2] === '\n'))
+                res += i > wsStart ? source.slice(wsStart, i + 1) : ch;
+        }
+        else {
+            res += ch;
+        }
+    }
+    if (source[source.length - 1] !== '"' || source.length === 1)
+        onError(source.length, 'MISSING_CHAR', 'Missing closing "quote');
+    return res;
+}
+/**
+ * Fold a single newline into a space, multiple newlines to N - 1 newlines.
+ * Presumes `source[offset] === '\n'`
+ */
+function foldNewline(source, offset) {
+    let fold = '';
+    let ch = source[offset + 1];
+    while (ch === ' ' || ch === '\t' || ch === '\n' || ch === '\r') {
+        if (ch === '\r' && source[offset + 2] !== '\n')
+            break;
+        if (ch === '\n')
+            fold += '\n';
+        offset += 1;
+        ch = source[offset + 1];
+    }
+    if (!fold)
+        fold = ' ';
+    return { fold, offset };
+}
+const escapeCodes = {
+    '0': '\0', // null character
+    a: '\x07', // bell character
+    b: '\b', // backspace
+    e: '\x1b', // escape character
+    f: '\f', // form feed
+    n: '\n', // line feed
+    r: '\r', // carriage return
+    t: '\t', // horizontal tab
+    v: '\v', // vertical tab
+    N: '\u0085', // Unicode next line
+    _: '\u00a0', // Unicode non-breaking space
+    L: '\u2028', // Unicode line separator
+    P: '\u2029', // Unicode paragraph separator
+    ' ': ' ',
+    '"': '"',
+    '/': '/',
+    '\\': '\\',
+    '\t': '\t'
+};
+function parseCharCode(source, offset, length, onError) {
+    const cc = source.substr(offset, length);
+    const ok = cc.length === length && /^[0-9a-fA-F]+$/.test(cc);
+    const code = ok ? parseInt(cc, 16) : NaN;
+    if (isNaN(code)) {
+        const raw = source.substr(offset - 2, length + 2);
+        onError(offset - 2, 'BAD_DQ_ESCAPE', `Invalid escape sequence ${raw}`);
+        return raw;
+    }
+    return String.fromCodePoint(code);
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-props.js"
+/*!***********************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-props.js ***!
+  \***********************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   resolveProps: () => (/* binding */ resolveProps)
+/* harmony export */ });
+function resolveProps(tokens, { flow, indicator, next, offset, onError, parentIndent, startOnNewline }) {
+    let spaceBefore = false;
+    let atNewline = startOnNewline;
+    let hasSpace = startOnNewline;
+    let comment = '';
+    let commentSep = '';
+    let hasNewline = false;
+    let reqSpace = false;
+    let tab = null;
+    let anchor = null;
+    let tag = null;
+    let newlineAfterProp = null;
+    let comma = null;
+    let found = null;
+    let start = null;
+    for (const token of tokens) {
+        if (reqSpace) {
+            if (token.type !== 'space' &&
+                token.type !== 'newline' &&
+                token.type !== 'comma')
+                onError(token.offset, 'MISSING_CHAR', 'Tags and anchors must be separated from the next token by white space');
+            reqSpace = false;
+        }
+        if (tab) {
+            if (atNewline && token.type !== 'comment' && token.type !== 'newline') {
+                onError(tab, 'TAB_AS_INDENT', 'Tabs are not allowed as indentation');
+            }
+            tab = null;
+        }
+        switch (token.type) {
+            case 'space':
+                // At the doc level, tabs at line start may be parsed
+                // as leading white space rather than indentation.
+                // In a flow collection, only the parser handles indent.
+                if (!flow &&
+                    (indicator !== 'doc-start' || next?.type !== 'flow-collection') &&
+                    token.source.includes('\t')) {
+                    tab = token;
+                }
+                hasSpace = true;
+                break;
+            case 'comment': {
+                if (!hasSpace)
+                    onError(token, 'MISSING_CHAR', 'Comments must be separated from other tokens by white space characters');
+                const cb = token.source.substring(1) || ' ';
+                if (!comment)
+                    comment = cb;
+                else
+                    comment += commentSep + cb;
+                commentSep = '';
+                atNewline = false;
+                break;
+            }
+            case 'newline':
+                if (atNewline) {
+                    if (comment)
+                        comment += token.source;
+                    else if (!found || indicator !== 'seq-item-ind')
+                        spaceBefore = true;
+                }
+                else
+                    commentSep += token.source;
+                atNewline = true;
+                hasNewline = true;
+                if (anchor || tag)
+                    newlineAfterProp = token;
+                hasSpace = true;
+                break;
+            case 'anchor':
+                if (anchor)
+                    onError(token, 'MULTIPLE_ANCHORS', 'A node can have at most one anchor');
+                if (token.source.endsWith(':'))
+                    onError(token.offset + token.source.length - 1, 'BAD_ALIAS', 'Anchor ending in : is ambiguous', true);
+                anchor = token;
+                start ?? (start = token.offset);
+                atNewline = false;
+                hasSpace = false;
+                reqSpace = true;
+                break;
+            case 'tag': {
+                if (tag)
+                    onError(token, 'MULTIPLE_TAGS', 'A node can have at most one tag');
+                tag = token;
+                start ?? (start = token.offset);
+                atNewline = false;
+                hasSpace = false;
+                reqSpace = true;
+                break;
+            }
+            case indicator:
+                // Could here handle preceding comments differently
+                if (anchor || tag)
+                    onError(token, 'BAD_PROP_ORDER', `Anchors and tags must be after the ${token.source} indicator`);
+                if (found)
+                    onError(token, 'UNEXPECTED_TOKEN', `Unexpected ${token.source} in ${flow ?? 'collection'}`);
+                found = token;
+                atNewline =
+                    indicator === 'seq-item-ind' || indicator === 'explicit-key-ind';
+                hasSpace = false;
+                break;
+            case 'comma':
+                if (flow) {
+                    if (comma)
+                        onError(token, 'UNEXPECTED_TOKEN', `Unexpected , in ${flow}`);
+                    comma = token;
+                    atNewline = false;
+                    hasSpace = false;
+                    break;
+                }
+            // else fallthrough
+            default:
+                onError(token, 'UNEXPECTED_TOKEN', `Unexpected ${token.type} token`);
+                atNewline = false;
+                hasSpace = false;
+        }
+    }
+    const last = tokens[tokens.length - 1];
+    const end = last ? last.offset + last.source.length : offset;
+    if (reqSpace &&
+        next &&
+        next.type !== 'space' &&
+        next.type !== 'newline' &&
+        next.type !== 'comma' &&
+        (next.type !== 'scalar' || next.source !== '')) {
+        onError(next.offset, 'MISSING_CHAR', 'Tags and anchors must be separated from the next token by white space');
+    }
+    if (tab &&
+        ((atNewline && tab.indent <= parentIndent) ||
+            next?.type === 'block-map' ||
+            next?.type === 'block-seq'))
+        onError(tab, 'TAB_AS_INDENT', 'Tabs are not allowed as indentation');
+    return {
+        comma,
+        found,
+        spaceBefore,
+        comment,
+        hasNewline,
+        anchor,
+        tag,
+        newlineAfterProp,
+        end,
+        start: start ?? end
+    };
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/util-contains-newline.js"
+/*!*******************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/util-contains-newline.js ***!
+  \*******************************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   containsNewline: () => (/* binding */ containsNewline)
+/* harmony export */ });
+function containsNewline(key) {
+    if (!key)
+        return null;
+    switch (key.type) {
+        case 'alias':
+        case 'scalar':
+        case 'double-quoted-scalar':
+        case 'single-quoted-scalar':
+            if (key.source.includes('\n'))
+                return true;
+            if (key.end)
+                for (const st of key.end)
+                    if (st.type === 'newline')
+                        return true;
+            return false;
+        case 'flow-collection':
+            for (const it of key.items) {
+                for (const st of it.start)
+                    if (st.type === 'newline')
+                        return true;
+                if (it.sep)
+                    for (const st of it.sep)
+                        if (st.type === 'newline')
+                            return true;
+                if (containsNewline(it.key) || containsNewline(it.value))
+                    return true;
+            }
+            return false;
+        default:
+            return true;
+    }
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/util-empty-scalar-position.js"
+/*!************************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/util-empty-scalar-position.js ***!
+  \************************************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   emptyScalarPosition: () => (/* binding */ emptyScalarPosition)
+/* harmony export */ });
+function emptyScalarPosition(offset, before, pos) {
+    if (before) {
+        pos ?? (pos = before.length);
+        for (let i = pos - 1; i >= 0; --i) {
+            let st = before[i];
+            switch (st.type) {
+                case 'space':
+                case 'comment':
+                case 'newline':
+                    offset -= st.source.length;
+                    continue;
+            }
+            // Technically, an empty scalar is immediately after the last non-empty
+            // node, but it's more useful to place it after any whitespace.
+            st = before[++i];
+            while (st?.type === 'space') {
+                offset += st.source.length;
+                st = before[++i];
+            }
+            break;
+        }
+    }
+    return offset;
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/util-flow-indent-check.js"
+/*!********************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/util-flow-indent-check.js ***!
+  \********************************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   flowIndentCheck: () => (/* binding */ flowIndentCheck)
+/* harmony export */ });
+/* harmony import */ var _util_contains_newline_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./util-contains-newline.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/util-contains-newline.js");
+
+
+function flowIndentCheck(indent, fc, onError) {
+    if (fc?.type === 'flow-collection') {
+        const end = fc.end[0];
+        if (end.indent === indent &&
+            (end.source === ']' || end.source === '}') &&
+            (0,_util_contains_newline_js__WEBPACK_IMPORTED_MODULE_0__.containsNewline)(fc)) {
+            const msg = 'Flow end indicator should be more indented than parent';
+            onError(end, 'BAD_INDENT', msg, true);
+        }
+    }
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/util-map-includes.js"
+/*!***************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/util-map-includes.js ***!
+  \***************************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   mapIncludes: () => (/* binding */ mapIncludes)
+/* harmony export */ });
+/* harmony import */ var _nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../nodes/identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+
+
+function mapIncludes(ctx, items, search) {
+    const { uniqueKeys } = ctx.options;
+    if (uniqueKeys === false)
+        return false;
+    const isEqual = typeof uniqueKeys === 'function'
+        ? uniqueKeys
+        : (a, b) => a === b || ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isScalar)(a) && (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isScalar)(b) && a.value === b.value);
+    return items.some(pair => isEqual(pair.key, search));
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/doc/Document.js"
+/*!**************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/doc/Document.js ***!
+  \**************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Document: () => (/* binding */ Document)
+/* harmony export */ });
+/* harmony import */ var _nodes_Alias_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../nodes/Alias.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Alias.js");
+/* harmony import */ var _nodes_Collection_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../nodes/Collection.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Collection.js");
+/* harmony import */ var _nodes_identity_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../nodes/identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _nodes_Pair_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../nodes/Pair.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Pair.js");
+/* harmony import */ var _nodes_toJS_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../nodes/toJS.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/toJS.js");
+/* harmony import */ var _schema_Schema_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../schema/Schema.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/Schema.js");
+/* harmony import */ var _stringify_stringifyDocument_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../stringify/stringifyDocument.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyDocument.js");
+/* harmony import */ var _anchors_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./anchors.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/doc/anchors.js");
+/* harmony import */ var _applyReviver_js__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./applyReviver.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/doc/applyReviver.js");
+/* harmony import */ var _createNode_js__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./createNode.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/doc/createNode.js");
+/* harmony import */ var _directives_js__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./directives.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/doc/directives.js");
+
+
+
+
+
+
+
+
+
+
+
+
+class Document {
+    constructor(value, replacer, options) {
+        /** A comment before this Document */
+        this.commentBefore = null;
+        /** A comment immediately after this Document */
+        this.comment = null;
+        /** Errors encountered during parsing. */
+        this.errors = [];
+        /** Warnings encountered during parsing. */
+        this.warnings = [];
+        Object.defineProperty(this, _nodes_identity_js__WEBPACK_IMPORTED_MODULE_2__.NODE_TYPE, { value: _nodes_identity_js__WEBPACK_IMPORTED_MODULE_2__.DOC });
+        let _replacer = null;
+        if (typeof replacer === 'function' || Array.isArray(replacer)) {
+            _replacer = replacer;
+        }
+        else if (options === undefined && replacer) {
+            options = replacer;
+            replacer = undefined;
+        }
+        const opt = Object.assign({
+            intAsBigInt: false,
+            keepSourceTokens: false,
+            logLevel: 'warn',
+            prettyErrors: true,
+            strict: true,
+            stringKeys: false,
+            uniqueKeys: true,
+            version: '1.2'
+        }, options);
+        this.options = opt;
+        let { version } = opt;
+        if (options?._directives) {
+            this.directives = options._directives.atDocument();
+            if (this.directives.yaml.explicit)
+                version = this.directives.yaml.version;
+        }
+        else
+            this.directives = new _directives_js__WEBPACK_IMPORTED_MODULE_10__.Directives({ version });
+        this.setSchema(version, options);
+        // @ts-expect-error We can't really know that this matches Contents.
+        this.contents =
+            value === undefined ? null : this.createNode(value, _replacer, options);
+    }
+    /**
+     * Create a deep copy of this Document and its contents.
+     *
+     * Custom Node values that inherit from `Object` still refer to their original instances.
+     */
+    clone() {
+        const copy = Object.create(Document.prototype, {
+            [_nodes_identity_js__WEBPACK_IMPORTED_MODULE_2__.NODE_TYPE]: { value: _nodes_identity_js__WEBPACK_IMPORTED_MODULE_2__.DOC }
+        });
+        copy.commentBefore = this.commentBefore;
+        copy.comment = this.comment;
+        copy.errors = this.errors.slice();
+        copy.warnings = this.warnings.slice();
+        copy.options = Object.assign({}, this.options);
+        if (this.directives)
+            copy.directives = this.directives.clone();
+        copy.schema = this.schema.clone();
+        // @ts-expect-error We can't really know that this matches Contents.
+        copy.contents = (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_2__.isNode)(this.contents)
+            ? this.contents.clone(copy.schema)
+            : this.contents;
+        if (this.range)
+            copy.range = this.range.slice();
+        return copy;
+    }
+    /** Adds a value to the document. */
+    add(value) {
+        if (assertCollection(this.contents))
+            this.contents.add(value);
+    }
+    /** Adds a value to the document. */
+    addIn(path, value) {
+        if (assertCollection(this.contents))
+            this.contents.addIn(path, value);
+    }
+    /**
+     * Create a new `Alias` node, ensuring that the target `node` has the required anchor.
+     *
+     * If `node` already has an anchor, `name` is ignored.
+     * Otherwise, the `node.anchor` value will be set to `name`,
+     * or if an anchor with that name is already present in the document,
+     * `name` will be used as a prefix for a new unique anchor.
+     * If `name` is undefined, the generated anchor will use 'a' as a prefix.
+     */
+    createAlias(node, name) {
+        if (!node.anchor) {
+            const prev = (0,_anchors_js__WEBPACK_IMPORTED_MODULE_7__.anchorNames)(this);
+            node.anchor =
+                // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+                !name || prev.has(name) ? (0,_anchors_js__WEBPACK_IMPORTED_MODULE_7__.findNewAnchor)(name || 'a', prev) : name;
+        }
+        return new _nodes_Alias_js__WEBPACK_IMPORTED_MODULE_0__.Alias(node.anchor);
+    }
+    createNode(value, replacer, options) {
+        let _replacer = undefined;
+        if (typeof replacer === 'function') {
+            value = replacer.call({ '': value }, '', value);
+            _replacer = replacer;
+        }
+        else if (Array.isArray(replacer)) {
+            const keyToStr = (v) => typeof v === 'number' || v instanceof String || v instanceof Number;
+            const asStr = replacer.filter(keyToStr).map(String);
+            if (asStr.length > 0)
+                replacer = replacer.concat(asStr);
+            _replacer = replacer;
+        }
+        else if (options === undefined && replacer) {
+            options = replacer;
+            replacer = undefined;
+        }
+        const { aliasDuplicateObjects, anchorPrefix, flow, keepUndefined, onTagObj, tag } = options ?? {};
+        const { onAnchor, setAnchors, sourceObjects } = (0,_anchors_js__WEBPACK_IMPORTED_MODULE_7__.createNodeAnchors)(this, 
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+        anchorPrefix || 'a');
+        const ctx = {
+            aliasDuplicateObjects: aliasDuplicateObjects ?? true,
+            keepUndefined: keepUndefined ?? false,
+            onAnchor,
+            onTagObj,
+            replacer: _replacer,
+            schema: this.schema,
+            sourceObjects
+        };
+        const node = (0,_createNode_js__WEBPACK_IMPORTED_MODULE_9__.createNode)(value, tag, ctx);
+        if (flow && (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_2__.isCollection)(node))
+            node.flow = true;
+        setAnchors();
+        return node;
+    }
+    /**
+     * Convert a key and a value into a `Pair` using the current schema,
+     * recursively wrapping all values as `Scalar` or `Collection` nodes.
+     */
+    createPair(key, value, options = {}) {
+        const k = this.createNode(key, null, options);
+        const v = this.createNode(value, null, options);
+        return new _nodes_Pair_js__WEBPACK_IMPORTED_MODULE_3__.Pair(k, v);
+    }
+    /**
+     * Removes a value from the document.
+     * @returns `true` if the item was found and removed.
+     */
+    delete(key) {
+        return assertCollection(this.contents) ? this.contents.delete(key) : false;
+    }
+    /**
+     * Removes a value from the document.
+     * @returns `true` if the item was found and removed.
+     */
+    deleteIn(path) {
+        if ((0,_nodes_Collection_js__WEBPACK_IMPORTED_MODULE_1__.isEmptyPath)(path)) {
+            if (this.contents == null)
+                return false;
+            // @ts-expect-error Presumed impossible if Strict extends false
+            this.contents = null;
+            return true;
+        }
+        return assertCollection(this.contents)
+            ? this.contents.deleteIn(path)
+            : false;
+    }
+    /**
+     * Returns item at `key`, or `undefined` if not found. By default unwraps
+     * scalar values from their surrounding node; to disable set `keepScalar` to
+     * `true` (collections are always returned intact).
+     */
+    get(key, keepScalar) {
+        return (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_2__.isCollection)(this.contents)
+            ? this.contents.get(key, keepScalar)
+            : undefined;
+    }
+    /**
+     * Returns item at `path`, or `undefined` if not found. By default unwraps
+     * scalar values from their surrounding node; to disable set `keepScalar` to
+     * `true` (collections are always returned intact).
+     */
+    getIn(path, keepScalar) {
+        if ((0,_nodes_Collection_js__WEBPACK_IMPORTED_MODULE_1__.isEmptyPath)(path))
+            return !keepScalar && (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_2__.isScalar)(this.contents)
+                ? this.contents.value
+                : this.contents;
+        return (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_2__.isCollection)(this.contents)
+            ? this.contents.getIn(path, keepScalar)
+            : undefined;
+    }
+    /**
+     * Checks if the document includes a value with the key `key`.
+     */
+    has(key) {
+        return (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_2__.isCollection)(this.contents) ? this.contents.has(key) : false;
+    }
+    /**
+     * Checks if the document includes a value at `path`.
+     */
+    hasIn(path) {
+        if ((0,_nodes_Collection_js__WEBPACK_IMPORTED_MODULE_1__.isEmptyPath)(path))
+            return this.contents !== undefined;
+        return (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_2__.isCollection)(this.contents) ? this.contents.hasIn(path) : false;
+    }
+    /**
+     * Sets a value in this document. For `!!set`, `value` needs to be a
+     * boolean to add/remove the item from the set.
+     */
+    set(key, value) {
+        if (this.contents == null) {
+            // @ts-expect-error We can't really know that this matches Contents.
+            this.contents = (0,_nodes_Collection_js__WEBPACK_IMPORTED_MODULE_1__.collectionFromPath)(this.schema, [key], value);
+        }
+        else if (assertCollection(this.contents)) {
+            this.contents.set(key, value);
+        }
+    }
+    /**
+     * Sets a value in this document. For `!!set`, `value` needs to be a
+     * boolean to add/remove the item from the set.
+     */
+    setIn(path, value) {
+        if ((0,_nodes_Collection_js__WEBPACK_IMPORTED_MODULE_1__.isEmptyPath)(path)) {
+            // @ts-expect-error We can't really know that this matches Contents.
+            this.contents = value;
+        }
+        else if (this.contents == null) {
+            // @ts-expect-error We can't really know that this matches Contents.
+            this.contents = (0,_nodes_Collection_js__WEBPACK_IMPORTED_MODULE_1__.collectionFromPath)(this.schema, Array.from(path), value);
+        }
+        else if (assertCollection(this.contents)) {
+            this.contents.setIn(path, value);
+        }
+    }
+    /**
+     * Change the YAML version and schema used by the document.
+     * A `null` version disables support for directives, explicit tags, anchors, and aliases.
+     * It also requires the `schema` option to be given as a `Schema` instance value.
+     *
+     * Overrides all previously set schema options.
+     */
+    setSchema(version, options = {}) {
+        if (typeof version === 'number')
+            version = String(version);
+        let opt;
+        switch (version) {
+            case '1.1':
+                if (this.directives)
+                    this.directives.yaml.version = '1.1';
+                else
+                    this.directives = new _directives_js__WEBPACK_IMPORTED_MODULE_10__.Directives({ version: '1.1' });
+                opt = { resolveKnownTags: false, schema: 'yaml-1.1' };
+                break;
+            case '1.2':
+            case 'next':
+                if (this.directives)
+                    this.directives.yaml.version = version;
+                else
+                    this.directives = new _directives_js__WEBPACK_IMPORTED_MODULE_10__.Directives({ version });
+                opt = { resolveKnownTags: true, schema: 'core' };
+                break;
+            case null:
+                if (this.directives)
+                    delete this.directives;
+                opt = null;
+                break;
+            default: {
+                const sv = JSON.stringify(version);
+                throw new Error(`Expected '1.1', '1.2' or null as first argument, but found: ${sv}`);
+            }
+        }
+        // Not using `instanceof Schema` to allow for duck typing
+        if (options.schema instanceof Object)
+            this.schema = options.schema;
+        else if (opt)
+            this.schema = new _schema_Schema_js__WEBPACK_IMPORTED_MODULE_5__.Schema(Object.assign(opt, options));
+        else
+            throw new Error(`With a null YAML version, the { schema: Schema } option is required`);
+    }
+    // json & jsonArg are only used from toJSON()
+    toJS({ json, jsonArg, mapAsMap, maxAliasCount, onAnchor, reviver } = {}) {
+        const ctx = {
+            anchors: new Map(),
+            doc: this,
+            keep: !json,
+            mapAsMap: mapAsMap === true,
+            mapKeyWarned: false,
+            maxAliasCount: typeof maxAliasCount === 'number' ? maxAliasCount : 100
+        };
+        const res = (0,_nodes_toJS_js__WEBPACK_IMPORTED_MODULE_4__.toJS)(this.contents, jsonArg ?? '', ctx);
+        if (typeof onAnchor === 'function')
+            for (const { count, res } of ctx.anchors.values())
+                onAnchor(res, count);
+        return typeof reviver === 'function'
+            ? (0,_applyReviver_js__WEBPACK_IMPORTED_MODULE_8__.applyReviver)(reviver, { '': res }, '', res)
+            : res;
+    }
+    /**
+     * A JSON representation of the document `contents`.
+     *
+     * @param jsonArg Used by `JSON.stringify` to indicate the array index or
+     *   property name.
+     */
+    toJSON(jsonArg, onAnchor) {
+        return this.toJS({ json: true, jsonArg, mapAsMap: false, onAnchor });
+    }
+    /** A YAML representation of the document. */
+    toString(options = {}) {
+        if (this.errors.length > 0)
+            throw new Error('Document with errors cannot be stringified');
+        if ('indent' in options &&
+            (!Number.isInteger(options.indent) || Number(options.indent) <= 0)) {
+            const s = JSON.stringify(options.indent);
+            throw new Error(`"indent" option must be a positive integer, not ${s}`);
+        }
+        return (0,_stringify_stringifyDocument_js__WEBPACK_IMPORTED_MODULE_6__.stringifyDocument)(this, options);
+    }
+}
+function assertCollection(contents) {
+    if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_2__.isCollection)(contents))
+        return true;
+    throw new Error('Expected a YAML collection as document contents');
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/doc/anchors.js"
+/*!*************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/doc/anchors.js ***!
+  \*************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   anchorIsValid: () => (/* binding */ anchorIsValid),
+/* harmony export */   anchorNames: () => (/* binding */ anchorNames),
+/* harmony export */   createNodeAnchors: () => (/* binding */ createNodeAnchors),
+/* harmony export */   findNewAnchor: () => (/* binding */ findNewAnchor)
+/* harmony export */ });
+/* harmony import */ var _nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../nodes/identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _visit_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../visit.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/visit.js");
+
+
+
+/**
+ * Verify that the input string is a valid anchor.
+ *
+ * Will throw on errors.
+ */
+function anchorIsValid(anchor) {
+    if (/[\x00-\x19\s,[\]{}]/.test(anchor)) {
+        const sa = JSON.stringify(anchor);
+        const msg = `Anchor must not contain whitespace or control characters: ${sa}`;
+        throw new Error(msg);
+    }
+    return true;
+}
+function anchorNames(root) {
+    const anchors = new Set();
+    (0,_visit_js__WEBPACK_IMPORTED_MODULE_1__.visit)(root, {
+        Value(_key, node) {
+            if (node.anchor)
+                anchors.add(node.anchor);
+        }
+    });
+    return anchors;
+}
+/** Find a new anchor name with the given `prefix` and a one-indexed suffix. */
+function findNewAnchor(prefix, exclude) {
+    for (let i = 1; true; ++i) {
+        const name = `${prefix}${i}`;
+        if (!exclude.has(name))
+            return name;
+    }
+}
+function createNodeAnchors(doc, prefix) {
+    const aliasObjects = [];
+    const sourceObjects = new Map();
+    let prevAnchors = null;
+    return {
+        onAnchor: (source) => {
+            aliasObjects.push(source);
+            prevAnchors ?? (prevAnchors = anchorNames(doc));
+            const anchor = findNewAnchor(prefix, prevAnchors);
+            prevAnchors.add(anchor);
+            return anchor;
+        },
+        /**
+         * With circular references, the source node is only resolved after all
+         * of its child nodes are. This is why anchors are set only after all of
+         * the nodes have been created.
+         */
+        setAnchors: () => {
+            for (const source of aliasObjects) {
+                const ref = sourceObjects.get(source);
+                if (typeof ref === 'object' &&
+                    ref.anchor &&
+                    ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isScalar)(ref.node) || (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isCollection)(ref.node))) {
+                    ref.node.anchor = ref.anchor;
+                }
+                else {
+                    const error = new Error('Failed to resolve repeated object (this should not happen)');
+                    error.source = source;
+                    throw error;
+                }
+            }
+        },
+        sourceObjects
+    };
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/doc/applyReviver.js"
+/*!******************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/doc/applyReviver.js ***!
+  \******************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   applyReviver: () => (/* binding */ applyReviver)
+/* harmony export */ });
+/**
+ * Applies the JSON.parse reviver algorithm as defined in the ECMA-262 spec,
+ * in section 24.5.1.1 "Runtime Semantics: InternalizeJSONProperty" of the
+ * 2021 edition: https://tc39.es/ecma262/#sec-json.parse
+ *
+ * Includes extensions for handling Map and Set objects.
+ */
+function applyReviver(reviver, obj, key, val) {
+    if (val && typeof val === 'object') {
+        if (Array.isArray(val)) {
+            for (let i = 0, len = val.length; i < len; ++i) {
+                const v0 = val[i];
+                const v1 = applyReviver(reviver, val, String(i), v0);
+                // eslint-disable-next-line @typescript-eslint/no-array-delete
+                if (v1 === undefined)
+                    delete val[i];
+                else if (v1 !== v0)
+                    val[i] = v1;
+            }
+        }
+        else if (val instanceof Map) {
+            for (const k of Array.from(val.keys())) {
+                const v0 = val.get(k);
+                const v1 = applyReviver(reviver, val, k, v0);
+                if (v1 === undefined)
+                    val.delete(k);
+                else if (v1 !== v0)
+                    val.set(k, v1);
+            }
+        }
+        else if (val instanceof Set) {
+            for (const v0 of Array.from(val)) {
+                const v1 = applyReviver(reviver, val, v0, v0);
+                if (v1 === undefined)
+                    val.delete(v0);
+                else if (v1 !== v0) {
+                    val.delete(v0);
+                    val.add(v1);
+                }
+            }
+        }
+        else {
+            for (const [k, v0] of Object.entries(val)) {
+                const v1 = applyReviver(reviver, val, k, v0);
+                if (v1 === undefined)
+                    delete val[k];
+                else if (v1 !== v0)
+                    val[k] = v1;
+            }
+        }
+    }
+    return reviver.call(obj, key, val);
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/doc/createNode.js"
+/*!****************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/doc/createNode.js ***!
+  \****************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createNode: () => (/* binding */ createNode)
+/* harmony export */ });
+/* harmony import */ var _nodes_Alias_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../nodes/Alias.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Alias.js");
+/* harmony import */ var _nodes_identity_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../nodes/identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../nodes/Scalar.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Scalar.js");
+
+
+
+
+const defaultTagPrefix = 'tag:yaml.org,2002:';
+function findTagObject(value, tagName, tags) {
+    if (tagName) {
+        const match = tags.filter(t => t.tag === tagName);
+        const tagObj = match.find(t => !t.format) ?? match[0];
+        if (!tagObj)
+            throw new Error(`Tag ${tagName} not found`);
+        return tagObj;
+    }
+    return tags.find(t => t.identify?.(value) && !t.format);
+}
+function createNode(value, tagName, ctx) {
+    if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_1__.isDocument)(value))
+        value = value.contents;
+    if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_1__.isNode)(value))
+        return value;
+    if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_1__.isPair)(value)) {
+        const map = ctx.schema[_nodes_identity_js__WEBPACK_IMPORTED_MODULE_1__.MAP].createNode?.(ctx.schema, null, ctx);
+        map.items.push(value);
+        return map;
+    }
+    if (value instanceof String ||
+        value instanceof Number ||
+        value instanceof Boolean ||
+        (typeof BigInt !== 'undefined' && value instanceof BigInt) // not supported everywhere
+    ) {
+        // https://tc39.es/ecma262/#sec-serializejsonproperty
+        value = value.valueOf();
+    }
+    const { aliasDuplicateObjects, onAnchor, onTagObj, schema, sourceObjects } = ctx;
+    // Detect duplicate references to the same object & use Alias nodes for all
+    // after first. The `ref` wrapper allows for circular references to resolve.
+    let ref = undefined;
+    if (aliasDuplicateObjects && value && typeof value === 'object') {
+        ref = sourceObjects.get(value);
+        if (ref) {
+            ref.anchor ?? (ref.anchor = onAnchor(value));
+            return new _nodes_Alias_js__WEBPACK_IMPORTED_MODULE_0__.Alias(ref.anchor);
+        }
+        else {
+            ref = { anchor: null, node: null };
+            sourceObjects.set(value, ref);
+        }
+    }
+    if (tagName?.startsWith('!!'))
+        tagName = defaultTagPrefix + tagName.slice(2);
+    let tagObj = findTagObject(value, tagName, schema.tags);
+    if (!tagObj) {
+        if (value && typeof value.toJSON === 'function') {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+            value = value.toJSON();
+        }
+        if (!value || typeof value !== 'object') {
+            const node = new _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_2__.Scalar(value);
+            if (ref)
+                ref.node = node;
+            return node;
+        }
+        tagObj =
+            value instanceof Map
+                ? schema[_nodes_identity_js__WEBPACK_IMPORTED_MODULE_1__.MAP]
+                : Symbol.iterator in Object(value)
+                    ? schema[_nodes_identity_js__WEBPACK_IMPORTED_MODULE_1__.SEQ]
+                    : schema[_nodes_identity_js__WEBPACK_IMPORTED_MODULE_1__.MAP];
+    }
+    if (onTagObj) {
+        onTagObj(tagObj);
+        delete ctx.onTagObj;
+    }
+    const node = tagObj?.createNode
+        ? tagObj.createNode(ctx.schema, value, ctx)
+        : typeof tagObj?.nodeClass?.from === 'function'
+            ? tagObj.nodeClass.from(ctx.schema, value, ctx)
+            : new _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_2__.Scalar(value);
+    if (tagName)
+        node.tag = tagName;
+    else if (!tagObj.default)
+        node.tag = tagObj.tag;
+    if (ref)
+        ref.node = node;
+    return node;
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/doc/directives.js"
+/*!****************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/doc/directives.js ***!
+  \****************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Directives: () => (/* binding */ Directives)
+/* harmony export */ });
+/* harmony import */ var _nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../nodes/identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _visit_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../visit.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/visit.js");
+
+
+
+const escapeChars = {
+    '!': '%21',
+    ',': '%2C',
+    '[': '%5B',
+    ']': '%5D',
+    '{': '%7B',
+    '}': '%7D'
+};
+const escapeTagName = (tn) => tn.replace(/[!,[\]{}]/g, ch => escapeChars[ch]);
+class Directives {
+    constructor(yaml, tags) {
+        /**
+         * The directives-end/doc-start marker `---`. If `null`, a marker may still be
+         * included in the document's stringified representation.
+         */
+        this.docStart = null;
+        /** The doc-end marker `...`.  */
+        this.docEnd = false;
+        this.yaml = Object.assign({}, Directives.defaultYaml, yaml);
+        this.tags = Object.assign({}, Directives.defaultTags, tags);
+    }
+    clone() {
+        const copy = new Directives(this.yaml, this.tags);
+        copy.docStart = this.docStart;
+        return copy;
+    }
+    /**
+     * During parsing, get a Directives instance for the current document and
+     * update the stream state according to the current version's spec.
+     */
+    atDocument() {
+        const res = new Directives(this.yaml, this.tags);
+        switch (this.yaml.version) {
+            case '1.1':
+                this.atNextDocument = true;
+                break;
+            case '1.2':
+                this.atNextDocument = false;
+                this.yaml = {
+                    explicit: Directives.defaultYaml.explicit,
+                    version: '1.2'
+                };
+                this.tags = Object.assign({}, Directives.defaultTags);
+                break;
+        }
+        return res;
+    }
+    /**
+     * @param onError - May be called even if the action was successful
+     * @returns `true` on success
+     */
+    add(line, onError) {
+        if (this.atNextDocument) {
+            this.yaml = { explicit: Directives.defaultYaml.explicit, version: '1.1' };
+            this.tags = Object.assign({}, Directives.defaultTags);
+            this.atNextDocument = false;
+        }
+        const parts = line.trim().split(/[ \t]+/);
+        const name = parts.shift();
+        switch (name) {
+            case '%TAG': {
+                if (parts.length !== 2) {
+                    onError(0, '%TAG directive should contain exactly two parts');
+                    if (parts.length < 2)
+                        return false;
+                }
+                const [handle, prefix] = parts;
+                this.tags[handle] = prefix;
+                return true;
+            }
+            case '%YAML': {
+                this.yaml.explicit = true;
+                if (parts.length !== 1) {
+                    onError(0, '%YAML directive should contain exactly one part');
+                    return false;
+                }
+                const [version] = parts;
+                if (version === '1.1' || version === '1.2') {
+                    this.yaml.version = version;
+                    return true;
+                }
+                else {
+                    const isValid = /^\d+\.\d+$/.test(version);
+                    onError(6, `Unsupported YAML version ${version}`, isValid);
+                    return false;
+                }
+            }
+            default:
+                onError(0, `Unknown directive ${name}`, true);
+                return false;
+        }
+    }
+    /**
+     * Resolves a tag, matching handles to those defined in %TAG directives.
+     *
+     * @returns Resolved tag, which may also be the non-specific tag `'!'` or a
+     *   `'!local'` tag, or `null` if unresolvable.
+     */
+    tagName(source, onError) {
+        if (source === '!')
+            return '!'; // non-specific tag
+        if (source[0] !== '!') {
+            onError(`Not a valid tag: ${source}`);
+            return null;
+        }
+        if (source[1] === '<') {
+            const verbatim = source.slice(2, -1);
+            if (verbatim === '!' || verbatim === '!!') {
+                onError(`Verbatim tags aren't resolved, so ${source} is invalid.`);
+                return null;
+            }
+            if (source[source.length - 1] !== '>')
+                onError('Verbatim tags must end with a >');
+            return verbatim;
+        }
+        const [, handle, suffix] = source.match(/^(.*!)([^!]*)$/s);
+        if (!suffix)
+            onError(`The ${source} tag has no suffix`);
+        const prefix = this.tags[handle];
+        if (prefix) {
+            try {
+                return prefix + decodeURIComponent(suffix);
+            }
+            catch (error) {
+                onError(String(error));
+                return null;
+            }
+        }
+        if (handle === '!')
+            return source; // local tag
+        onError(`Could not resolve tag: ${source}`);
+        return null;
+    }
+    /**
+     * Given a fully resolved tag, returns its printable string form,
+     * taking into account current tag prefixes and defaults.
+     */
+    tagString(tag) {
+        for (const [handle, prefix] of Object.entries(this.tags)) {
+            if (tag.startsWith(prefix))
+                return handle + escapeTagName(tag.substring(prefix.length));
+        }
+        return tag[0] === '!' ? tag : `!<${tag}>`;
+    }
+    toString(doc) {
+        const lines = this.yaml.explicit
+            ? [`%YAML ${this.yaml.version || '1.2'}`]
+            : [];
+        const tagEntries = Object.entries(this.tags);
+        let tagNames;
+        if (doc && tagEntries.length > 0 && (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isNode)(doc.contents)) {
+            const tags = {};
+            (0,_visit_js__WEBPACK_IMPORTED_MODULE_1__.visit)(doc.contents, (_key, node) => {
+                if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isNode)(node) && node.tag)
+                    tags[node.tag] = true;
+            });
+            tagNames = Object.keys(tags);
+        }
+        else
+            tagNames = [];
+        for (const [handle, prefix] of tagEntries) {
+            if (handle === '!!' && prefix === 'tag:yaml.org,2002:')
+                continue;
+            if (!doc || tagNames.some(tn => tn.startsWith(prefix)))
+                lines.push(`%TAG ${handle} ${prefix}`);
+        }
+        return lines.join('\n');
+    }
+}
+Directives.defaultYaml = { explicit: false, version: '1.2' };
+Directives.defaultTags = { '!!': 'tag:yaml.org,2002:' };
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/errors.js"
+/*!********************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/errors.js ***!
+  \********************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   YAMLError: () => (/* binding */ YAMLError),
+/* harmony export */   YAMLParseError: () => (/* binding */ YAMLParseError),
+/* harmony export */   YAMLWarning: () => (/* binding */ YAMLWarning),
+/* harmony export */   prettifyError: () => (/* binding */ prettifyError)
+/* harmony export */ });
+class YAMLError extends Error {
+    constructor(name, pos, code, message) {
+        super();
+        this.name = name;
+        this.code = code;
+        this.message = message;
+        this.pos = pos;
+    }
+}
+class YAMLParseError extends YAMLError {
+    constructor(pos, code, message) {
+        super('YAMLParseError', pos, code, message);
+    }
+}
+class YAMLWarning extends YAMLError {
+    constructor(pos, code, message) {
+        super('YAMLWarning', pos, code, message);
+    }
+}
+const prettifyError = (src, lc) => (error) => {
+    if (error.pos[0] === -1)
+        return;
+    error.linePos = error.pos.map(pos => lc.linePos(pos));
+    const { line, col } = error.linePos[0];
+    error.message += ` at line ${line}, column ${col}`;
+    let ci = col - 1;
+    let lineStr = src
+        .substring(lc.lineStarts[line - 1], lc.lineStarts[line])
+        .replace(/[\n\r]+$/, '');
+    // Trim to max 80 chars, keeping col position near the middle
+    if (ci >= 60 && lineStr.length > 80) {
+        const trimStart = Math.min(ci - 39, lineStr.length - 79);
+        lineStr = '…' + lineStr.substring(trimStart);
+        ci -= trimStart - 1;
+    }
+    if (lineStr.length > 80)
+        lineStr = lineStr.substring(0, 79) + '…';
+    // Include previous line in context if pointing at line start
+    if (line > 1 && /^ *$/.test(lineStr.substring(0, ci))) {
+        // Regexp won't match if start is trimmed
+        let prev = src.substring(lc.lineStarts[line - 2], lc.lineStarts[line - 1]);
+        if (prev.length > 80)
+            prev = prev.substring(0, 79) + '…\n';
+        lineStr = prev + lineStr;
+    }
+    if (/[^ ]/.test(lineStr)) {
+        let count = 1;
+        const end = error.linePos[1];
+        if (end?.line === line && end.col > col) {
+            count = Math.max(1, Math.min(end.col - col, 80 - ci));
+        }
+        const pointer = ' '.repeat(ci) + '^'.repeat(count);
+        error.message += `:\n\n${lineStr}\n${pointer}\n`;
+    }
+};
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/index.js"
+/*!*******************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/index.js ***!
+  \*******************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Alias: () => (/* reexport safe */ _nodes_Alias_js__WEBPACK_IMPORTED_MODULE_4__.Alias),
+/* harmony export */   CST: () => (/* reexport module object */ _parse_cst_js__WEBPACK_IMPORTED_MODULE_10__),
+/* harmony export */   Composer: () => (/* reexport safe */ _compose_composer_js__WEBPACK_IMPORTED_MODULE_0__.Composer),
+/* harmony export */   Document: () => (/* reexport safe */ _doc_Document_js__WEBPACK_IMPORTED_MODULE_1__.Document),
+/* harmony export */   Lexer: () => (/* reexport safe */ _parse_lexer_js__WEBPACK_IMPORTED_MODULE_11__.Lexer),
+/* harmony export */   LineCounter: () => (/* reexport safe */ _parse_line_counter_js__WEBPACK_IMPORTED_MODULE_12__.LineCounter),
+/* harmony export */   Pair: () => (/* reexport safe */ _nodes_Pair_js__WEBPACK_IMPORTED_MODULE_6__.Pair),
+/* harmony export */   Parser: () => (/* reexport safe */ _parse_parser_js__WEBPACK_IMPORTED_MODULE_13__.Parser),
+/* harmony export */   Scalar: () => (/* reexport safe */ _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_7__.Scalar),
+/* harmony export */   Schema: () => (/* reexport safe */ _schema_Schema_js__WEBPACK_IMPORTED_MODULE_2__.Schema),
+/* harmony export */   YAMLError: () => (/* reexport safe */ _errors_js__WEBPACK_IMPORTED_MODULE_3__.YAMLError),
+/* harmony export */   YAMLMap: () => (/* reexport safe */ _nodes_YAMLMap_js__WEBPACK_IMPORTED_MODULE_8__.YAMLMap),
+/* harmony export */   YAMLParseError: () => (/* reexport safe */ _errors_js__WEBPACK_IMPORTED_MODULE_3__.YAMLParseError),
+/* harmony export */   YAMLSeq: () => (/* reexport safe */ _nodes_YAMLSeq_js__WEBPACK_IMPORTED_MODULE_9__.YAMLSeq),
+/* harmony export */   YAMLWarning: () => (/* reexport safe */ _errors_js__WEBPACK_IMPORTED_MODULE_3__.YAMLWarning),
+/* harmony export */   isAlias: () => (/* reexport safe */ _nodes_identity_js__WEBPACK_IMPORTED_MODULE_5__.isAlias),
+/* harmony export */   isCollection: () => (/* reexport safe */ _nodes_identity_js__WEBPACK_IMPORTED_MODULE_5__.isCollection),
+/* harmony export */   isDocument: () => (/* reexport safe */ _nodes_identity_js__WEBPACK_IMPORTED_MODULE_5__.isDocument),
+/* harmony export */   isMap: () => (/* reexport safe */ _nodes_identity_js__WEBPACK_IMPORTED_MODULE_5__.isMap),
+/* harmony export */   isNode: () => (/* reexport safe */ _nodes_identity_js__WEBPACK_IMPORTED_MODULE_5__.isNode),
+/* harmony export */   isPair: () => (/* reexport safe */ _nodes_identity_js__WEBPACK_IMPORTED_MODULE_5__.isPair),
+/* harmony export */   isScalar: () => (/* reexport safe */ _nodes_identity_js__WEBPACK_IMPORTED_MODULE_5__.isScalar),
+/* harmony export */   isSeq: () => (/* reexport safe */ _nodes_identity_js__WEBPACK_IMPORTED_MODULE_5__.isSeq),
+/* harmony export */   parse: () => (/* reexport safe */ _public_api_js__WEBPACK_IMPORTED_MODULE_14__.parse),
+/* harmony export */   parseAllDocuments: () => (/* reexport safe */ _public_api_js__WEBPACK_IMPORTED_MODULE_14__.parseAllDocuments),
+/* harmony export */   parseDocument: () => (/* reexport safe */ _public_api_js__WEBPACK_IMPORTED_MODULE_14__.parseDocument),
+/* harmony export */   stringify: () => (/* reexport safe */ _public_api_js__WEBPACK_IMPORTED_MODULE_14__.stringify),
+/* harmony export */   visit: () => (/* reexport safe */ _visit_js__WEBPACK_IMPORTED_MODULE_15__.visit),
+/* harmony export */   visitAsync: () => (/* reexport safe */ _visit_js__WEBPACK_IMPORTED_MODULE_15__.visitAsync)
+/* harmony export */ });
+/* harmony import */ var _compose_composer_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./compose/composer.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/composer.js");
+/* harmony import */ var _doc_Document_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./doc/Document.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/doc/Document.js");
+/* harmony import */ var _schema_Schema_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./schema/Schema.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/Schema.js");
+/* harmony import */ var _errors_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./errors.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/errors.js");
+/* harmony import */ var _nodes_Alias_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./nodes/Alias.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Alias.js");
+/* harmony import */ var _nodes_identity_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./nodes/identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _nodes_Pair_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./nodes/Pair.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Pair.js");
+/* harmony import */ var _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./nodes/Scalar.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Scalar.js");
+/* harmony import */ var _nodes_YAMLMap_js__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./nodes/YAMLMap.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/YAMLMap.js");
+/* harmony import */ var _nodes_YAMLSeq_js__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./nodes/YAMLSeq.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/YAMLSeq.js");
+/* harmony import */ var _parse_cst_js__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./parse/cst.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/parse/cst.js");
+/* harmony import */ var _parse_lexer_js__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./parse/lexer.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/parse/lexer.js");
+/* harmony import */ var _parse_line_counter_js__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./parse/line-counter.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/parse/line-counter.js");
+/* harmony import */ var _parse_parser_js__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./parse/parser.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/parse/parser.js");
+/* harmony import */ var _public_api_js__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./public-api.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/public-api.js");
+/* harmony import */ var _visit_js__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./visit.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/visit.js");
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/log.js"
+/*!*****************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/log.js ***!
+  \*****************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   debug: () => (/* binding */ debug),
+/* harmony export */   warn: () => (/* binding */ warn)
+/* harmony export */ });
+function debug(logLevel, ...messages) {
+    if (logLevel === 'debug')
+        console.log(...messages);
+}
+function warn(logLevel, warning) {
+    if (logLevel === 'debug' || logLevel === 'warn') {
+        console.warn(warning);
+    }
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Alias.js"
+/*!*************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Alias.js ***!
+  \*************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Alias: () => (/* binding */ Alias)
+/* harmony export */ });
+/* harmony import */ var _doc_anchors_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../doc/anchors.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/doc/anchors.js");
+/* harmony import */ var _visit_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../visit.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/visit.js");
+/* harmony import */ var _identity_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _Node_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./Node.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Node.js");
+/* harmony import */ var _toJS_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./toJS.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/toJS.js");
+
+
+
+
+
+
+class Alias extends _Node_js__WEBPACK_IMPORTED_MODULE_3__.NodeBase {
+    constructor(source) {
+        super(_identity_js__WEBPACK_IMPORTED_MODULE_2__.ALIAS);
+        this.source = source;
+        Object.defineProperty(this, 'tag', {
+            set() {
+                throw new Error('Alias nodes cannot have tags');
+            }
+        });
+    }
+    /**
+     * Resolve the value of this alias within `doc`, finding the last
+     * instance of the `source` anchor before this node.
+     */
+    resolve(doc, ctx) {
+        let nodes;
+        if (ctx?.aliasResolveCache) {
+            nodes = ctx.aliasResolveCache;
+        }
+        else {
+            nodes = [];
+            (0,_visit_js__WEBPACK_IMPORTED_MODULE_1__.visit)(doc, {
+                Node: (_key, node) => {
+                    if ((0,_identity_js__WEBPACK_IMPORTED_MODULE_2__.isAlias)(node) || (0,_identity_js__WEBPACK_IMPORTED_MODULE_2__.hasAnchor)(node))
+                        nodes.push(node);
+                }
+            });
+            if (ctx)
+                ctx.aliasResolveCache = nodes;
+        }
+        let found = undefined;
+        for (const node of nodes) {
+            if (node === this)
+                break;
+            if (node.anchor === this.source)
+                found = node;
+        }
+        return found;
+    }
+    toJSON(_arg, ctx) {
+        if (!ctx)
+            return { source: this.source };
+        const { anchors, doc, maxAliasCount } = ctx;
+        const source = this.resolve(doc, ctx);
+        if (!source) {
+            const msg = `Unresolved alias (the anchor must be set before the alias): ${this.source}`;
+            throw new ReferenceError(msg);
+        }
+        let data = anchors.get(source);
+        if (!data) {
+            // Resolve anchors for Node.prototype.toJS()
+            (0,_toJS_js__WEBPACK_IMPORTED_MODULE_4__.toJS)(source, null, ctx);
+            data = anchors.get(source);
+        }
+        /* istanbul ignore if */
+        if (data?.res === undefined) {
+            const msg = 'This should not happen: Alias anchor was not resolved?';
+            throw new ReferenceError(msg);
+        }
+        if (maxAliasCount >= 0) {
+            data.count += 1;
+            if (data.aliasCount === 0)
+                data.aliasCount = getAliasCount(doc, source, anchors);
+            if (data.count * data.aliasCount > maxAliasCount) {
+                const msg = 'Excessive alias count indicates a resource exhaustion attack';
+                throw new ReferenceError(msg);
+            }
+        }
+        return data.res;
+    }
+    toString(ctx, _onComment, _onChompKeep) {
+        const src = `*${this.source}`;
+        if (ctx) {
+            (0,_doc_anchors_js__WEBPACK_IMPORTED_MODULE_0__.anchorIsValid)(this.source);
+            if (ctx.options.verifyAliasOrder && !ctx.anchors.has(this.source)) {
+                const msg = `Unresolved alias (the anchor must be set before the alias): ${this.source}`;
+                throw new Error(msg);
+            }
+            if (ctx.implicitKey)
+                return `${src} `;
+        }
+        return src;
+    }
+}
+function getAliasCount(doc, node, anchors) {
+    if ((0,_identity_js__WEBPACK_IMPORTED_MODULE_2__.isAlias)(node)) {
+        const source = node.resolve(doc);
+        const anchor = anchors && source && anchors.get(source);
+        return anchor ? anchor.count * anchor.aliasCount : 0;
+    }
+    else if ((0,_identity_js__WEBPACK_IMPORTED_MODULE_2__.isCollection)(node)) {
+        let count = 0;
+        for (const item of node.items) {
+            const c = getAliasCount(doc, item, anchors);
+            if (c > count)
+                count = c;
+        }
+        return count;
+    }
+    else if ((0,_identity_js__WEBPACK_IMPORTED_MODULE_2__.isPair)(node)) {
+        const kc = getAliasCount(doc, node.key, anchors);
+        const vc = getAliasCount(doc, node.value, anchors);
+        return Math.max(kc, vc);
+    }
+    return 1;
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Collection.js"
+/*!******************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Collection.js ***!
+  \******************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Collection: () => (/* binding */ Collection),
+/* harmony export */   collectionFromPath: () => (/* binding */ collectionFromPath),
+/* harmony export */   isEmptyPath: () => (/* binding */ isEmptyPath)
+/* harmony export */ });
+/* harmony import */ var _doc_createNode_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../doc/createNode.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/doc/createNode.js");
+/* harmony import */ var _identity_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _Node_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./Node.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Node.js");
+
+
+
+
+function collectionFromPath(schema, path, value) {
+    let v = value;
+    for (let i = path.length - 1; i >= 0; --i) {
+        const k = path[i];
+        if (typeof k === 'number' && Number.isInteger(k) && k >= 0) {
+            const a = [];
+            a[k] = v;
+            v = a;
+        }
+        else {
+            v = new Map([[k, v]]);
+        }
+    }
+    return (0,_doc_createNode_js__WEBPACK_IMPORTED_MODULE_0__.createNode)(v, undefined, {
+        aliasDuplicateObjects: false,
+        keepUndefined: false,
+        onAnchor: () => {
+            throw new Error('This should not happen, please report a bug.');
+        },
+        schema,
+        sourceObjects: new Map()
+    });
+}
+// Type guard is intentionally a little wrong so as to be more useful,
+// as it does not cover untypable empty non-string iterables (e.g. []).
+const isEmptyPath = (path) => path == null ||
+    (typeof path === 'object' && !!path[Symbol.iterator]().next().done);
+class Collection extends _Node_js__WEBPACK_IMPORTED_MODULE_2__.NodeBase {
+    constructor(type, schema) {
+        super(type);
+        Object.defineProperty(this, 'schema', {
+            value: schema,
+            configurable: true,
+            enumerable: false,
+            writable: true
+        });
+    }
+    /**
+     * Create a copy of this collection.
+     *
+     * @param schema - If defined, overwrites the original's schema
+     */
+    clone(schema) {
+        const copy = Object.create(Object.getPrototypeOf(this), Object.getOwnPropertyDescriptors(this));
+        if (schema)
+            copy.schema = schema;
+        copy.items = copy.items.map(it => (0,_identity_js__WEBPACK_IMPORTED_MODULE_1__.isNode)(it) || (0,_identity_js__WEBPACK_IMPORTED_MODULE_1__.isPair)(it) ? it.clone(schema) : it);
+        if (this.range)
+            copy.range = this.range.slice();
+        return copy;
+    }
+    /**
+     * Adds a value to the collection. For `!!map` and `!!omap` the value must
+     * be a Pair instance or a `{ key, value }` object, which may not have a key
+     * that already exists in the map.
+     */
+    addIn(path, value) {
+        if (isEmptyPath(path))
+            this.add(value);
+        else {
+            const [key, ...rest] = path;
+            const node = this.get(key, true);
+            if ((0,_identity_js__WEBPACK_IMPORTED_MODULE_1__.isCollection)(node))
+                node.addIn(rest, value);
+            else if (node === undefined && this.schema)
+                this.set(key, collectionFromPath(this.schema, rest, value));
+            else
+                throw new Error(`Expected YAML collection at ${key}. Remaining path: ${rest}`);
+        }
+    }
+    /**
+     * Removes a value from the collection.
+     * @returns `true` if the item was found and removed.
+     */
+    deleteIn(path) {
+        const [key, ...rest] = path;
+        if (rest.length === 0)
+            return this.delete(key);
+        const node = this.get(key, true);
+        if ((0,_identity_js__WEBPACK_IMPORTED_MODULE_1__.isCollection)(node))
+            return node.deleteIn(rest);
+        else
+            throw new Error(`Expected YAML collection at ${key}. Remaining path: ${rest}`);
+    }
+    /**
+     * Returns item at `key`, or `undefined` if not found. By default unwraps
+     * scalar values from their surrounding node; to disable set `keepScalar` to
+     * `true` (collections are always returned intact).
+     */
+    getIn(path, keepScalar) {
+        const [key, ...rest] = path;
+        const node = this.get(key, true);
+        if (rest.length === 0)
+            return !keepScalar && (0,_identity_js__WEBPACK_IMPORTED_MODULE_1__.isScalar)(node) ? node.value : node;
+        else
+            return (0,_identity_js__WEBPACK_IMPORTED_MODULE_1__.isCollection)(node) ? node.getIn(rest, keepScalar) : undefined;
+    }
+    hasAllNullValues(allowScalar) {
+        return this.items.every(node => {
+            if (!(0,_identity_js__WEBPACK_IMPORTED_MODULE_1__.isPair)(node))
+                return false;
+            const n = node.value;
+            return (n == null ||
+                (allowScalar &&
+                    (0,_identity_js__WEBPACK_IMPORTED_MODULE_1__.isScalar)(n) &&
+                    n.value == null &&
+                    !n.commentBefore &&
+                    !n.comment &&
+                    !n.tag));
+        });
+    }
+    /**
+     * Checks if the collection includes a value with the key `key`.
+     */
+    hasIn(path) {
+        const [key, ...rest] = path;
+        if (rest.length === 0)
+            return this.has(key);
+        const node = this.get(key, true);
+        return (0,_identity_js__WEBPACK_IMPORTED_MODULE_1__.isCollection)(node) ? node.hasIn(rest) : false;
+    }
+    /**
+     * Sets a value in this collection. For `!!set`, `value` needs to be a
+     * boolean to add/remove the item from the set.
+     */
+    setIn(path, value) {
+        const [key, ...rest] = path;
+        if (rest.length === 0) {
+            this.set(key, value);
+        }
+        else {
+            const node = this.get(key, true);
+            if ((0,_identity_js__WEBPACK_IMPORTED_MODULE_1__.isCollection)(node))
+                node.setIn(rest, value);
+            else if (node === undefined && this.schema)
+                this.set(key, collectionFromPath(this.schema, rest, value));
+            else
+                throw new Error(`Expected YAML collection at ${key}. Remaining path: ${rest}`);
+        }
+    }
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Node.js"
+/*!************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Node.js ***!
+  \************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   NodeBase: () => (/* binding */ NodeBase)
+/* harmony export */ });
+/* harmony import */ var _doc_applyReviver_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../doc/applyReviver.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/doc/applyReviver.js");
+/* harmony import */ var _identity_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _toJS_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./toJS.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/toJS.js");
+
+
+
+
+class NodeBase {
+    constructor(type) {
+        Object.defineProperty(this, _identity_js__WEBPACK_IMPORTED_MODULE_1__.NODE_TYPE, { value: type });
+    }
+    /** Create a copy of this node.  */
+    clone() {
+        const copy = Object.create(Object.getPrototypeOf(this), Object.getOwnPropertyDescriptors(this));
+        if (this.range)
+            copy.range = this.range.slice();
+        return copy;
+    }
+    /** A plain JavaScript representation of this node. */
+    toJS(doc, { mapAsMap, maxAliasCount, onAnchor, reviver } = {}) {
+        if (!(0,_identity_js__WEBPACK_IMPORTED_MODULE_1__.isDocument)(doc))
+            throw new TypeError('A document argument is required');
+        const ctx = {
+            anchors: new Map(),
+            doc,
+            keep: true,
+            mapAsMap: mapAsMap === true,
+            mapKeyWarned: false,
+            maxAliasCount: typeof maxAliasCount === 'number' ? maxAliasCount : 100
+        };
+        const res = (0,_toJS_js__WEBPACK_IMPORTED_MODULE_2__.toJS)(this, '', ctx);
+        if (typeof onAnchor === 'function')
+            for (const { count, res } of ctx.anchors.values())
+                onAnchor(res, count);
+        return typeof reviver === 'function'
+            ? (0,_doc_applyReviver_js__WEBPACK_IMPORTED_MODULE_0__.applyReviver)(reviver, { '': res }, '', res)
+            : res;
+    }
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Pair.js"
+/*!************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Pair.js ***!
+  \************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Pair: () => (/* binding */ Pair),
+/* harmony export */   createPair: () => (/* binding */ createPair)
+/* harmony export */ });
+/* harmony import */ var _doc_createNode_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../doc/createNode.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/doc/createNode.js");
+/* harmony import */ var _stringify_stringifyPair_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../stringify/stringifyPair.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyPair.js");
+/* harmony import */ var _addPairToJSMap_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./addPairToJSMap.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/addPairToJSMap.js");
+/* harmony import */ var _identity_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+
+
+
+
+
+function createPair(key, value, ctx) {
+    const k = (0,_doc_createNode_js__WEBPACK_IMPORTED_MODULE_0__.createNode)(key, undefined, ctx);
+    const v = (0,_doc_createNode_js__WEBPACK_IMPORTED_MODULE_0__.createNode)(value, undefined, ctx);
+    return new Pair(k, v);
+}
+class Pair {
+    constructor(key, value = null) {
+        Object.defineProperty(this, _identity_js__WEBPACK_IMPORTED_MODULE_3__.NODE_TYPE, { value: _identity_js__WEBPACK_IMPORTED_MODULE_3__.PAIR });
+        this.key = key;
+        this.value = value;
+    }
+    clone(schema) {
+        let { key, value } = this;
+        if ((0,_identity_js__WEBPACK_IMPORTED_MODULE_3__.isNode)(key))
+            key = key.clone(schema);
+        if ((0,_identity_js__WEBPACK_IMPORTED_MODULE_3__.isNode)(value))
+            value = value.clone(schema);
+        return new Pair(key, value);
+    }
+    toJSON(_, ctx) {
+        const pair = ctx?.mapAsMap ? new Map() : {};
+        return (0,_addPairToJSMap_js__WEBPACK_IMPORTED_MODULE_2__.addPairToJSMap)(ctx, pair, this);
+    }
+    toString(ctx, onComment, onChompKeep) {
+        return ctx?.doc
+            ? (0,_stringify_stringifyPair_js__WEBPACK_IMPORTED_MODULE_1__.stringifyPair)(this, ctx, onComment, onChompKeep)
+            : JSON.stringify(this);
+    }
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Scalar.js"
+/*!**************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Scalar.js ***!
+  \**************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Scalar: () => (/* binding */ Scalar),
+/* harmony export */   isScalarValue: () => (/* binding */ isScalarValue)
+/* harmony export */ });
+/* harmony import */ var _identity_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _Node_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./Node.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Node.js");
+/* harmony import */ var _toJS_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./toJS.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/toJS.js");
+
+
+
+
+const isScalarValue = (value) => !value || (typeof value !== 'function' && typeof value !== 'object');
+class Scalar extends _Node_js__WEBPACK_IMPORTED_MODULE_1__.NodeBase {
+    constructor(value) {
+        super(_identity_js__WEBPACK_IMPORTED_MODULE_0__.SCALAR);
+        this.value = value;
+    }
+    toJSON(arg, ctx) {
+        return ctx?.keep ? this.value : (0,_toJS_js__WEBPACK_IMPORTED_MODULE_2__.toJS)(this.value, arg, ctx);
+    }
+    toString() {
+        return String(this.value);
+    }
+}
+Scalar.BLOCK_FOLDED = 'BLOCK_FOLDED';
+Scalar.BLOCK_LITERAL = 'BLOCK_LITERAL';
+Scalar.PLAIN = 'PLAIN';
+Scalar.QUOTE_DOUBLE = 'QUOTE_DOUBLE';
+Scalar.QUOTE_SINGLE = 'QUOTE_SINGLE';
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/YAMLMap.js"
+/*!***************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/YAMLMap.js ***!
+  \***************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   YAMLMap: () => (/* binding */ YAMLMap),
+/* harmony export */   findPair: () => (/* binding */ findPair)
+/* harmony export */ });
+/* harmony import */ var _stringify_stringifyCollection_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../stringify/stringifyCollection.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyCollection.js");
+/* harmony import */ var _addPairToJSMap_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./addPairToJSMap.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/addPairToJSMap.js");
+/* harmony import */ var _Collection_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./Collection.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Collection.js");
+/* harmony import */ var _identity_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _Pair_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./Pair.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Pair.js");
+/* harmony import */ var _Scalar_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./Scalar.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Scalar.js");
+
+
+
+
+
+
+
+function findPair(items, key) {
+    const k = (0,_identity_js__WEBPACK_IMPORTED_MODULE_3__.isScalar)(key) ? key.value : key;
+    for (const it of items) {
+        if ((0,_identity_js__WEBPACK_IMPORTED_MODULE_3__.isPair)(it)) {
+            if (it.key === key || it.key === k)
+                return it;
+            if ((0,_identity_js__WEBPACK_IMPORTED_MODULE_3__.isScalar)(it.key) && it.key.value === k)
+                return it;
+        }
+    }
+    return undefined;
+}
+class YAMLMap extends _Collection_js__WEBPACK_IMPORTED_MODULE_2__.Collection {
+    static get tagName() {
+        return 'tag:yaml.org,2002:map';
+    }
+    constructor(schema) {
+        super(_identity_js__WEBPACK_IMPORTED_MODULE_3__.MAP, schema);
+        this.items = [];
+    }
+    /**
+     * A generic collection parsing method that can be extended
+     * to other node classes that inherit from YAMLMap
+     */
+    static from(schema, obj, ctx) {
+        const { keepUndefined, replacer } = ctx;
+        const map = new this(schema);
+        const add = (key, value) => {
+            if (typeof replacer === 'function')
+                value = replacer.call(obj, key, value);
+            else if (Array.isArray(replacer) && !replacer.includes(key))
+                return;
+            if (value !== undefined || keepUndefined)
+                map.items.push((0,_Pair_js__WEBPACK_IMPORTED_MODULE_4__.createPair)(key, value, ctx));
+        };
+        if (obj instanceof Map) {
+            for (const [key, value] of obj)
+                add(key, value);
+        }
+        else if (obj && typeof obj === 'object') {
+            for (const key of Object.keys(obj))
+                add(key, obj[key]);
+        }
+        if (typeof schema.sortMapEntries === 'function') {
+            map.items.sort(schema.sortMapEntries);
+        }
+        return map;
+    }
+    /**
+     * Adds a value to the collection.
+     *
+     * @param overwrite - If not set `true`, using a key that is already in the
+     *   collection will throw. Otherwise, overwrites the previous value.
+     */
+    add(pair, overwrite) {
+        let _pair;
+        if ((0,_identity_js__WEBPACK_IMPORTED_MODULE_3__.isPair)(pair))
+            _pair = pair;
+        else if (!pair || typeof pair !== 'object' || !('key' in pair)) {
+            // In TypeScript, this never happens.
+            _pair = new _Pair_js__WEBPACK_IMPORTED_MODULE_4__.Pair(pair, pair?.value);
+        }
+        else
+            _pair = new _Pair_js__WEBPACK_IMPORTED_MODULE_4__.Pair(pair.key, pair.value);
+        const prev = findPair(this.items, _pair.key);
+        const sortEntries = this.schema?.sortMapEntries;
+        if (prev) {
+            if (!overwrite)
+                throw new Error(`Key ${_pair.key} already set`);
+            // For scalars, keep the old node & its comments and anchors
+            if ((0,_identity_js__WEBPACK_IMPORTED_MODULE_3__.isScalar)(prev.value) && (0,_Scalar_js__WEBPACK_IMPORTED_MODULE_5__.isScalarValue)(_pair.value))
+                prev.value.value = _pair.value;
+            else
+                prev.value = _pair.value;
+        }
+        else if (sortEntries) {
+            const i = this.items.findIndex(item => sortEntries(_pair, item) < 0);
+            if (i === -1)
+                this.items.push(_pair);
+            else
+                this.items.splice(i, 0, _pair);
+        }
+        else {
+            this.items.push(_pair);
+        }
+    }
+    delete(key) {
+        const it = findPair(this.items, key);
+        if (!it)
+            return false;
+        const del = this.items.splice(this.items.indexOf(it), 1);
+        return del.length > 0;
+    }
+    get(key, keepScalar) {
+        const it = findPair(this.items, key);
+        const node = it?.value;
+        return (!keepScalar && (0,_identity_js__WEBPACK_IMPORTED_MODULE_3__.isScalar)(node) ? node.value : node) ?? undefined;
+    }
+    has(key) {
+        return !!findPair(this.items, key);
+    }
+    set(key, value) {
+        this.add(new _Pair_js__WEBPACK_IMPORTED_MODULE_4__.Pair(key, value), true);
+    }
+    /**
+     * @param ctx - Conversion context, originally set in Document#toJS()
+     * @param {Class} Type - If set, forces the returned collection type
+     * @returns Instance of Type, Map, or Object
+     */
+    toJSON(_, ctx, Type) {
+        const map = Type ? new Type() : ctx?.mapAsMap ? new Map() : {};
+        if (ctx?.onCreate)
+            ctx.onCreate(map);
+        for (const item of this.items)
+            (0,_addPairToJSMap_js__WEBPACK_IMPORTED_MODULE_1__.addPairToJSMap)(ctx, map, item);
+        return map;
+    }
+    toString(ctx, onComment, onChompKeep) {
+        if (!ctx)
+            return JSON.stringify(this);
+        for (const item of this.items) {
+            if (!(0,_identity_js__WEBPACK_IMPORTED_MODULE_3__.isPair)(item))
+                throw new Error(`Map items must all be pairs; found ${JSON.stringify(item)} instead`);
+        }
+        if (!ctx.allNullValues && this.hasAllNullValues(false))
+            ctx = Object.assign({}, ctx, { allNullValues: true });
+        return (0,_stringify_stringifyCollection_js__WEBPACK_IMPORTED_MODULE_0__.stringifyCollection)(this, ctx, {
+            blockItemPrefix: '',
+            flowChars: { start: '{', end: '}' },
+            itemIndent: ctx.indent || '',
+            onChompKeep,
+            onComment
+        });
+    }
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/YAMLSeq.js"
+/*!***************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/YAMLSeq.js ***!
+  \***************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   YAMLSeq: () => (/* binding */ YAMLSeq)
+/* harmony export */ });
+/* harmony import */ var _doc_createNode_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../doc/createNode.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/doc/createNode.js");
+/* harmony import */ var _stringify_stringifyCollection_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../stringify/stringifyCollection.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyCollection.js");
+/* harmony import */ var _Collection_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./Collection.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Collection.js");
+/* harmony import */ var _identity_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _Scalar_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./Scalar.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Scalar.js");
+/* harmony import */ var _toJS_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./toJS.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/toJS.js");
+
+
+
+
+
+
+
+class YAMLSeq extends _Collection_js__WEBPACK_IMPORTED_MODULE_2__.Collection {
+    static get tagName() {
+        return 'tag:yaml.org,2002:seq';
+    }
+    constructor(schema) {
+        super(_identity_js__WEBPACK_IMPORTED_MODULE_3__.SEQ, schema);
+        this.items = [];
+    }
+    add(value) {
+        this.items.push(value);
+    }
+    /**
+     * Removes a value from the collection.
+     *
+     * `key` must contain a representation of an integer for this to succeed.
+     * It may be wrapped in a `Scalar`.
+     *
+     * @returns `true` if the item was found and removed.
+     */
+    delete(key) {
+        const idx = asItemIndex(key);
+        if (typeof idx !== 'number')
+            return false;
+        const del = this.items.splice(idx, 1);
+        return del.length > 0;
+    }
+    get(key, keepScalar) {
+        const idx = asItemIndex(key);
+        if (typeof idx !== 'number')
+            return undefined;
+        const it = this.items[idx];
+        return !keepScalar && (0,_identity_js__WEBPACK_IMPORTED_MODULE_3__.isScalar)(it) ? it.value : it;
+    }
+    /**
+     * Checks if the collection includes a value with the key `key`.
+     *
+     * `key` must contain a representation of an integer for this to succeed.
+     * It may be wrapped in a `Scalar`.
+     */
+    has(key) {
+        const idx = asItemIndex(key);
+        return typeof idx === 'number' && idx < this.items.length;
+    }
+    /**
+     * Sets a value in this collection. For `!!set`, `value` needs to be a
+     * boolean to add/remove the item from the set.
+     *
+     * If `key` does not contain a representation of an integer, this will throw.
+     * It may be wrapped in a `Scalar`.
+     */
+    set(key, value) {
+        const idx = asItemIndex(key);
+        if (typeof idx !== 'number')
+            throw new Error(`Expected a valid index, not ${key}.`);
+        const prev = this.items[idx];
+        if ((0,_identity_js__WEBPACK_IMPORTED_MODULE_3__.isScalar)(prev) && (0,_Scalar_js__WEBPACK_IMPORTED_MODULE_4__.isScalarValue)(value))
+            prev.value = value;
+        else
+            this.items[idx] = value;
+    }
+    toJSON(_, ctx) {
+        const seq = [];
+        if (ctx?.onCreate)
+            ctx.onCreate(seq);
+        let i = 0;
+        for (const item of this.items)
+            seq.push((0,_toJS_js__WEBPACK_IMPORTED_MODULE_5__.toJS)(item, String(i++), ctx));
+        return seq;
+    }
+    toString(ctx, onComment, onChompKeep) {
+        if (!ctx)
+            return JSON.stringify(this);
+        return (0,_stringify_stringifyCollection_js__WEBPACK_IMPORTED_MODULE_1__.stringifyCollection)(this, ctx, {
+            blockItemPrefix: '- ',
+            flowChars: { start: '[', end: ']' },
+            itemIndent: (ctx.indent || '') + '  ',
+            onChompKeep,
+            onComment
+        });
+    }
+    static from(schema, obj, ctx) {
+        const { replacer } = ctx;
+        const seq = new this(schema);
+        if (obj && Symbol.iterator in Object(obj)) {
+            let i = 0;
+            for (let it of obj) {
+                if (typeof replacer === 'function') {
+                    const key = obj instanceof Set ? it : String(i++);
+                    it = replacer.call(obj, key, it);
+                }
+                seq.items.push((0,_doc_createNode_js__WEBPACK_IMPORTED_MODULE_0__.createNode)(it, undefined, ctx));
+            }
+        }
+        return seq;
+    }
+}
+function asItemIndex(key) {
+    let idx = (0,_identity_js__WEBPACK_IMPORTED_MODULE_3__.isScalar)(key) ? key.value : key;
+    if (idx && typeof idx === 'string')
+        idx = Number(idx);
+    return typeof idx === 'number' && Number.isInteger(idx) && idx >= 0
+        ? idx
+        : null;
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/addPairToJSMap.js"
+/*!**********************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/addPairToJSMap.js ***!
+  \**********************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   addPairToJSMap: () => (/* binding */ addPairToJSMap)
+/* harmony export */ });
+/* harmony import */ var _log_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../log.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/log.js");
+/* harmony import */ var _schema_yaml_1_1_merge_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../schema/yaml-1.1/merge.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/merge.js");
+/* harmony import */ var _stringify_stringify_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../stringify/stringify.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringify.js");
+/* harmony import */ var _identity_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _toJS_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./toJS.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/toJS.js");
+
+
+
+
+
+
+function addPairToJSMap(ctx, map, { key, value }) {
+    if ((0,_identity_js__WEBPACK_IMPORTED_MODULE_3__.isNode)(key) && key.addToJSMap)
+        key.addToJSMap(ctx, map, value);
+    // TODO: Should drop this special case for bare << handling
+    else if ((0,_schema_yaml_1_1_merge_js__WEBPACK_IMPORTED_MODULE_1__.isMergeKey)(ctx, key))
+        (0,_schema_yaml_1_1_merge_js__WEBPACK_IMPORTED_MODULE_1__.addMergeToJSMap)(ctx, map, value);
+    else {
+        const jsKey = (0,_toJS_js__WEBPACK_IMPORTED_MODULE_4__.toJS)(key, '', ctx);
+        if (map instanceof Map) {
+            map.set(jsKey, (0,_toJS_js__WEBPACK_IMPORTED_MODULE_4__.toJS)(value, jsKey, ctx));
+        }
+        else if (map instanceof Set) {
+            map.add(jsKey);
+        }
+        else {
+            const stringKey = stringifyKey(key, jsKey, ctx);
+            const jsValue = (0,_toJS_js__WEBPACK_IMPORTED_MODULE_4__.toJS)(value, stringKey, ctx);
+            if (stringKey in map)
+                Object.defineProperty(map, stringKey, {
+                    value: jsValue,
+                    writable: true,
+                    enumerable: true,
+                    configurable: true
+                });
+            else
+                map[stringKey] = jsValue;
+        }
+    }
+    return map;
+}
+function stringifyKey(key, jsKey, ctx) {
+    if (jsKey === null)
+        return '';
+    // eslint-disable-next-line @typescript-eslint/no-base-to-string
+    if (typeof jsKey !== 'object')
+        return String(jsKey);
+    if ((0,_identity_js__WEBPACK_IMPORTED_MODULE_3__.isNode)(key) && ctx?.doc) {
+        const strCtx = (0,_stringify_stringify_js__WEBPACK_IMPORTED_MODULE_2__.createStringifyContext)(ctx.doc, {});
+        strCtx.anchors = new Set();
+        for (const node of ctx.anchors.keys())
+            strCtx.anchors.add(node.anchor);
+        strCtx.inFlow = true;
+        strCtx.inStringifyKey = true;
+        const strKey = key.toString(strCtx);
+        if (!ctx.mapKeyWarned) {
+            let jsonStr = JSON.stringify(strKey);
+            if (jsonStr.length > 40)
+                jsonStr = jsonStr.substring(0, 36) + '..."';
+            (0,_log_js__WEBPACK_IMPORTED_MODULE_0__.warn)(ctx.doc.options.logLevel, `Keys with collection values will be stringified due to JS Object restrictions: ${jsonStr}. Set mapAsMap: true to use object keys.`);
+            ctx.mapKeyWarned = true;
+        }
+        return strKey;
+    }
+    return JSON.stringify(jsKey);
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js"
+/*!****************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js ***!
+  \****************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   ALIAS: () => (/* binding */ ALIAS),
+/* harmony export */   DOC: () => (/* binding */ DOC),
+/* harmony export */   MAP: () => (/* binding */ MAP),
+/* harmony export */   NODE_TYPE: () => (/* binding */ NODE_TYPE),
+/* harmony export */   PAIR: () => (/* binding */ PAIR),
+/* harmony export */   SCALAR: () => (/* binding */ SCALAR),
+/* harmony export */   SEQ: () => (/* binding */ SEQ),
+/* harmony export */   hasAnchor: () => (/* binding */ hasAnchor),
+/* harmony export */   isAlias: () => (/* binding */ isAlias),
+/* harmony export */   isCollection: () => (/* binding */ isCollection),
+/* harmony export */   isDocument: () => (/* binding */ isDocument),
+/* harmony export */   isMap: () => (/* binding */ isMap),
+/* harmony export */   isNode: () => (/* binding */ isNode),
+/* harmony export */   isPair: () => (/* binding */ isPair),
+/* harmony export */   isScalar: () => (/* binding */ isScalar),
+/* harmony export */   isSeq: () => (/* binding */ isSeq)
+/* harmony export */ });
+const ALIAS = Symbol.for('yaml.alias');
+const DOC = Symbol.for('yaml.document');
+const MAP = Symbol.for('yaml.map');
+const PAIR = Symbol.for('yaml.pair');
+const SCALAR = Symbol.for('yaml.scalar');
+const SEQ = Symbol.for('yaml.seq');
+const NODE_TYPE = Symbol.for('yaml.node.type');
+const isAlias = (node) => !!node && typeof node === 'object' && node[NODE_TYPE] === ALIAS;
+const isDocument = (node) => !!node && typeof node === 'object' && node[NODE_TYPE] === DOC;
+const isMap = (node) => !!node && typeof node === 'object' && node[NODE_TYPE] === MAP;
+const isPair = (node) => !!node && typeof node === 'object' && node[NODE_TYPE] === PAIR;
+const isScalar = (node) => !!node && typeof node === 'object' && node[NODE_TYPE] === SCALAR;
+const isSeq = (node) => !!node && typeof node === 'object' && node[NODE_TYPE] === SEQ;
+function isCollection(node) {
+    if (node && typeof node === 'object')
+        switch (node[NODE_TYPE]) {
+            case MAP:
+            case SEQ:
+                return true;
+        }
+    return false;
+}
+function isNode(node) {
+    if (node && typeof node === 'object')
+        switch (node[NODE_TYPE]) {
+            case ALIAS:
+            case MAP:
+            case SCALAR:
+            case SEQ:
+                return true;
+        }
+    return false;
+}
+const hasAnchor = (node) => (isScalar(node) || isCollection(node)) && !!node.anchor;
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/toJS.js"
+/*!************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/toJS.js ***!
+  \************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   toJS: () => (/* binding */ toJS)
+/* harmony export */ });
+/* harmony import */ var _identity_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+
+
+/**
+ * Recursively convert any node or its contents to native JavaScript
+ *
+ * @param value - The input value
+ * @param arg - If `value` defines a `toJSON()` method, use this
+ *   as its first argument
+ * @param ctx - Conversion context, originally set in Document#toJS(). If
+ *   `{ keep: true }` is not set, output should be suitable for JSON
+ *   stringification.
+ */
+function toJS(value, arg, ctx) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    if (Array.isArray(value))
+        return value.map((v, i) => toJS(v, String(i), ctx));
+    if (value && typeof value.toJSON === 'function') {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+        if (!ctx || !(0,_identity_js__WEBPACK_IMPORTED_MODULE_0__.hasAnchor)(value))
+            return value.toJSON(arg, ctx);
+        const data = { aliasCount: 0, count: 1, res: undefined };
+        ctx.anchors.set(value, data);
+        ctx.onCreate = res => {
+            data.res = res;
+            delete ctx.onCreate;
+        };
+        const res = value.toJSON(arg, ctx);
+        if (ctx.onCreate)
+            ctx.onCreate(res);
+        return res;
+    }
+    if (typeof value === 'bigint' && !ctx?.keep)
+        return Number(value);
+    return value;
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/parse/cst-scalar.js"
+/*!******************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/parse/cst-scalar.js ***!
+  \******************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createScalarToken: () => (/* binding */ createScalarToken),
+/* harmony export */   resolveAsScalar: () => (/* binding */ resolveAsScalar),
+/* harmony export */   setScalarValue: () => (/* binding */ setScalarValue)
+/* harmony export */ });
+/* harmony import */ var _compose_resolve_block_scalar_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../compose/resolve-block-scalar.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-block-scalar.js");
+/* harmony import */ var _compose_resolve_flow_scalar_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../compose/resolve-flow-scalar.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/resolve-flow-scalar.js");
+/* harmony import */ var _errors_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../errors.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/errors.js");
+/* harmony import */ var _stringify_stringifyString_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../stringify/stringifyString.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyString.js");
+
+
+
+
+
+function resolveAsScalar(token, strict = true, onError) {
+    if (token) {
+        const _onError = (pos, code, message) => {
+            const offset = typeof pos === 'number' ? pos : Array.isArray(pos) ? pos[0] : pos.offset;
+            if (onError)
+                onError(offset, code, message);
+            else
+                throw new _errors_js__WEBPACK_IMPORTED_MODULE_2__.YAMLParseError([offset, offset + 1], code, message);
+        };
+        switch (token.type) {
+            case 'scalar':
+            case 'single-quoted-scalar':
+            case 'double-quoted-scalar':
+                return (0,_compose_resolve_flow_scalar_js__WEBPACK_IMPORTED_MODULE_1__.resolveFlowScalar)(token, strict, _onError);
+            case 'block-scalar':
+                return (0,_compose_resolve_block_scalar_js__WEBPACK_IMPORTED_MODULE_0__.resolveBlockScalar)({ options: { strict } }, token, _onError);
+        }
+    }
+    return null;
+}
+/**
+ * Create a new scalar token with `value`
+ *
+ * Values that represent an actual string but may be parsed as a different type should use a `type` other than `'PLAIN'`,
+ * as this function does not support any schema operations and won't check for such conflicts.
+ *
+ * @param value The string representation of the value, which will have its content properly indented.
+ * @param context.end Comments and whitespace after the end of the value, or after the block scalar header. If undefined, a newline will be added.
+ * @param context.implicitKey Being within an implicit key may affect the resolved type of the token's value.
+ * @param context.indent The indent level of the token.
+ * @param context.inFlow Is this scalar within a flow collection? This may affect the resolved type of the token's value.
+ * @param context.offset The offset position of the token.
+ * @param context.type The preferred type of the scalar token. If undefined, the previous type of the `token` will be used, defaulting to `'PLAIN'`.
+ */
+function createScalarToken(value, context) {
+    const { implicitKey = false, indent, inFlow = false, offset = -1, type = 'PLAIN' } = context;
+    const source = (0,_stringify_stringifyString_js__WEBPACK_IMPORTED_MODULE_3__.stringifyString)({ type, value }, {
+        implicitKey,
+        indent: indent > 0 ? ' '.repeat(indent) : '',
+        inFlow,
+        options: { blockQuote: true, lineWidth: -1 }
+    });
+    const end = context.end ?? [
+        { type: 'newline', offset: -1, indent, source: '\n' }
+    ];
+    switch (source[0]) {
+        case '|':
+        case '>': {
+            const he = source.indexOf('\n');
+            const head = source.substring(0, he);
+            const body = source.substring(he + 1) + '\n';
+            const props = [
+                { type: 'block-scalar-header', offset, indent, source: head }
+            ];
+            if (!addEndtoBlockProps(props, end))
+                props.push({ type: 'newline', offset: -1, indent, source: '\n' });
+            return { type: 'block-scalar', offset, indent, props, source: body };
+        }
+        case '"':
+            return { type: 'double-quoted-scalar', offset, indent, source, end };
+        case "'":
+            return { type: 'single-quoted-scalar', offset, indent, source, end };
+        default:
+            return { type: 'scalar', offset, indent, source, end };
+    }
+}
+/**
+ * Set the value of `token` to the given string `value`, overwriting any previous contents and type that it may have.
+ *
+ * Best efforts are made to retain any comments previously associated with the `token`,
+ * though all contents within a collection's `items` will be overwritten.
+ *
+ * Values that represent an actual string but may be parsed as a different type should use a `type` other than `'PLAIN'`,
+ * as this function does not support any schema operations and won't check for such conflicts.
+ *
+ * @param token Any token. If it does not include an `indent` value, the value will be stringified as if it were an implicit key.
+ * @param value The string representation of the value, which will have its content properly indented.
+ * @param context.afterKey In most cases, values after a key should have an additional level of indentation.
+ * @param context.implicitKey Being within an implicit key may affect the resolved type of the token's value.
+ * @param context.inFlow Being within a flow collection may affect the resolved type of the token's value.
+ * @param context.type The preferred type of the scalar token. If undefined, the previous type of the `token` will be used, defaulting to `'PLAIN'`.
+ */
+function setScalarValue(token, value, context = {}) {
+    let { afterKey = false, implicitKey = false, inFlow = false, type } = context;
+    let indent = 'indent' in token ? token.indent : null;
+    if (afterKey && typeof indent === 'number')
+        indent += 2;
+    if (!type)
+        switch (token.type) {
+            case 'single-quoted-scalar':
+                type = 'QUOTE_SINGLE';
+                break;
+            case 'double-quoted-scalar':
+                type = 'QUOTE_DOUBLE';
+                break;
+            case 'block-scalar': {
+                const header = token.props[0];
+                if (header.type !== 'block-scalar-header')
+                    throw new Error('Invalid block scalar header');
+                type = header.source[0] === '>' ? 'BLOCK_FOLDED' : 'BLOCK_LITERAL';
+                break;
+            }
+            default:
+                type = 'PLAIN';
+        }
+    const source = (0,_stringify_stringifyString_js__WEBPACK_IMPORTED_MODULE_3__.stringifyString)({ type, value }, {
+        implicitKey: implicitKey || indent === null,
+        indent: indent !== null && indent > 0 ? ' '.repeat(indent) : '',
+        inFlow,
+        options: { blockQuote: true, lineWidth: -1 }
+    });
+    switch (source[0]) {
+        case '|':
+        case '>':
+            setBlockScalarValue(token, source);
+            break;
+        case '"':
+            setFlowScalarValue(token, source, 'double-quoted-scalar');
+            break;
+        case "'":
+            setFlowScalarValue(token, source, 'single-quoted-scalar');
+            break;
+        default:
+            setFlowScalarValue(token, source, 'scalar');
+    }
+}
+function setBlockScalarValue(token, source) {
+    const he = source.indexOf('\n');
+    const head = source.substring(0, he);
+    const body = source.substring(he + 1) + '\n';
+    if (token.type === 'block-scalar') {
+        const header = token.props[0];
+        if (header.type !== 'block-scalar-header')
+            throw new Error('Invalid block scalar header');
+        header.source = head;
+        token.source = body;
+    }
+    else {
+        const { offset } = token;
+        const indent = 'indent' in token ? token.indent : -1;
+        const props = [
+            { type: 'block-scalar-header', offset, indent, source: head }
+        ];
+        if (!addEndtoBlockProps(props, 'end' in token ? token.end : undefined))
+            props.push({ type: 'newline', offset: -1, indent, source: '\n' });
+        for (const key of Object.keys(token))
+            if (key !== 'type' && key !== 'offset')
+                delete token[key];
+        Object.assign(token, { type: 'block-scalar', indent, props, source: body });
+    }
+}
+/** @returns `true` if last token is a newline */
+function addEndtoBlockProps(props, end) {
+    if (end)
+        for (const st of end)
+            switch (st.type) {
+                case 'space':
+                case 'comment':
+                    props.push(st);
+                    break;
+                case 'newline':
+                    props.push(st);
+                    return true;
+            }
+    return false;
+}
+function setFlowScalarValue(token, source, type) {
+    switch (token.type) {
+        case 'scalar':
+        case 'double-quoted-scalar':
+        case 'single-quoted-scalar':
+            token.type = type;
+            token.source = source;
+            break;
+        case 'block-scalar': {
+            const end = token.props.slice(1);
+            let oa = source.length;
+            if (token.props[0].type === 'block-scalar-header')
+                oa -= token.props[0].source.length;
+            for (const tok of end)
+                tok.offset += oa;
+            delete token.props;
+            Object.assign(token, { type, source, end });
+            break;
+        }
+        case 'block-map':
+        case 'block-seq': {
+            const offset = token.offset + source.length;
+            const nl = { type: 'newline', offset, indent: token.indent, source: '\n' };
+            delete token.items;
+            Object.assign(token, { type, source, end: [nl] });
+            break;
+        }
+        default: {
+            const indent = 'indent' in token ? token.indent : -1;
+            const end = 'end' in token && Array.isArray(token.end)
+                ? token.end.filter(st => st.type === 'space' ||
+                    st.type === 'comment' ||
+                    st.type === 'newline')
+                : [];
+            for (const key of Object.keys(token))
+                if (key !== 'type' && key !== 'offset')
+                    delete token[key];
+            Object.assign(token, { type, indent, source, end });
+        }
+    }
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/parse/cst-stringify.js"
+/*!*********************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/parse/cst-stringify.js ***!
+  \*********************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   stringify: () => (/* binding */ stringify)
+/* harmony export */ });
+/**
+ * Stringify a CST document, token, or collection item
+ *
+ * Fair warning: This applies no validation whatsoever, and
+ * simply concatenates the sources in their logical order.
+ */
+const stringify = (cst) => 'type' in cst ? stringifyToken(cst) : stringifyItem(cst);
+function stringifyToken(token) {
+    switch (token.type) {
+        case 'block-scalar': {
+            let res = '';
+            for (const tok of token.props)
+                res += stringifyToken(tok);
+            return res + token.source;
+        }
+        case 'block-map':
+        case 'block-seq': {
+            let res = '';
+            for (const item of token.items)
+                res += stringifyItem(item);
+            return res;
+        }
+        case 'flow-collection': {
+            let res = token.start.source;
+            for (const item of token.items)
+                res += stringifyItem(item);
+            for (const st of token.end)
+                res += st.source;
+            return res;
+        }
+        case 'document': {
+            let res = stringifyItem(token);
+            if (token.end)
+                for (const st of token.end)
+                    res += st.source;
+            return res;
+        }
+        default: {
+            let res = token.source;
+            if ('end' in token && token.end)
+                for (const st of token.end)
+                    res += st.source;
+            return res;
+        }
+    }
+}
+function stringifyItem({ start, key, sep, value }) {
+    let res = '';
+    for (const st of start)
+        res += st.source;
+    if (key)
+        res += stringifyToken(key);
+    if (sep)
+        for (const st of sep)
+            res += st.source;
+    if (value)
+        res += stringifyToken(value);
+    return res;
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/parse/cst-visit.js"
+/*!*****************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/parse/cst-visit.js ***!
+  \*****************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   visit: () => (/* binding */ visit)
+/* harmony export */ });
+const BREAK = Symbol('break visit');
+const SKIP = Symbol('skip children');
+const REMOVE = Symbol('remove item');
+/**
+ * Apply a visitor to a CST document or item.
+ *
+ * Walks through the tree (depth-first) starting from the root, calling a
+ * `visitor` function with two arguments when entering each item:
+ *   - `item`: The current item, which included the following members:
+ *     - `start: SourceToken[]` – Source tokens before the key or value,
+ *       possibly including its anchor or tag.
+ *     - `key?: Token | null` – Set for pair values. May then be `null`, if
+ *       the key before the `:` separator is empty.
+ *     - `sep?: SourceToken[]` – Source tokens between the key and the value,
+ *       which should include the `:` map value indicator if `value` is set.
+ *     - `value?: Token` – The value of a sequence item, or of a map pair.
+ *   - `path`: The steps from the root to the current node, as an array of
+ *     `['key' | 'value', number]` tuples.
+ *
+ * The return value of the visitor may be used to control the traversal:
+ *   - `undefined` (default): Do nothing and continue
+ *   - `visit.SKIP`: Do not visit the children of this token, continue with
+ *      next sibling
+ *   - `visit.BREAK`: Terminate traversal completely
+ *   - `visit.REMOVE`: Remove the current item, then continue with the next one
+ *   - `number`: Set the index of the next step. This is useful especially if
+ *     the index of the current token has changed.
+ *   - `function`: Define the next visitor for this item. After the original
+ *     visitor is called on item entry, next visitors are called after handling
+ *     a non-empty `key` and when exiting the item.
+ */
+function visit(cst, visitor) {
+    if ('type' in cst && cst.type === 'document')
+        cst = { start: cst.start, value: cst.value };
+    _visit(Object.freeze([]), cst, visitor);
+}
+// Without the `as symbol` casts, TS declares these in the `visit`
+// namespace using `var`, but then complains about that because
+// `unique symbol` must be `const`.
+/** Terminate visit traversal completely */
+visit.BREAK = BREAK;
+/** Do not visit the children of the current item */
+visit.SKIP = SKIP;
+/** Remove the current item */
+visit.REMOVE = REMOVE;
+/** Find the item at `path` from `cst` as the root */
+visit.itemAtPath = (cst, path) => {
+    let item = cst;
+    for (const [field, index] of path) {
+        const tok = item?.[field];
+        if (tok && 'items' in tok) {
+            item = tok.items[index];
+        }
+        else
+            return undefined;
+    }
+    return item;
+};
+/**
+ * Get the immediate parent collection of the item at `path` from `cst` as the root.
+ *
+ * Throws an error if the collection is not found, which should never happen if the item itself exists.
+ */
+visit.parentCollection = (cst, path) => {
+    const parent = visit.itemAtPath(cst, path.slice(0, -1));
+    const field = path[path.length - 1][0];
+    const coll = parent?.[field];
+    if (coll && 'items' in coll)
+        return coll;
+    throw new Error('Parent collection not found');
+};
+function _visit(path, item, visitor) {
+    let ctrl = visitor(item, path);
+    if (typeof ctrl === 'symbol')
+        return ctrl;
+    for (const field of ['key', 'value']) {
+        const token = item[field];
+        if (token && 'items' in token) {
+            for (let i = 0; i < token.items.length; ++i) {
+                const ci = _visit(Object.freeze(path.concat([[field, i]])), token.items[i], visitor);
+                if (typeof ci === 'number')
+                    i = ci - 1;
+                else if (ci === BREAK)
+                    return BREAK;
+                else if (ci === REMOVE) {
+                    token.items.splice(i, 1);
+                    i -= 1;
+                }
+            }
+            if (typeof ctrl === 'function' && field === 'key')
+                ctrl = ctrl(item, path);
+        }
+    }
+    return typeof ctrl === 'function' ? ctrl(item, path) : ctrl;
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/parse/cst.js"
+/*!***********************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/parse/cst.js ***!
+  \***********************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   BOM: () => (/* binding */ BOM),
+/* harmony export */   DOCUMENT: () => (/* binding */ DOCUMENT),
+/* harmony export */   FLOW_END: () => (/* binding */ FLOW_END),
+/* harmony export */   SCALAR: () => (/* binding */ SCALAR),
+/* harmony export */   createScalarToken: () => (/* reexport safe */ _cst_scalar_js__WEBPACK_IMPORTED_MODULE_0__.createScalarToken),
+/* harmony export */   isCollection: () => (/* binding */ isCollection),
+/* harmony export */   isScalar: () => (/* binding */ isScalar),
+/* harmony export */   prettyToken: () => (/* binding */ prettyToken),
+/* harmony export */   resolveAsScalar: () => (/* reexport safe */ _cst_scalar_js__WEBPACK_IMPORTED_MODULE_0__.resolveAsScalar),
+/* harmony export */   setScalarValue: () => (/* reexport safe */ _cst_scalar_js__WEBPACK_IMPORTED_MODULE_0__.setScalarValue),
+/* harmony export */   stringify: () => (/* reexport safe */ _cst_stringify_js__WEBPACK_IMPORTED_MODULE_1__.stringify),
+/* harmony export */   tokenType: () => (/* binding */ tokenType),
+/* harmony export */   visit: () => (/* reexport safe */ _cst_visit_js__WEBPACK_IMPORTED_MODULE_2__.visit)
+/* harmony export */ });
+/* harmony import */ var _cst_scalar_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./cst-scalar.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/parse/cst-scalar.js");
+/* harmony import */ var _cst_stringify_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./cst-stringify.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/parse/cst-stringify.js");
+/* harmony import */ var _cst_visit_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./cst-visit.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/parse/cst-visit.js");
+
+
+
+
+/** The byte order mark */
+const BOM = '\u{FEFF}';
+/** Start of doc-mode */
+const DOCUMENT = '\x02'; // C0: Start of Text
+/** Unexpected end of flow-mode */
+const FLOW_END = '\x18'; // C0: Cancel
+/** Next token is a scalar value */
+const SCALAR = '\x1f'; // C0: Unit Separator
+/** @returns `true` if `token` is a flow or block collection */
+const isCollection = (token) => !!token && 'items' in token;
+/** @returns `true` if `token` is a flow or block scalar; not an alias */
+const isScalar = (token) => !!token &&
+    (token.type === 'scalar' ||
+        token.type === 'single-quoted-scalar' ||
+        token.type === 'double-quoted-scalar' ||
+        token.type === 'block-scalar');
+/* istanbul ignore next */
+/** Get a printable representation of a lexer token */
+function prettyToken(token) {
+    switch (token) {
+        case BOM:
+            return '<BOM>';
+        case DOCUMENT:
+            return '<DOC>';
+        case FLOW_END:
+            return '<FLOW_END>';
+        case SCALAR:
+            return '<SCALAR>';
+        default:
+            return JSON.stringify(token);
+    }
+}
+/** Identify the type of a lexer token. May return `null` for unknown tokens. */
+function tokenType(source) {
+    switch (source) {
+        case BOM:
+            return 'byte-order-mark';
+        case DOCUMENT:
+            return 'doc-mode';
+        case FLOW_END:
+            return 'flow-error-end';
+        case SCALAR:
+            return 'scalar';
+        case '---':
+            return 'doc-start';
+        case '...':
+            return 'doc-end';
+        case '':
+        case '\n':
+        case '\r\n':
+            return 'newline';
+        case '-':
+            return 'seq-item-ind';
+        case '?':
+            return 'explicit-key-ind';
+        case ':':
+            return 'map-value-ind';
+        case '{':
+            return 'flow-map-start';
+        case '}':
+            return 'flow-map-end';
+        case '[':
+            return 'flow-seq-start';
+        case ']':
+            return 'flow-seq-end';
+        case ',':
+            return 'comma';
+    }
+    switch (source[0]) {
+        case ' ':
+        case '\t':
+            return 'space';
+        case '#':
+            return 'comment';
+        case '%':
+            return 'directive-line';
+        case '*':
+            return 'alias';
+        case '&':
+            return 'anchor';
+        case '!':
+            return 'tag';
+        case "'":
+            return 'single-quoted-scalar';
+        case '"':
+            return 'double-quoted-scalar';
+        case '|':
+        case '>':
+            return 'block-scalar-header';
+    }
+    return null;
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/parse/lexer.js"
+/*!*************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/parse/lexer.js ***!
+  \*************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Lexer: () => (/* binding */ Lexer)
+/* harmony export */ });
+/* harmony import */ var _cst_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./cst.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/parse/cst.js");
+
+
+/*
+START -> stream
+
+stream
+  directive -> line-end -> stream
+  indent + line-end -> stream
+  [else] -> line-start
+
+line-end
+  comment -> line-end
+  newline -> .
+  input-end -> END
+
+line-start
+  doc-start -> doc
+  doc-end -> stream
+  [else] -> indent -> block-start
+
+block-start
+  seq-item-start -> block-start
+  explicit-key-start -> block-start
+  map-value-start -> block-start
+  [else] -> doc
+
+doc
+  line-end -> line-start
+  spaces -> doc
+  anchor -> doc
+  tag -> doc
+  flow-start -> flow -> doc
+  flow-end -> error -> doc
+  seq-item-start -> error -> doc
+  explicit-key-start -> error -> doc
+  map-value-start -> doc
+  alias -> doc
+  quote-start -> quoted-scalar -> doc
+  block-scalar-header -> line-end -> block-scalar(min) -> line-start
+  [else] -> plain-scalar(false, min) -> doc
+
+flow
+  line-end -> flow
+  spaces -> flow
+  anchor -> flow
+  tag -> flow
+  flow-start -> flow -> flow
+  flow-end -> .
+  seq-item-start -> error -> flow
+  explicit-key-start -> flow
+  map-value-start -> flow
+  alias -> flow
+  quote-start -> quoted-scalar -> flow
+  comma -> flow
+  [else] -> plain-scalar(true, 0) -> flow
+
+quoted-scalar
+  quote-end -> .
+  [else] -> quoted-scalar
+
+block-scalar(min)
+  newline + peek(indent < min) -> .
+  [else] -> block-scalar(min)
+
+plain-scalar(is-flow, min)
+  scalar-end(is-flow) -> .
+  peek(newline + (indent < min)) -> .
+  [else] -> plain-scalar(min)
+*/
+function isEmpty(ch) {
+    switch (ch) {
+        case undefined:
+        case ' ':
+        case '\n':
+        case '\r':
+        case '\t':
+            return true;
+        default:
+            return false;
+    }
+}
+const hexDigits = new Set('0123456789ABCDEFabcdef');
+const tagChars = new Set("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-#;/?:@&=+$_.!~*'()");
+const flowIndicatorChars = new Set(',[]{}');
+const invalidAnchorChars = new Set(' ,[]{}\n\r\t');
+const isNotAnchorChar = (ch) => !ch || invalidAnchorChars.has(ch);
+/**
+ * Splits an input string into lexical tokens, i.e. smaller strings that are
+ * easily identifiable by `tokens.tokenType()`.
+ *
+ * Lexing starts always in a "stream" context. Incomplete input may be buffered
+ * until a complete token can be emitted.
+ *
+ * In addition to slices of the original input, the following control characters
+ * may also be emitted:
+ *
+ * - `\x02` (Start of Text): A document starts with the next token
+ * - `\x18` (Cancel): Unexpected end of flow-mode (indicates an error)
+ * - `\x1f` (Unit Separator): Next token is a scalar value
+ * - `\u{FEFF}` (Byte order mark): Emitted separately outside documents
+ */
+class Lexer {
+    constructor() {
+        /**
+         * Flag indicating whether the end of the current buffer marks the end of
+         * all input
+         */
+        this.atEnd = false;
+        /**
+         * Explicit indent set in block scalar header, as an offset from the current
+         * minimum indent, so e.g. set to 1 from a header `|2+`. Set to -1 if not
+         * explicitly set.
+         */
+        this.blockScalarIndent = -1;
+        /**
+         * Block scalars that include a + (keep) chomping indicator in their header
+         * include trailing empty lines, which are otherwise excluded from the
+         * scalar's contents.
+         */
+        this.blockScalarKeep = false;
+        /** Current input */
+        this.buffer = '';
+        /**
+         * Flag noting whether the map value indicator : can immediately follow this
+         * node within a flow context.
+         */
+        this.flowKey = false;
+        /** Count of surrounding flow collection levels. */
+        this.flowLevel = 0;
+        /**
+         * Minimum level of indentation required for next lines to be parsed as a
+         * part of the current scalar value.
+         */
+        this.indentNext = 0;
+        /** Indentation level of the current line. */
+        this.indentValue = 0;
+        /** Position of the next \n character. */
+        this.lineEndPos = null;
+        /** Stores the state of the lexer if reaching the end of incpomplete input */
+        this.next = null;
+        /** A pointer to `buffer`; the current position of the lexer. */
+        this.pos = 0;
+    }
+    /**
+     * Generate YAML tokens from the `source` string. If `incomplete`,
+     * a part of the last line may be left as a buffer for the next call.
+     *
+     * @returns A generator of lexical tokens
+     */
+    *lex(source, incomplete = false) {
+        if (source) {
+            if (typeof source !== 'string')
+                throw TypeError('source is not a string');
+            this.buffer = this.buffer ? this.buffer + source : source;
+            this.lineEndPos = null;
+        }
+        this.atEnd = !incomplete;
+        let next = this.next ?? 'stream';
+        while (next && (incomplete || this.hasChars(1)))
+            next = yield* this.parseNext(next);
+    }
+    atLineEnd() {
+        let i = this.pos;
+        let ch = this.buffer[i];
+        while (ch === ' ' || ch === '\t')
+            ch = this.buffer[++i];
+        if (!ch || ch === '#' || ch === '\n')
+            return true;
+        if (ch === '\r')
+            return this.buffer[i + 1] === '\n';
+        return false;
+    }
+    charAt(n) {
+        return this.buffer[this.pos + n];
+    }
+    continueScalar(offset) {
+        let ch = this.buffer[offset];
+        if (this.indentNext > 0) {
+            let indent = 0;
+            while (ch === ' ')
+                ch = this.buffer[++indent + offset];
+            if (ch === '\r') {
+                const next = this.buffer[indent + offset + 1];
+                if (next === '\n' || (!next && !this.atEnd))
+                    return offset + indent + 1;
+            }
+            return ch === '\n' || indent >= this.indentNext || (!ch && !this.atEnd)
+                ? offset + indent
+                : -1;
+        }
+        if (ch === '-' || ch === '.') {
+            const dt = this.buffer.substr(offset, 3);
+            if ((dt === '---' || dt === '...') && isEmpty(this.buffer[offset + 3]))
+                return -1;
+        }
+        return offset;
+    }
+    getLine() {
+        let end = this.lineEndPos;
+        if (typeof end !== 'number' || (end !== -1 && end < this.pos)) {
+            end = this.buffer.indexOf('\n', this.pos);
+            this.lineEndPos = end;
+        }
+        if (end === -1)
+            return this.atEnd ? this.buffer.substring(this.pos) : null;
+        if (this.buffer[end - 1] === '\r')
+            end -= 1;
+        return this.buffer.substring(this.pos, end);
+    }
+    hasChars(n) {
+        return this.pos + n <= this.buffer.length;
+    }
+    setNext(state) {
+        this.buffer = this.buffer.substring(this.pos);
+        this.pos = 0;
+        this.lineEndPos = null;
+        this.next = state;
+        return null;
+    }
+    peek(n) {
+        return this.buffer.substr(this.pos, n);
+    }
+    *parseNext(next) {
+        switch (next) {
+            case 'stream':
+                return yield* this.parseStream();
+            case 'line-start':
+                return yield* this.parseLineStart();
+            case 'block-start':
+                return yield* this.parseBlockStart();
+            case 'doc':
+                return yield* this.parseDocument();
+            case 'flow':
+                return yield* this.parseFlowCollection();
+            case 'quoted-scalar':
+                return yield* this.parseQuotedScalar();
+            case 'block-scalar':
+                return yield* this.parseBlockScalar();
+            case 'plain-scalar':
+                return yield* this.parsePlainScalar();
+        }
+    }
+    *parseStream() {
+        let line = this.getLine();
+        if (line === null)
+            return this.setNext('stream');
+        if (line[0] === _cst_js__WEBPACK_IMPORTED_MODULE_0__.BOM) {
+            yield* this.pushCount(1);
+            line = line.substring(1);
+        }
+        if (line[0] === '%') {
+            let dirEnd = line.length;
+            let cs = line.indexOf('#');
+            while (cs !== -1) {
+                const ch = line[cs - 1];
+                if (ch === ' ' || ch === '\t') {
+                    dirEnd = cs - 1;
+                    break;
+                }
+                else {
+                    cs = line.indexOf('#', cs + 1);
+                }
+            }
+            while (true) {
+                const ch = line[dirEnd - 1];
+                if (ch === ' ' || ch === '\t')
+                    dirEnd -= 1;
+                else
+                    break;
+            }
+            const n = (yield* this.pushCount(dirEnd)) + (yield* this.pushSpaces(true));
+            yield* this.pushCount(line.length - n); // possible comment
+            this.pushNewline();
+            return 'stream';
+        }
+        if (this.atLineEnd()) {
+            const sp = yield* this.pushSpaces(true);
+            yield* this.pushCount(line.length - sp);
+            yield* this.pushNewline();
+            return 'stream';
+        }
+        yield _cst_js__WEBPACK_IMPORTED_MODULE_0__.DOCUMENT;
+        return yield* this.parseLineStart();
+    }
+    *parseLineStart() {
+        const ch = this.charAt(0);
+        if (!ch && !this.atEnd)
+            return this.setNext('line-start');
+        if (ch === '-' || ch === '.') {
+            if (!this.atEnd && !this.hasChars(4))
+                return this.setNext('line-start');
+            const s = this.peek(3);
+            if ((s === '---' || s === '...') && isEmpty(this.charAt(3))) {
+                yield* this.pushCount(3);
+                this.indentValue = 0;
+                this.indentNext = 0;
+                return s === '---' ? 'doc' : 'stream';
+            }
+        }
+        this.indentValue = yield* this.pushSpaces(false);
+        if (this.indentNext > this.indentValue && !isEmpty(this.charAt(1)))
+            this.indentNext = this.indentValue;
+        return yield* this.parseBlockStart();
+    }
+    *parseBlockStart() {
+        const [ch0, ch1] = this.peek(2);
+        if (!ch1 && !this.atEnd)
+            return this.setNext('block-start');
+        if ((ch0 === '-' || ch0 === '?' || ch0 === ':') && isEmpty(ch1)) {
+            const n = (yield* this.pushCount(1)) + (yield* this.pushSpaces(true));
+            this.indentNext = this.indentValue + 1;
+            this.indentValue += n;
+            return yield* this.parseBlockStart();
+        }
+        return 'doc';
+    }
+    *parseDocument() {
+        yield* this.pushSpaces(true);
+        const line = this.getLine();
+        if (line === null)
+            return this.setNext('doc');
+        let n = yield* this.pushIndicators();
+        switch (line[n]) {
+            case '#':
+                yield* this.pushCount(line.length - n);
+            // fallthrough
+            case undefined:
+                yield* this.pushNewline();
+                return yield* this.parseLineStart();
+            case '{':
+            case '[':
+                yield* this.pushCount(1);
+                this.flowKey = false;
+                this.flowLevel = 1;
+                return 'flow';
+            case '}':
+            case ']':
+                // this is an error
+                yield* this.pushCount(1);
+                return 'doc';
+            case '*':
+                yield* this.pushUntil(isNotAnchorChar);
+                return 'doc';
+            case '"':
+            case "'":
+                return yield* this.parseQuotedScalar();
+            case '|':
+            case '>':
+                n += yield* this.parseBlockScalarHeader();
+                n += yield* this.pushSpaces(true);
+                yield* this.pushCount(line.length - n);
+                yield* this.pushNewline();
+                return yield* this.parseBlockScalar();
+            default:
+                return yield* this.parsePlainScalar();
+        }
+    }
+    *parseFlowCollection() {
+        let nl, sp;
+        let indent = -1;
+        do {
+            nl = yield* this.pushNewline();
+            if (nl > 0) {
+                sp = yield* this.pushSpaces(false);
+                this.indentValue = indent = sp;
+            }
+            else {
+                sp = 0;
+            }
+            sp += yield* this.pushSpaces(true);
+        } while (nl + sp > 0);
+        const line = this.getLine();
+        if (line === null)
+            return this.setNext('flow');
+        if ((indent !== -1 && indent < this.indentNext && line[0] !== '#') ||
+            (indent === 0 &&
+                (line.startsWith('---') || line.startsWith('...')) &&
+                isEmpty(line[3]))) {
+            // Allowing for the terminal ] or } at the same (rather than greater)
+            // indent level as the initial [ or { is technically invalid, but
+            // failing here would be surprising to users.
+            const atFlowEndMarker = indent === this.indentNext - 1 &&
+                this.flowLevel === 1 &&
+                (line[0] === ']' || line[0] === '}');
+            if (!atFlowEndMarker) {
+                // this is an error
+                this.flowLevel = 0;
+                yield _cst_js__WEBPACK_IMPORTED_MODULE_0__.FLOW_END;
+                return yield* this.parseLineStart();
+            }
+        }
+        let n = 0;
+        while (line[n] === ',') {
+            n += yield* this.pushCount(1);
+            n += yield* this.pushSpaces(true);
+            this.flowKey = false;
+        }
+        n += yield* this.pushIndicators();
+        switch (line[n]) {
+            case undefined:
+                return 'flow';
+            case '#':
+                yield* this.pushCount(line.length - n);
+                return 'flow';
+            case '{':
+            case '[':
+                yield* this.pushCount(1);
+                this.flowKey = false;
+                this.flowLevel += 1;
+                return 'flow';
+            case '}':
+            case ']':
+                yield* this.pushCount(1);
+                this.flowKey = true;
+                this.flowLevel -= 1;
+                return this.flowLevel ? 'flow' : 'doc';
+            case '*':
+                yield* this.pushUntil(isNotAnchorChar);
+                return 'flow';
+            case '"':
+            case "'":
+                this.flowKey = true;
+                return yield* this.parseQuotedScalar();
+            case ':': {
+                const next = this.charAt(1);
+                if (this.flowKey || isEmpty(next) || next === ',') {
+                    this.flowKey = false;
+                    yield* this.pushCount(1);
+                    yield* this.pushSpaces(true);
+                    return 'flow';
+                }
+            }
+            // fallthrough
+            default:
+                this.flowKey = false;
+                return yield* this.parsePlainScalar();
+        }
+    }
+    *parseQuotedScalar() {
+        const quote = this.charAt(0);
+        let end = this.buffer.indexOf(quote, this.pos + 1);
+        if (quote === "'") {
+            while (end !== -1 && this.buffer[end + 1] === "'")
+                end = this.buffer.indexOf("'", end + 2);
+        }
+        else {
+            // double-quote
+            while (end !== -1) {
+                let n = 0;
+                while (this.buffer[end - 1 - n] === '\\')
+                    n += 1;
+                if (n % 2 === 0)
+                    break;
+                end = this.buffer.indexOf('"', end + 1);
+            }
+        }
+        // Only looking for newlines within the quotes
+        const qb = this.buffer.substring(0, end);
+        let nl = qb.indexOf('\n', this.pos);
+        if (nl !== -1) {
+            while (nl !== -1) {
+                const cs = this.continueScalar(nl + 1);
+                if (cs === -1)
+                    break;
+                nl = qb.indexOf('\n', cs);
+            }
+            if (nl !== -1) {
+                // this is an error caused by an unexpected unindent
+                end = nl - (qb[nl - 1] === '\r' ? 2 : 1);
+            }
+        }
+        if (end === -1) {
+            if (!this.atEnd)
+                return this.setNext('quoted-scalar');
+            end = this.buffer.length;
+        }
+        yield* this.pushToIndex(end + 1, false);
+        return this.flowLevel ? 'flow' : 'doc';
+    }
+    *parseBlockScalarHeader() {
+        this.blockScalarIndent = -1;
+        this.blockScalarKeep = false;
+        let i = this.pos;
+        while (true) {
+            const ch = this.buffer[++i];
+            if (ch === '+')
+                this.blockScalarKeep = true;
+            else if (ch > '0' && ch <= '9')
+                this.blockScalarIndent = Number(ch) - 1;
+            else if (ch !== '-')
+                break;
+        }
+        return yield* this.pushUntil(ch => isEmpty(ch) || ch === '#');
+    }
+    *parseBlockScalar() {
+        let nl = this.pos - 1; // may be -1 if this.pos === 0
+        let indent = 0;
+        let ch;
+        loop: for (let i = this.pos; (ch = this.buffer[i]); ++i) {
+            switch (ch) {
+                case ' ':
+                    indent += 1;
+                    break;
+                case '\n':
+                    nl = i;
+                    indent = 0;
+                    break;
+                case '\r': {
+                    const next = this.buffer[i + 1];
+                    if (!next && !this.atEnd)
+                        return this.setNext('block-scalar');
+                    if (next === '\n')
+                        break;
+                } // fallthrough
+                default:
+                    break loop;
+            }
+        }
+        if (!ch && !this.atEnd)
+            return this.setNext('block-scalar');
+        if (indent >= this.indentNext) {
+            if (this.blockScalarIndent === -1)
+                this.indentNext = indent;
+            else {
+                this.indentNext =
+                    this.blockScalarIndent + (this.indentNext === 0 ? 1 : this.indentNext);
+            }
+            do {
+                const cs = this.continueScalar(nl + 1);
+                if (cs === -1)
+                    break;
+                nl = this.buffer.indexOf('\n', cs);
+            } while (nl !== -1);
+            if (nl === -1) {
+                if (!this.atEnd)
+                    return this.setNext('block-scalar');
+                nl = this.buffer.length;
+            }
+        }
+        // Trailing insufficiently indented tabs are invalid.
+        // To catch that during parsing, we include them in the block scalar value.
+        let i = nl + 1;
+        ch = this.buffer[i];
+        while (ch === ' ')
+            ch = this.buffer[++i];
+        if (ch === '\t') {
+            while (ch === '\t' || ch === ' ' || ch === '\r' || ch === '\n')
+                ch = this.buffer[++i];
+            nl = i - 1;
+        }
+        else if (!this.blockScalarKeep) {
+            do {
+                let i = nl - 1;
+                let ch = this.buffer[i];
+                if (ch === '\r')
+                    ch = this.buffer[--i];
+                const lastChar = i; // Drop the line if last char not more indented
+                while (ch === ' ')
+                    ch = this.buffer[--i];
+                if (ch === '\n' && i >= this.pos && i + 1 + indent > lastChar)
+                    nl = i;
+                else
+                    break;
+            } while (true);
+        }
+        yield _cst_js__WEBPACK_IMPORTED_MODULE_0__.SCALAR;
+        yield* this.pushToIndex(nl + 1, true);
+        return yield* this.parseLineStart();
+    }
+    *parsePlainScalar() {
+        const inFlow = this.flowLevel > 0;
+        let end = this.pos - 1;
+        let i = this.pos - 1;
+        let ch;
+        while ((ch = this.buffer[++i])) {
+            if (ch === ':') {
+                const next = this.buffer[i + 1];
+                if (isEmpty(next) || (inFlow && flowIndicatorChars.has(next)))
+                    break;
+                end = i;
+            }
+            else if (isEmpty(ch)) {
+                let next = this.buffer[i + 1];
+                if (ch === '\r') {
+                    if (next === '\n') {
+                        i += 1;
+                        ch = '\n';
+                        next = this.buffer[i + 1];
+                    }
+                    else
+                        end = i;
+                }
+                if (next === '#' || (inFlow && flowIndicatorChars.has(next)))
+                    break;
+                if (ch === '\n') {
+                    const cs = this.continueScalar(i + 1);
+                    if (cs === -1)
+                        break;
+                    i = Math.max(i, cs - 2); // to advance, but still account for ' #'
+                }
+            }
+            else {
+                if (inFlow && flowIndicatorChars.has(ch))
+                    break;
+                end = i;
+            }
+        }
+        if (!ch && !this.atEnd)
+            return this.setNext('plain-scalar');
+        yield _cst_js__WEBPACK_IMPORTED_MODULE_0__.SCALAR;
+        yield* this.pushToIndex(end + 1, true);
+        return inFlow ? 'flow' : 'doc';
+    }
+    *pushCount(n) {
+        if (n > 0) {
+            yield this.buffer.substr(this.pos, n);
+            this.pos += n;
+            return n;
+        }
+        return 0;
+    }
+    *pushToIndex(i, allowEmpty) {
+        const s = this.buffer.slice(this.pos, i);
+        if (s) {
+            yield s;
+            this.pos += s.length;
+            return s.length;
+        }
+        else if (allowEmpty)
+            yield '';
+        return 0;
+    }
+    *pushIndicators() {
+        switch (this.charAt(0)) {
+            case '!':
+                return ((yield* this.pushTag()) +
+                    (yield* this.pushSpaces(true)) +
+                    (yield* this.pushIndicators()));
+            case '&':
+                return ((yield* this.pushUntil(isNotAnchorChar)) +
+                    (yield* this.pushSpaces(true)) +
+                    (yield* this.pushIndicators()));
+            case '-': // this is an error
+            case '?': // this is an error outside flow collections
+            case ':': {
+                const inFlow = this.flowLevel > 0;
+                const ch1 = this.charAt(1);
+                if (isEmpty(ch1) || (inFlow && flowIndicatorChars.has(ch1))) {
+                    if (!inFlow)
+                        this.indentNext = this.indentValue + 1;
+                    else if (this.flowKey)
+                        this.flowKey = false;
+                    return ((yield* this.pushCount(1)) +
+                        (yield* this.pushSpaces(true)) +
+                        (yield* this.pushIndicators()));
+                }
+            }
+        }
+        return 0;
+    }
+    *pushTag() {
+        if (this.charAt(1) === '<') {
+            let i = this.pos + 2;
+            let ch = this.buffer[i];
+            while (!isEmpty(ch) && ch !== '>')
+                ch = this.buffer[++i];
+            return yield* this.pushToIndex(ch === '>' ? i + 1 : i, false);
+        }
+        else {
+            let i = this.pos + 1;
+            let ch = this.buffer[i];
+            while (ch) {
+                if (tagChars.has(ch))
+                    ch = this.buffer[++i];
+                else if (ch === '%' &&
+                    hexDigits.has(this.buffer[i + 1]) &&
+                    hexDigits.has(this.buffer[i + 2])) {
+                    ch = this.buffer[(i += 3)];
+                }
+                else
+                    break;
+            }
+            return yield* this.pushToIndex(i, false);
+        }
+    }
+    *pushNewline() {
+        const ch = this.buffer[this.pos];
+        if (ch === '\n')
+            return yield* this.pushCount(1);
+        else if (ch === '\r' && this.charAt(1) === '\n')
+            return yield* this.pushCount(2);
+        else
+            return 0;
+    }
+    *pushSpaces(allowTabs) {
+        let i = this.pos - 1;
+        let ch;
+        do {
+            ch = this.buffer[++i];
+        } while (ch === ' ' || (allowTabs && ch === '\t'));
+        const n = i - this.pos;
+        if (n > 0) {
+            yield this.buffer.substr(this.pos, n);
+            this.pos = i;
+        }
+        return n;
+    }
+    *pushUntil(test) {
+        let i = this.pos;
+        let ch = this.buffer[i];
+        while (!test(ch))
+            ch = this.buffer[++i];
+        return yield* this.pushToIndex(i, false);
+    }
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/parse/line-counter.js"
+/*!********************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/parse/line-counter.js ***!
+  \********************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   LineCounter: () => (/* binding */ LineCounter)
+/* harmony export */ });
+/**
+ * Tracks newlines during parsing in order to provide an efficient API for
+ * determining the one-indexed `{ line, col }` position for any offset
+ * within the input.
+ */
+class LineCounter {
+    constructor() {
+        this.lineStarts = [];
+        /**
+         * Should be called in ascending order. Otherwise, call
+         * `lineCounter.lineStarts.sort()` before calling `linePos()`.
+         */
+        this.addNewLine = (offset) => this.lineStarts.push(offset);
+        /**
+         * Performs a binary search and returns the 1-indexed { line, col }
+         * position of `offset`. If `line === 0`, `addNewLine` has never been
+         * called or `offset` is before the first known newline.
+         */
+        this.linePos = (offset) => {
+            let low = 0;
+            let high = this.lineStarts.length;
+            while (low < high) {
+                const mid = (low + high) >> 1; // Math.floor((low + high) / 2)
+                if (this.lineStarts[mid] < offset)
+                    low = mid + 1;
+                else
+                    high = mid;
+            }
+            if (this.lineStarts[low] === offset)
+                return { line: low + 1, col: 1 };
+            if (low === 0)
+                return { line: 0, col: offset };
+            const start = this.lineStarts[low - 1];
+            return { line: low, col: offset - start + 1 };
+        };
+    }
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/parse/parser.js"
+/*!**************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/parse/parser.js ***!
+  \**************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Parser: () => (/* binding */ Parser)
+/* harmony export */ });
+/* harmony import */ var _cst_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./cst.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/parse/cst.js");
+/* harmony import */ var _lexer_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./lexer.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/parse/lexer.js");
+
+
+
+function includesToken(list, type) {
+    for (let i = 0; i < list.length; ++i)
+        if (list[i].type === type)
+            return true;
+    return false;
+}
+function findNonEmptyIndex(list) {
+    for (let i = 0; i < list.length; ++i) {
+        switch (list[i].type) {
+            case 'space':
+            case 'comment':
+            case 'newline':
+                break;
+            default:
+                return i;
+        }
+    }
+    return -1;
+}
+function isFlowToken(token) {
+    switch (token?.type) {
+        case 'alias':
+        case 'scalar':
+        case 'single-quoted-scalar':
+        case 'double-quoted-scalar':
+        case 'flow-collection':
+            return true;
+        default:
+            return false;
+    }
+}
+function getPrevProps(parent) {
+    switch (parent.type) {
+        case 'document':
+            return parent.start;
+        case 'block-map': {
+            const it = parent.items[parent.items.length - 1];
+            return it.sep ?? it.start;
+        }
+        case 'block-seq':
+            return parent.items[parent.items.length - 1].start;
+        /* istanbul ignore next should not happen */
+        default:
+            return [];
+    }
+}
+/** Note: May modify input array */
+function getFirstKeyStartProps(prev) {
+    if (prev.length === 0)
+        return [];
+    let i = prev.length;
+    loop: while (--i >= 0) {
+        switch (prev[i].type) {
+            case 'doc-start':
+            case 'explicit-key-ind':
+            case 'map-value-ind':
+            case 'seq-item-ind':
+            case 'newline':
+                break loop;
+        }
+    }
+    while (prev[++i]?.type === 'space') {
+        /* loop */
+    }
+    return prev.splice(i, prev.length);
+}
+function fixFlowSeqItems(fc) {
+    if (fc.start.type === 'flow-seq-start') {
+        for (const it of fc.items) {
+            if (it.sep &&
+                !it.value &&
+                !includesToken(it.start, 'explicit-key-ind') &&
+                !includesToken(it.sep, 'map-value-ind')) {
+                if (it.key)
+                    it.value = it.key;
+                delete it.key;
+                if (isFlowToken(it.value)) {
+                    if (it.value.end)
+                        Array.prototype.push.apply(it.value.end, it.sep);
+                    else
+                        it.value.end = it.sep;
+                }
+                else
+                    Array.prototype.push.apply(it.start, it.sep);
+                delete it.sep;
+            }
+        }
+    }
+}
+/**
+ * A YAML concrete syntax tree (CST) parser
+ *
+ * ```ts
+ * const src: string = ...
+ * for (const token of new Parser().parse(src)) {
+ *   // token: Token
+ * }
+ * ```
+ *
+ * To use the parser with a user-provided lexer:
+ *
+ * ```ts
+ * function* parse(source: string, lexer: Lexer) {
+ *   const parser = new Parser()
+ *   for (const lexeme of lexer.lex(source))
+ *     yield* parser.next(lexeme)
+ *   yield* parser.end()
+ * }
+ *
+ * const src: string = ...
+ * const lexer = new Lexer()
+ * for (const token of parse(src, lexer)) {
+ *   // token: Token
+ * }
+ * ```
+ */
+class Parser {
+    /**
+     * @param onNewLine - If defined, called separately with the start position of
+     *   each new line (in `parse()`, including the start of input).
+     */
+    constructor(onNewLine) {
+        /** If true, space and sequence indicators count as indentation */
+        this.atNewLine = true;
+        /** If true, next token is a scalar value */
+        this.atScalar = false;
+        /** Current indentation level */
+        this.indent = 0;
+        /** Current offset since the start of parsing */
+        this.offset = 0;
+        /** On the same line with a block map key */
+        this.onKeyLine = false;
+        /** Top indicates the node that's currently being built */
+        this.stack = [];
+        /** The source of the current token, set in parse() */
+        this.source = '';
+        /** The type of the current token, set in parse() */
+        this.type = '';
+        // Must be defined after `next()`
+        this.lexer = new _lexer_js__WEBPACK_IMPORTED_MODULE_1__.Lexer();
+        this.onNewLine = onNewLine;
+    }
+    /**
+     * Parse `source` as a YAML stream.
+     * If `incomplete`, a part of the last line may be left as a buffer for the next call.
+     *
+     * Errors are not thrown, but yielded as `{ type: 'error', message }` tokens.
+     *
+     * @returns A generator of tokens representing each directive, document, and other structure.
+     */
+    *parse(source, incomplete = false) {
+        if (this.onNewLine && this.offset === 0)
+            this.onNewLine(0);
+        for (const lexeme of this.lexer.lex(source, incomplete))
+            yield* this.next(lexeme);
+        if (!incomplete)
+            yield* this.end();
+    }
+    /**
+     * Advance the parser by the `source` of one lexical token.
+     */
+    *next(source) {
+        this.source = source;
+        if (this.atScalar) {
+            this.atScalar = false;
+            yield* this.step();
+            this.offset += source.length;
+            return;
+        }
+        const type = (0,_cst_js__WEBPACK_IMPORTED_MODULE_0__.tokenType)(source);
+        if (!type) {
+            const message = `Not a YAML token: ${source}`;
+            yield* this.pop({ type: 'error', offset: this.offset, message, source });
+            this.offset += source.length;
+        }
+        else if (type === 'scalar') {
+            this.atNewLine = false;
+            this.atScalar = true;
+            this.type = 'scalar';
+        }
+        else {
+            this.type = type;
+            yield* this.step();
+            switch (type) {
+                case 'newline':
+                    this.atNewLine = true;
+                    this.indent = 0;
+                    if (this.onNewLine)
+                        this.onNewLine(this.offset + source.length);
+                    break;
+                case 'space':
+                    if (this.atNewLine && source[0] === ' ')
+                        this.indent += source.length;
+                    break;
+                case 'explicit-key-ind':
+                case 'map-value-ind':
+                case 'seq-item-ind':
+                    if (this.atNewLine)
+                        this.indent += source.length;
+                    break;
+                case 'doc-mode':
+                case 'flow-error-end':
+                    return;
+                default:
+                    this.atNewLine = false;
+            }
+            this.offset += source.length;
+        }
+    }
+    /** Call at end of input to push out any remaining constructions */
+    *end() {
+        while (this.stack.length > 0)
+            yield* this.pop();
+    }
+    get sourceToken() {
+        const st = {
+            type: this.type,
+            offset: this.offset,
+            indent: this.indent,
+            source: this.source
+        };
+        return st;
+    }
+    *step() {
+        const top = this.peek(1);
+        if (this.type === 'doc-end' && top?.type !== 'doc-end') {
+            while (this.stack.length > 0)
+                yield* this.pop();
+            this.stack.push({
+                type: 'doc-end',
+                offset: this.offset,
+                source: this.source
+            });
+            return;
+        }
+        if (!top)
+            return yield* this.stream();
+        switch (top.type) {
+            case 'document':
+                return yield* this.document(top);
+            case 'alias':
+            case 'scalar':
+            case 'single-quoted-scalar':
+            case 'double-quoted-scalar':
+                return yield* this.scalar(top);
+            case 'block-scalar':
+                return yield* this.blockScalar(top);
+            case 'block-map':
+                return yield* this.blockMap(top);
+            case 'block-seq':
+                return yield* this.blockSequence(top);
+            case 'flow-collection':
+                return yield* this.flowCollection(top);
+            case 'doc-end':
+                return yield* this.documentEnd(top);
+        }
+        /* istanbul ignore next should not happen */
+        yield* this.pop();
+    }
+    peek(n) {
+        return this.stack[this.stack.length - n];
+    }
+    *pop(error) {
+        const token = error ?? this.stack.pop();
+        /* istanbul ignore if should not happen */
+        if (!token) {
+            const message = 'Tried to pop an empty stack';
+            yield { type: 'error', offset: this.offset, source: '', message };
+        }
+        else if (this.stack.length === 0) {
+            yield token;
+        }
+        else {
+            const top = this.peek(1);
+            if (token.type === 'block-scalar') {
+                // Block scalars use their parent rather than header indent
+                token.indent = 'indent' in top ? top.indent : 0;
+            }
+            else if (token.type === 'flow-collection' && top.type === 'document') {
+                // Ignore all indent for top-level flow collections
+                token.indent = 0;
+            }
+            if (token.type === 'flow-collection')
+                fixFlowSeqItems(token);
+            switch (top.type) {
+                case 'document':
+                    top.value = token;
+                    break;
+                case 'block-scalar':
+                    top.props.push(token); // error
+                    break;
+                case 'block-map': {
+                    const it = top.items[top.items.length - 1];
+                    if (it.value) {
+                        top.items.push({ start: [], key: token, sep: [] });
+                        this.onKeyLine = true;
+                        return;
+                    }
+                    else if (it.sep) {
+                        it.value = token;
+                    }
+                    else {
+                        Object.assign(it, { key: token, sep: [] });
+                        this.onKeyLine = !it.explicitKey;
+                        return;
+                    }
+                    break;
+                }
+                case 'block-seq': {
+                    const it = top.items[top.items.length - 1];
+                    if (it.value)
+                        top.items.push({ start: [], value: token });
+                    else
+                        it.value = token;
+                    break;
+                }
+                case 'flow-collection': {
+                    const it = top.items[top.items.length - 1];
+                    if (!it || it.value)
+                        top.items.push({ start: [], key: token, sep: [] });
+                    else if (it.sep)
+                        it.value = token;
+                    else
+                        Object.assign(it, { key: token, sep: [] });
+                    return;
+                }
+                /* istanbul ignore next should not happen */
+                default:
+                    yield* this.pop();
+                    yield* this.pop(token);
+            }
+            if ((top.type === 'document' ||
+                top.type === 'block-map' ||
+                top.type === 'block-seq') &&
+                (token.type === 'block-map' || token.type === 'block-seq')) {
+                const last = token.items[token.items.length - 1];
+                if (last &&
+                    !last.sep &&
+                    !last.value &&
+                    last.start.length > 0 &&
+                    findNonEmptyIndex(last.start) === -1 &&
+                    (token.indent === 0 ||
+                        last.start.every(st => st.type !== 'comment' || st.indent < token.indent))) {
+                    if (top.type === 'document')
+                        top.end = last.start;
+                    else
+                        top.items.push({ start: last.start });
+                    token.items.splice(-1, 1);
+                }
+            }
+        }
+    }
+    *stream() {
+        switch (this.type) {
+            case 'directive-line':
+                yield { type: 'directive', offset: this.offset, source: this.source };
+                return;
+            case 'byte-order-mark':
+            case 'space':
+            case 'comment':
+            case 'newline':
+                yield this.sourceToken;
+                return;
+            case 'doc-mode':
+            case 'doc-start': {
+                const doc = {
+                    type: 'document',
+                    offset: this.offset,
+                    start: []
+                };
+                if (this.type === 'doc-start')
+                    doc.start.push(this.sourceToken);
+                this.stack.push(doc);
+                return;
+            }
+        }
+        yield {
+            type: 'error',
+            offset: this.offset,
+            message: `Unexpected ${this.type} token in YAML stream`,
+            source: this.source
+        };
+    }
+    *document(doc) {
+        if (doc.value)
+            return yield* this.lineEnd(doc);
+        switch (this.type) {
+            case 'doc-start': {
+                if (findNonEmptyIndex(doc.start) !== -1) {
+                    yield* this.pop();
+                    yield* this.step();
+                }
+                else
+                    doc.start.push(this.sourceToken);
+                return;
+            }
+            case 'anchor':
+            case 'tag':
+            case 'space':
+            case 'comment':
+            case 'newline':
+                doc.start.push(this.sourceToken);
+                return;
+        }
+        const bv = this.startBlockValue(doc);
+        if (bv)
+            this.stack.push(bv);
+        else {
+            yield {
+                type: 'error',
+                offset: this.offset,
+                message: `Unexpected ${this.type} token in YAML document`,
+                source: this.source
+            };
+        }
+    }
+    *scalar(scalar) {
+        if (this.type === 'map-value-ind') {
+            const prev = getPrevProps(this.peek(2));
+            const start = getFirstKeyStartProps(prev);
+            let sep;
+            if (scalar.end) {
+                sep = scalar.end;
+                sep.push(this.sourceToken);
+                delete scalar.end;
+            }
+            else
+                sep = [this.sourceToken];
+            const map = {
+                type: 'block-map',
+                offset: scalar.offset,
+                indent: scalar.indent,
+                items: [{ start, key: scalar, sep }]
+            };
+            this.onKeyLine = true;
+            this.stack[this.stack.length - 1] = map;
+        }
+        else
+            yield* this.lineEnd(scalar);
+    }
+    *blockScalar(scalar) {
+        switch (this.type) {
+            case 'space':
+            case 'comment':
+            case 'newline':
+                scalar.props.push(this.sourceToken);
+                return;
+            case 'scalar':
+                scalar.source = this.source;
+                // block-scalar source includes trailing newline
+                this.atNewLine = true;
+                this.indent = 0;
+                if (this.onNewLine) {
+                    let nl = this.source.indexOf('\n') + 1;
+                    while (nl !== 0) {
+                        this.onNewLine(this.offset + nl);
+                        nl = this.source.indexOf('\n', nl) + 1;
+                    }
+                }
+                yield* this.pop();
+                break;
+            /* istanbul ignore next should not happen */
+            default:
+                yield* this.pop();
+                yield* this.step();
+        }
+    }
+    *blockMap(map) {
+        const it = map.items[map.items.length - 1];
+        // it.sep is true-ish if pair already has key or : separator
+        switch (this.type) {
+            case 'newline':
+                this.onKeyLine = false;
+                if (it.value) {
+                    const end = 'end' in it.value ? it.value.end : undefined;
+                    const last = Array.isArray(end) ? end[end.length - 1] : undefined;
+                    if (last?.type === 'comment')
+                        end?.push(this.sourceToken);
+                    else
+                        map.items.push({ start: [this.sourceToken] });
+                }
+                else if (it.sep) {
+                    it.sep.push(this.sourceToken);
+                }
+                else {
+                    it.start.push(this.sourceToken);
+                }
+                return;
+            case 'space':
+            case 'comment':
+                if (it.value) {
+                    map.items.push({ start: [this.sourceToken] });
+                }
+                else if (it.sep) {
+                    it.sep.push(this.sourceToken);
+                }
+                else {
+                    if (this.atIndentedComment(it.start, map.indent)) {
+                        const prev = map.items[map.items.length - 2];
+                        const end = prev?.value?.end;
+                        if (Array.isArray(end)) {
+                            Array.prototype.push.apply(end, it.start);
+                            end.push(this.sourceToken);
+                            map.items.pop();
+                            return;
+                        }
+                    }
+                    it.start.push(this.sourceToken);
+                }
+                return;
+        }
+        if (this.indent >= map.indent) {
+            const atMapIndent = !this.onKeyLine && this.indent === map.indent;
+            const atNextItem = atMapIndent &&
+                (it.sep || it.explicitKey) &&
+                this.type !== 'seq-item-ind';
+            // For empty nodes, assign newline-separated not indented empty tokens to following node
+            let start = [];
+            if (atNextItem && it.sep && !it.value) {
+                const nl = [];
+                for (let i = 0; i < it.sep.length; ++i) {
+                    const st = it.sep[i];
+                    switch (st.type) {
+                        case 'newline':
+                            nl.push(i);
+                            break;
+                        case 'space':
+                            break;
+                        case 'comment':
+                            if (st.indent > map.indent)
+                                nl.length = 0;
+                            break;
+                        default:
+                            nl.length = 0;
+                    }
+                }
+                if (nl.length >= 2)
+                    start = it.sep.splice(nl[1]);
+            }
+            switch (this.type) {
+                case 'anchor':
+                case 'tag':
+                    if (atNextItem || it.value) {
+                        start.push(this.sourceToken);
+                        map.items.push({ start });
+                        this.onKeyLine = true;
+                    }
+                    else if (it.sep) {
+                        it.sep.push(this.sourceToken);
+                    }
+                    else {
+                        it.start.push(this.sourceToken);
+                    }
+                    return;
+                case 'explicit-key-ind':
+                    if (!it.sep && !it.explicitKey) {
+                        it.start.push(this.sourceToken);
+                        it.explicitKey = true;
+                    }
+                    else if (atNextItem || it.value) {
+                        start.push(this.sourceToken);
+                        map.items.push({ start, explicitKey: true });
+                    }
+                    else {
+                        this.stack.push({
+                            type: 'block-map',
+                            offset: this.offset,
+                            indent: this.indent,
+                            items: [{ start: [this.sourceToken], explicitKey: true }]
+                        });
+                    }
+                    this.onKeyLine = true;
+                    return;
+                case 'map-value-ind':
+                    if (it.explicitKey) {
+                        if (!it.sep) {
+                            if (includesToken(it.start, 'newline')) {
+                                Object.assign(it, { key: null, sep: [this.sourceToken] });
+                            }
+                            else {
+                                const start = getFirstKeyStartProps(it.start);
+                                this.stack.push({
+                                    type: 'block-map',
+                                    offset: this.offset,
+                                    indent: this.indent,
+                                    items: [{ start, key: null, sep: [this.sourceToken] }]
+                                });
+                            }
+                        }
+                        else if (it.value) {
+                            map.items.push({ start: [], key: null, sep: [this.sourceToken] });
+                        }
+                        else if (includesToken(it.sep, 'map-value-ind')) {
+                            this.stack.push({
+                                type: 'block-map',
+                                offset: this.offset,
+                                indent: this.indent,
+                                items: [{ start, key: null, sep: [this.sourceToken] }]
+                            });
+                        }
+                        else if (isFlowToken(it.key) &&
+                            !includesToken(it.sep, 'newline')) {
+                            const start = getFirstKeyStartProps(it.start);
+                            const key = it.key;
+                            const sep = it.sep;
+                            sep.push(this.sourceToken);
+                            // @ts-expect-error type guard is wrong here
+                            delete it.key;
+                            // @ts-expect-error type guard is wrong here
+                            delete it.sep;
+                            this.stack.push({
+                                type: 'block-map',
+                                offset: this.offset,
+                                indent: this.indent,
+                                items: [{ start, key, sep }]
+                            });
+                        }
+                        else if (start.length > 0) {
+                            // Not actually at next item
+                            it.sep = it.sep.concat(start, this.sourceToken);
+                        }
+                        else {
+                            it.sep.push(this.sourceToken);
+                        }
+                    }
+                    else {
+                        if (!it.sep) {
+                            Object.assign(it, { key: null, sep: [this.sourceToken] });
+                        }
+                        else if (it.value || atNextItem) {
+                            map.items.push({ start, key: null, sep: [this.sourceToken] });
+                        }
+                        else if (includesToken(it.sep, 'map-value-ind')) {
+                            this.stack.push({
+                                type: 'block-map',
+                                offset: this.offset,
+                                indent: this.indent,
+                                items: [{ start: [], key: null, sep: [this.sourceToken] }]
+                            });
+                        }
+                        else {
+                            it.sep.push(this.sourceToken);
+                        }
+                    }
+                    this.onKeyLine = true;
+                    return;
+                case 'alias':
+                case 'scalar':
+                case 'single-quoted-scalar':
+                case 'double-quoted-scalar': {
+                    const fs = this.flowScalar(this.type);
+                    if (atNextItem || it.value) {
+                        map.items.push({ start, key: fs, sep: [] });
+                        this.onKeyLine = true;
+                    }
+                    else if (it.sep) {
+                        this.stack.push(fs);
+                    }
+                    else {
+                        Object.assign(it, { key: fs, sep: [] });
+                        this.onKeyLine = true;
+                    }
+                    return;
+                }
+                default: {
+                    const bv = this.startBlockValue(map);
+                    if (bv) {
+                        if (bv.type === 'block-seq') {
+                            if (!it.explicitKey &&
+                                it.sep &&
+                                !includesToken(it.sep, 'newline')) {
+                                yield* this.pop({
+                                    type: 'error',
+                                    offset: this.offset,
+                                    message: 'Unexpected block-seq-ind on same line with key',
+                                    source: this.source
+                                });
+                                return;
+                            }
+                        }
+                        else if (atMapIndent) {
+                            map.items.push({ start });
+                        }
+                        this.stack.push(bv);
+                        return;
+                    }
+                }
+            }
+        }
+        yield* this.pop();
+        yield* this.step();
+    }
+    *blockSequence(seq) {
+        const it = seq.items[seq.items.length - 1];
+        switch (this.type) {
+            case 'newline':
+                if (it.value) {
+                    const end = 'end' in it.value ? it.value.end : undefined;
+                    const last = Array.isArray(end) ? end[end.length - 1] : undefined;
+                    if (last?.type === 'comment')
+                        end?.push(this.sourceToken);
+                    else
+                        seq.items.push({ start: [this.sourceToken] });
+                }
+                else
+                    it.start.push(this.sourceToken);
+                return;
+            case 'space':
+            case 'comment':
+                if (it.value)
+                    seq.items.push({ start: [this.sourceToken] });
+                else {
+                    if (this.atIndentedComment(it.start, seq.indent)) {
+                        const prev = seq.items[seq.items.length - 2];
+                        const end = prev?.value?.end;
+                        if (Array.isArray(end)) {
+                            Array.prototype.push.apply(end, it.start);
+                            end.push(this.sourceToken);
+                            seq.items.pop();
+                            return;
+                        }
+                    }
+                    it.start.push(this.sourceToken);
+                }
+                return;
+            case 'anchor':
+            case 'tag':
+                if (it.value || this.indent <= seq.indent)
+                    break;
+                it.start.push(this.sourceToken);
+                return;
+            case 'seq-item-ind':
+                if (this.indent !== seq.indent)
+                    break;
+                if (it.value || includesToken(it.start, 'seq-item-ind'))
+                    seq.items.push({ start: [this.sourceToken] });
+                else
+                    it.start.push(this.sourceToken);
+                return;
+        }
+        if (this.indent > seq.indent) {
+            const bv = this.startBlockValue(seq);
+            if (bv) {
+                this.stack.push(bv);
+                return;
+            }
+        }
+        yield* this.pop();
+        yield* this.step();
+    }
+    *flowCollection(fc) {
+        const it = fc.items[fc.items.length - 1];
+        if (this.type === 'flow-error-end') {
+            let top;
+            do {
+                yield* this.pop();
+                top = this.peek(1);
+            } while (top?.type === 'flow-collection');
+        }
+        else if (fc.end.length === 0) {
+            switch (this.type) {
+                case 'comma':
+                case 'explicit-key-ind':
+                    if (!it || it.sep)
+                        fc.items.push({ start: [this.sourceToken] });
+                    else
+                        it.start.push(this.sourceToken);
+                    return;
+                case 'map-value-ind':
+                    if (!it || it.value)
+                        fc.items.push({ start: [], key: null, sep: [this.sourceToken] });
+                    else if (it.sep)
+                        it.sep.push(this.sourceToken);
+                    else
+                        Object.assign(it, { key: null, sep: [this.sourceToken] });
+                    return;
+                case 'space':
+                case 'comment':
+                case 'newline':
+                case 'anchor':
+                case 'tag':
+                    if (!it || it.value)
+                        fc.items.push({ start: [this.sourceToken] });
+                    else if (it.sep)
+                        it.sep.push(this.sourceToken);
+                    else
+                        it.start.push(this.sourceToken);
+                    return;
+                case 'alias':
+                case 'scalar':
+                case 'single-quoted-scalar':
+                case 'double-quoted-scalar': {
+                    const fs = this.flowScalar(this.type);
+                    if (!it || it.value)
+                        fc.items.push({ start: [], key: fs, sep: [] });
+                    else if (it.sep)
+                        this.stack.push(fs);
+                    else
+                        Object.assign(it, { key: fs, sep: [] });
+                    return;
+                }
+                case 'flow-map-end':
+                case 'flow-seq-end':
+                    fc.end.push(this.sourceToken);
+                    return;
+            }
+            const bv = this.startBlockValue(fc);
+            /* istanbul ignore else should not happen */
+            if (bv)
+                this.stack.push(bv);
+            else {
+                yield* this.pop();
+                yield* this.step();
+            }
+        }
+        else {
+            const parent = this.peek(2);
+            if (parent.type === 'block-map' &&
+                ((this.type === 'map-value-ind' && parent.indent === fc.indent) ||
+                    (this.type === 'newline' &&
+                        !parent.items[parent.items.length - 1].sep))) {
+                yield* this.pop();
+                yield* this.step();
+            }
+            else if (this.type === 'map-value-ind' &&
+                parent.type !== 'flow-collection') {
+                const prev = getPrevProps(parent);
+                const start = getFirstKeyStartProps(prev);
+                fixFlowSeqItems(fc);
+                const sep = fc.end.splice(1, fc.end.length);
+                sep.push(this.sourceToken);
+                const map = {
+                    type: 'block-map',
+                    offset: fc.offset,
+                    indent: fc.indent,
+                    items: [{ start, key: fc, sep }]
+                };
+                this.onKeyLine = true;
+                this.stack[this.stack.length - 1] = map;
+            }
+            else {
+                yield* this.lineEnd(fc);
+            }
+        }
+    }
+    flowScalar(type) {
+        if (this.onNewLine) {
+            let nl = this.source.indexOf('\n') + 1;
+            while (nl !== 0) {
+                this.onNewLine(this.offset + nl);
+                nl = this.source.indexOf('\n', nl) + 1;
+            }
+        }
+        return {
+            type,
+            offset: this.offset,
+            indent: this.indent,
+            source: this.source
+        };
+    }
+    startBlockValue(parent) {
+        switch (this.type) {
+            case 'alias':
+            case 'scalar':
+            case 'single-quoted-scalar':
+            case 'double-quoted-scalar':
+                return this.flowScalar(this.type);
+            case 'block-scalar-header':
+                return {
+                    type: 'block-scalar',
+                    offset: this.offset,
+                    indent: this.indent,
+                    props: [this.sourceToken],
+                    source: ''
+                };
+            case 'flow-map-start':
+            case 'flow-seq-start':
+                return {
+                    type: 'flow-collection',
+                    offset: this.offset,
+                    indent: this.indent,
+                    start: this.sourceToken,
+                    items: [],
+                    end: []
+                };
+            case 'seq-item-ind':
+                return {
+                    type: 'block-seq',
+                    offset: this.offset,
+                    indent: this.indent,
+                    items: [{ start: [this.sourceToken] }]
+                };
+            case 'explicit-key-ind': {
+                this.onKeyLine = true;
+                const prev = getPrevProps(parent);
+                const start = getFirstKeyStartProps(prev);
+                start.push(this.sourceToken);
+                return {
+                    type: 'block-map',
+                    offset: this.offset,
+                    indent: this.indent,
+                    items: [{ start, explicitKey: true }]
+                };
+            }
+            case 'map-value-ind': {
+                this.onKeyLine = true;
+                const prev = getPrevProps(parent);
+                const start = getFirstKeyStartProps(prev);
+                return {
+                    type: 'block-map',
+                    offset: this.offset,
+                    indent: this.indent,
+                    items: [{ start, key: null, sep: [this.sourceToken] }]
+                };
+            }
+        }
+        return null;
+    }
+    atIndentedComment(start, indent) {
+        if (this.type !== 'comment')
+            return false;
+        if (this.indent <= indent)
+            return false;
+        return start.every(st => st.type === 'newline' || st.type === 'space');
+    }
+    *documentEnd(docEnd) {
+        if (this.type !== 'doc-mode') {
+            if (docEnd.end)
+                docEnd.end.push(this.sourceToken);
+            else
+                docEnd.end = [this.sourceToken];
+            if (this.type === 'newline')
+                yield* this.pop();
+        }
+    }
+    *lineEnd(token) {
+        switch (this.type) {
+            case 'comma':
+            case 'doc-start':
+            case 'doc-end':
+            case 'flow-seq-end':
+            case 'flow-map-end':
+            case 'map-value-ind':
+                yield* this.pop();
+                yield* this.step();
+                break;
+            case 'newline':
+                this.onKeyLine = false;
+            // fallthrough
+            case 'space':
+            case 'comment':
+            default:
+                // all other values are errors
+                if (token.end)
+                    token.end.push(this.sourceToken);
+                else
+                    token.end = [this.sourceToken];
+                if (this.type === 'newline')
+                    yield* this.pop();
+        }
+    }
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/public-api.js"
+/*!************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/public-api.js ***!
+  \************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   parse: () => (/* binding */ parse),
+/* harmony export */   parseAllDocuments: () => (/* binding */ parseAllDocuments),
+/* harmony export */   parseDocument: () => (/* binding */ parseDocument),
+/* harmony export */   stringify: () => (/* binding */ stringify)
+/* harmony export */ });
+/* harmony import */ var _compose_composer_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./compose/composer.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/compose/composer.js");
+/* harmony import */ var _doc_Document_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./doc/Document.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/doc/Document.js");
+/* harmony import */ var _errors_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./errors.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/errors.js");
+/* harmony import */ var _log_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./log.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/log.js");
+/* harmony import */ var _nodes_identity_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./nodes/identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _parse_line_counter_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./parse/line-counter.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/parse/line-counter.js");
+/* harmony import */ var _parse_parser_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./parse/parser.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/parse/parser.js");
+
+
+
+
+
+
+
+
+function parseOptions(options) {
+    const prettyErrors = options.prettyErrors !== false;
+    const lineCounter = options.lineCounter || (prettyErrors && new _parse_line_counter_js__WEBPACK_IMPORTED_MODULE_5__.LineCounter()) || null;
+    return { lineCounter, prettyErrors };
+}
+/**
+ * Parse the input as a stream of YAML documents.
+ *
+ * Documents should be separated from each other by `...` or `---` marker lines.
+ *
+ * @returns If an empty `docs` array is returned, it will be of type
+ *   EmptyStream and contain additional stream information. In
+ *   TypeScript, you should use `'empty' in docs` as a type guard for it.
+ */
+function parseAllDocuments(source, options = {}) {
+    const { lineCounter, prettyErrors } = parseOptions(options);
+    const parser = new _parse_parser_js__WEBPACK_IMPORTED_MODULE_6__.Parser(lineCounter?.addNewLine);
+    const composer = new _compose_composer_js__WEBPACK_IMPORTED_MODULE_0__.Composer(options);
+    const docs = Array.from(composer.compose(parser.parse(source)));
+    if (prettyErrors && lineCounter)
+        for (const doc of docs) {
+            doc.errors.forEach((0,_errors_js__WEBPACK_IMPORTED_MODULE_2__.prettifyError)(source, lineCounter));
+            doc.warnings.forEach((0,_errors_js__WEBPACK_IMPORTED_MODULE_2__.prettifyError)(source, lineCounter));
+        }
+    if (docs.length > 0)
+        return docs;
+    return Object.assign([], { empty: true }, composer.streamInfo());
+}
+/** Parse an input string into a single YAML.Document */
+function parseDocument(source, options = {}) {
+    const { lineCounter, prettyErrors } = parseOptions(options);
+    const parser = new _parse_parser_js__WEBPACK_IMPORTED_MODULE_6__.Parser(lineCounter?.addNewLine);
+    const composer = new _compose_composer_js__WEBPACK_IMPORTED_MODULE_0__.Composer(options);
+    // `doc` is always set by compose.end(true) at the very latest
+    let doc = null;
+    for (const _doc of composer.compose(parser.parse(source), true, source.length)) {
+        if (!doc)
+            doc = _doc;
+        else if (doc.options.logLevel !== 'silent') {
+            doc.errors.push(new _errors_js__WEBPACK_IMPORTED_MODULE_2__.YAMLParseError(_doc.range.slice(0, 2), 'MULTIPLE_DOCS', 'Source contains multiple documents; please use YAML.parseAllDocuments()'));
+            break;
+        }
+    }
+    if (prettyErrors && lineCounter) {
+        doc.errors.forEach((0,_errors_js__WEBPACK_IMPORTED_MODULE_2__.prettifyError)(source, lineCounter));
+        doc.warnings.forEach((0,_errors_js__WEBPACK_IMPORTED_MODULE_2__.prettifyError)(source, lineCounter));
+    }
+    return doc;
+}
+function parse(src, reviver, options) {
+    let _reviver = undefined;
+    if (typeof reviver === 'function') {
+        _reviver = reviver;
+    }
+    else if (options === undefined && reviver && typeof reviver === 'object') {
+        options = reviver;
+    }
+    const doc = parseDocument(src, options);
+    if (!doc)
+        return null;
+    doc.warnings.forEach(warning => (0,_log_js__WEBPACK_IMPORTED_MODULE_3__.warn)(doc.options.logLevel, warning));
+    if (doc.errors.length > 0) {
+        if (doc.options.logLevel !== 'silent')
+            throw doc.errors[0];
+        else
+            doc.errors = [];
+    }
+    return doc.toJS(Object.assign({ reviver: _reviver }, options));
+}
+function stringify(value, replacer, options) {
+    let _replacer = null;
+    if (typeof replacer === 'function' || Array.isArray(replacer)) {
+        _replacer = replacer;
+    }
+    else if (options === undefined && replacer) {
+        options = replacer;
+    }
+    if (typeof options === 'string')
+        options = options.length;
+    if (typeof options === 'number') {
+        const indent = Math.round(options);
+        options = indent < 1 ? undefined : indent > 8 ? { indent: 8 } : { indent };
+    }
+    if (value === undefined) {
+        const { keepUndefined } = options ?? replacer ?? {};
+        if (!keepUndefined)
+            return undefined;
+    }
+    if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_4__.isDocument)(value) && !_replacer)
+        return value.toString(options);
+    return new _doc_Document_js__WEBPACK_IMPORTED_MODULE_1__.Document(value, _replacer, options).toString(options);
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/Schema.js"
+/*!***************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/Schema.js ***!
+  \***************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Schema: () => (/* binding */ Schema)
+/* harmony export */ });
+/* harmony import */ var _nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../nodes/identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _common_map_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./common/map.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/common/map.js");
+/* harmony import */ var _common_seq_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./common/seq.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/common/seq.js");
+/* harmony import */ var _common_string_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./common/string.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/common/string.js");
+/* harmony import */ var _tags_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./tags.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/tags.js");
+
+
+
+
+
+
+const sortMapEntriesByKey = (a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0;
+class Schema {
+    constructor({ compat, customTags, merge, resolveKnownTags, schema, sortMapEntries, toStringDefaults }) {
+        this.compat = Array.isArray(compat)
+            ? (0,_tags_js__WEBPACK_IMPORTED_MODULE_4__.getTags)(compat, 'compat')
+            : compat
+                ? (0,_tags_js__WEBPACK_IMPORTED_MODULE_4__.getTags)(null, compat)
+                : null;
+        this.name = (typeof schema === 'string' && schema) || 'core';
+        this.knownTags = resolveKnownTags ? _tags_js__WEBPACK_IMPORTED_MODULE_4__.coreKnownTags : {};
+        this.tags = (0,_tags_js__WEBPACK_IMPORTED_MODULE_4__.getTags)(customTags, this.name, merge);
+        this.toStringOptions = toStringDefaults ?? null;
+        Object.defineProperty(this, _nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.MAP, { value: _common_map_js__WEBPACK_IMPORTED_MODULE_1__.map });
+        Object.defineProperty(this, _nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.SCALAR, { value: _common_string_js__WEBPACK_IMPORTED_MODULE_3__.string });
+        Object.defineProperty(this, _nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.SEQ, { value: _common_seq_js__WEBPACK_IMPORTED_MODULE_2__.seq });
+        // Used by createMap()
+        this.sortMapEntries =
+            typeof sortMapEntries === 'function'
+                ? sortMapEntries
+                : sortMapEntries === true
+                    ? sortMapEntriesByKey
+                    : null;
+    }
+    clone() {
+        const copy = Object.create(Schema.prototype, Object.getOwnPropertyDescriptors(this));
+        copy.tags = this.tags.slice();
+        return copy;
+    }
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/common/map.js"
+/*!*******************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/common/map.js ***!
+  \*******************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   map: () => (/* binding */ map)
+/* harmony export */ });
+/* harmony import */ var _nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../nodes/identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _nodes_YAMLMap_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../nodes/YAMLMap.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/YAMLMap.js");
+
+
+
+const map = {
+    collection: 'map',
+    default: true,
+    nodeClass: _nodes_YAMLMap_js__WEBPACK_IMPORTED_MODULE_1__.YAMLMap,
+    tag: 'tag:yaml.org,2002:map',
+    resolve(map, onError) {
+        if (!(0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isMap)(map))
+            onError('Expected a mapping for this tag');
+        return map;
+    },
+    createNode: (schema, obj, ctx) => _nodes_YAMLMap_js__WEBPACK_IMPORTED_MODULE_1__.YAMLMap.from(schema, obj, ctx)
+};
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/common/null.js"
+/*!********************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/common/null.js ***!
+  \********************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   nullTag: () => (/* binding */ nullTag)
+/* harmony export */ });
+/* harmony import */ var _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../nodes/Scalar.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Scalar.js");
+
+
+const nullTag = {
+    identify: value => value == null,
+    createNode: () => new _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar(null),
+    default: true,
+    tag: 'tag:yaml.org,2002:null',
+    test: /^(?:~|[Nn]ull|NULL)?$/,
+    resolve: () => new _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar(null),
+    stringify: ({ source }, ctx) => typeof source === 'string' && nullTag.test.test(source)
+        ? source
+        : ctx.options.nullStr
+};
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/common/seq.js"
+/*!*******************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/common/seq.js ***!
+  \*******************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   seq: () => (/* binding */ seq)
+/* harmony export */ });
+/* harmony import */ var _nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../nodes/identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _nodes_YAMLSeq_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../nodes/YAMLSeq.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/YAMLSeq.js");
+
+
+
+const seq = {
+    collection: 'seq',
+    default: true,
+    nodeClass: _nodes_YAMLSeq_js__WEBPACK_IMPORTED_MODULE_1__.YAMLSeq,
+    tag: 'tag:yaml.org,2002:seq',
+    resolve(seq, onError) {
+        if (!(0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isSeq)(seq))
+            onError('Expected a sequence for this tag');
+        return seq;
+    },
+    createNode: (schema, obj, ctx) => _nodes_YAMLSeq_js__WEBPACK_IMPORTED_MODULE_1__.YAMLSeq.from(schema, obj, ctx)
+};
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/common/string.js"
+/*!**********************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/common/string.js ***!
+  \**********************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   string: () => (/* binding */ string)
+/* harmony export */ });
+/* harmony import */ var _stringify_stringifyString_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../stringify/stringifyString.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyString.js");
+
+
+const string = {
+    identify: value => typeof value === 'string',
+    default: true,
+    tag: 'tag:yaml.org,2002:str',
+    resolve: str => str,
+    stringify(item, ctx, onComment, onChompKeep) {
+        ctx = Object.assign({ actualString: true }, ctx);
+        return (0,_stringify_stringifyString_js__WEBPACK_IMPORTED_MODULE_0__.stringifyString)(item, ctx, onComment, onChompKeep);
+    }
+};
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/core/bool.js"
+/*!******************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/core/bool.js ***!
+  \******************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   boolTag: () => (/* binding */ boolTag)
+/* harmony export */ });
+/* harmony import */ var _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../nodes/Scalar.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Scalar.js");
+
+
+const boolTag = {
+    identify: value => typeof value === 'boolean',
+    default: true,
+    tag: 'tag:yaml.org,2002:bool',
+    test: /^(?:[Tt]rue|TRUE|[Ff]alse|FALSE)$/,
+    resolve: str => new _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar(str[0] === 't' || str[0] === 'T'),
+    stringify({ source, value }, ctx) {
+        if (source && boolTag.test.test(source)) {
+            const sv = source[0] === 't' || source[0] === 'T';
+            if (value === sv)
+                return source;
+        }
+        return value ? ctx.options.trueStr : ctx.options.falseStr;
+    }
+};
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/core/float.js"
+/*!*******************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/core/float.js ***!
+  \*******************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   float: () => (/* binding */ float),
+/* harmony export */   floatExp: () => (/* binding */ floatExp),
+/* harmony export */   floatNaN: () => (/* binding */ floatNaN)
+/* harmony export */ });
+/* harmony import */ var _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../nodes/Scalar.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Scalar.js");
+/* harmony import */ var _stringify_stringifyNumber_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../stringify/stringifyNumber.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyNumber.js");
+
+
+
+const floatNaN = {
+    identify: value => typeof value === 'number',
+    default: true,
+    tag: 'tag:yaml.org,2002:float',
+    test: /^(?:[-+]?\.(?:inf|Inf|INF)|\.nan|\.NaN|\.NAN)$/,
+    resolve: str => str.slice(-3).toLowerCase() === 'nan'
+        ? NaN
+        : str[0] === '-'
+            ? Number.NEGATIVE_INFINITY
+            : Number.POSITIVE_INFINITY,
+    stringify: _stringify_stringifyNumber_js__WEBPACK_IMPORTED_MODULE_1__.stringifyNumber
+};
+const floatExp = {
+    identify: value => typeof value === 'number',
+    default: true,
+    tag: 'tag:yaml.org,2002:float',
+    format: 'EXP',
+    test: /^[-+]?(?:\.[0-9]+|[0-9]+(?:\.[0-9]*)?)[eE][-+]?[0-9]+$/,
+    resolve: str => parseFloat(str),
+    stringify(node) {
+        const num = Number(node.value);
+        return isFinite(num) ? num.toExponential() : (0,_stringify_stringifyNumber_js__WEBPACK_IMPORTED_MODULE_1__.stringifyNumber)(node);
+    }
+};
+const float = {
+    identify: value => typeof value === 'number',
+    default: true,
+    tag: 'tag:yaml.org,2002:float',
+    test: /^[-+]?(?:\.[0-9]+|[0-9]+\.[0-9]*)$/,
+    resolve(str) {
+        const node = new _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar(parseFloat(str));
+        const dot = str.indexOf('.');
+        if (dot !== -1 && str[str.length - 1] === '0')
+            node.minFractionDigits = str.length - dot - 1;
+        return node;
+    },
+    stringify: _stringify_stringifyNumber_js__WEBPACK_IMPORTED_MODULE_1__.stringifyNumber
+};
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/core/int.js"
+/*!*****************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/core/int.js ***!
+  \*****************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   int: () => (/* binding */ int),
+/* harmony export */   intHex: () => (/* binding */ intHex),
+/* harmony export */   intOct: () => (/* binding */ intOct)
+/* harmony export */ });
+/* harmony import */ var _stringify_stringifyNumber_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../stringify/stringifyNumber.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyNumber.js");
+
+
+const intIdentify = (value) => typeof value === 'bigint' || Number.isInteger(value);
+const intResolve = (str, offset, radix, { intAsBigInt }) => (intAsBigInt ? BigInt(str) : parseInt(str.substring(offset), radix));
+function intStringify(node, radix, prefix) {
+    const { value } = node;
+    if (intIdentify(value) && value >= 0)
+        return prefix + value.toString(radix);
+    return (0,_stringify_stringifyNumber_js__WEBPACK_IMPORTED_MODULE_0__.stringifyNumber)(node);
+}
+const intOct = {
+    identify: value => intIdentify(value) && value >= 0,
+    default: true,
+    tag: 'tag:yaml.org,2002:int',
+    format: 'OCT',
+    test: /^0o[0-7]+$/,
+    resolve: (str, _onError, opt) => intResolve(str, 2, 8, opt),
+    stringify: node => intStringify(node, 8, '0o')
+};
+const int = {
+    identify: intIdentify,
+    default: true,
+    tag: 'tag:yaml.org,2002:int',
+    test: /^[-+]?[0-9]+$/,
+    resolve: (str, _onError, opt) => intResolve(str, 0, 10, opt),
+    stringify: _stringify_stringifyNumber_js__WEBPACK_IMPORTED_MODULE_0__.stringifyNumber
+};
+const intHex = {
+    identify: value => intIdentify(value) && value >= 0,
+    default: true,
+    tag: 'tag:yaml.org,2002:int',
+    format: 'HEX',
+    test: /^0x[0-9a-fA-F]+$/,
+    resolve: (str, _onError, opt) => intResolve(str, 2, 16, opt),
+    stringify: node => intStringify(node, 16, '0x')
+};
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/core/schema.js"
+/*!********************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/core/schema.js ***!
+  \********************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   schema: () => (/* binding */ schema)
+/* harmony export */ });
+/* harmony import */ var _common_map_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../common/map.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/common/map.js");
+/* harmony import */ var _common_null_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../common/null.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/common/null.js");
+/* harmony import */ var _common_seq_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../common/seq.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/common/seq.js");
+/* harmony import */ var _common_string_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../common/string.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/common/string.js");
+/* harmony import */ var _bool_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./bool.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/core/bool.js");
+/* harmony import */ var _float_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./float.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/core/float.js");
+/* harmony import */ var _int_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./int.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/core/int.js");
+
+
+
+
+
+
+
+
+const schema = [
+    _common_map_js__WEBPACK_IMPORTED_MODULE_0__.map,
+    _common_seq_js__WEBPACK_IMPORTED_MODULE_2__.seq,
+    _common_string_js__WEBPACK_IMPORTED_MODULE_3__.string,
+    _common_null_js__WEBPACK_IMPORTED_MODULE_1__.nullTag,
+    _bool_js__WEBPACK_IMPORTED_MODULE_4__.boolTag,
+    _int_js__WEBPACK_IMPORTED_MODULE_6__.intOct,
+    _int_js__WEBPACK_IMPORTED_MODULE_6__.int,
+    _int_js__WEBPACK_IMPORTED_MODULE_6__.intHex,
+    _float_js__WEBPACK_IMPORTED_MODULE_5__.floatNaN,
+    _float_js__WEBPACK_IMPORTED_MODULE_5__.floatExp,
+    _float_js__WEBPACK_IMPORTED_MODULE_5__.float
+];
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/json/schema.js"
+/*!********************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/json/schema.js ***!
+  \********************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   schema: () => (/* binding */ schema)
+/* harmony export */ });
+/* harmony import */ var _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../nodes/Scalar.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Scalar.js");
+/* harmony import */ var _common_map_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../common/map.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/common/map.js");
+/* harmony import */ var _common_seq_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../common/seq.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/common/seq.js");
+
+
+
+
+function intIdentify(value) {
+    return typeof value === 'bigint' || Number.isInteger(value);
+}
+const stringifyJSON = ({ value }) => JSON.stringify(value);
+const jsonScalars = [
+    {
+        identify: value => typeof value === 'string',
+        default: true,
+        tag: 'tag:yaml.org,2002:str',
+        resolve: str => str,
+        stringify: stringifyJSON
+    },
+    {
+        identify: value => value == null,
+        createNode: () => new _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar(null),
+        default: true,
+        tag: 'tag:yaml.org,2002:null',
+        test: /^null$/,
+        resolve: () => null,
+        stringify: stringifyJSON
+    },
+    {
+        identify: value => typeof value === 'boolean',
+        default: true,
+        tag: 'tag:yaml.org,2002:bool',
+        test: /^true$|^false$/,
+        resolve: str => str === 'true',
+        stringify: stringifyJSON
+    },
+    {
+        identify: intIdentify,
+        default: true,
+        tag: 'tag:yaml.org,2002:int',
+        test: /^-?(?:0|[1-9][0-9]*)$/,
+        resolve: (str, _onError, { intAsBigInt }) => intAsBigInt ? BigInt(str) : parseInt(str, 10),
+        stringify: ({ value }) => intIdentify(value) ? value.toString() : JSON.stringify(value)
+    },
+    {
+        identify: value => typeof value === 'number',
+        default: true,
+        tag: 'tag:yaml.org,2002:float',
+        test: /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]*)?(?:[eE][-+]?[0-9]+)?$/,
+        resolve: str => parseFloat(str),
+        stringify: stringifyJSON
+    }
+];
+const jsonError = {
+    default: true,
+    tag: '',
+    test: /^/,
+    resolve(str, onError) {
+        onError(`Unresolved plain scalar ${JSON.stringify(str)}`);
+        return str;
+    }
+};
+const schema = [_common_map_js__WEBPACK_IMPORTED_MODULE_1__.map, _common_seq_js__WEBPACK_IMPORTED_MODULE_2__.seq].concat(jsonScalars, jsonError);
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/tags.js"
+/*!*************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/tags.js ***!
+  \*************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   coreKnownTags: () => (/* binding */ coreKnownTags),
+/* harmony export */   getTags: () => (/* binding */ getTags)
+/* harmony export */ });
+/* harmony import */ var _common_map_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./common/map.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/common/map.js");
+/* harmony import */ var _common_null_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./common/null.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/common/null.js");
+/* harmony import */ var _common_seq_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./common/seq.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/common/seq.js");
+/* harmony import */ var _common_string_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./common/string.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/common/string.js");
+/* harmony import */ var _core_bool_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./core/bool.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/core/bool.js");
+/* harmony import */ var _core_float_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./core/float.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/core/float.js");
+/* harmony import */ var _core_int_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./core/int.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/core/int.js");
+/* harmony import */ var _core_schema_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./core/schema.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/core/schema.js");
+/* harmony import */ var _json_schema_js__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./json/schema.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/json/schema.js");
+/* harmony import */ var _yaml_1_1_binary_js__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./yaml-1.1/binary.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/binary.js");
+/* harmony import */ var _yaml_1_1_merge_js__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./yaml-1.1/merge.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/merge.js");
+/* harmony import */ var _yaml_1_1_omap_js__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./yaml-1.1/omap.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/omap.js");
+/* harmony import */ var _yaml_1_1_pairs_js__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./yaml-1.1/pairs.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/pairs.js");
+/* harmony import */ var _yaml_1_1_schema_js__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./yaml-1.1/schema.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/schema.js");
+/* harmony import */ var _yaml_1_1_set_js__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./yaml-1.1/set.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/set.js");
+/* harmony import */ var _yaml_1_1_timestamp_js__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./yaml-1.1/timestamp.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/timestamp.js");
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const schemas = new Map([
+    ['core', _core_schema_js__WEBPACK_IMPORTED_MODULE_7__.schema],
+    ['failsafe', [_common_map_js__WEBPACK_IMPORTED_MODULE_0__.map, _common_seq_js__WEBPACK_IMPORTED_MODULE_2__.seq, _common_string_js__WEBPACK_IMPORTED_MODULE_3__.string]],
+    ['json', _json_schema_js__WEBPACK_IMPORTED_MODULE_8__.schema],
+    ['yaml11', _yaml_1_1_schema_js__WEBPACK_IMPORTED_MODULE_13__.schema],
+    ['yaml-1.1', _yaml_1_1_schema_js__WEBPACK_IMPORTED_MODULE_13__.schema]
+]);
+const tagsByName = {
+    binary: _yaml_1_1_binary_js__WEBPACK_IMPORTED_MODULE_9__.binary,
+    bool: _core_bool_js__WEBPACK_IMPORTED_MODULE_4__.boolTag,
+    float: _core_float_js__WEBPACK_IMPORTED_MODULE_5__.float,
+    floatExp: _core_float_js__WEBPACK_IMPORTED_MODULE_5__.floatExp,
+    floatNaN: _core_float_js__WEBPACK_IMPORTED_MODULE_5__.floatNaN,
+    floatTime: _yaml_1_1_timestamp_js__WEBPACK_IMPORTED_MODULE_15__.floatTime,
+    int: _core_int_js__WEBPACK_IMPORTED_MODULE_6__.int,
+    intHex: _core_int_js__WEBPACK_IMPORTED_MODULE_6__.intHex,
+    intOct: _core_int_js__WEBPACK_IMPORTED_MODULE_6__.intOct,
+    intTime: _yaml_1_1_timestamp_js__WEBPACK_IMPORTED_MODULE_15__.intTime,
+    map: _common_map_js__WEBPACK_IMPORTED_MODULE_0__.map,
+    merge: _yaml_1_1_merge_js__WEBPACK_IMPORTED_MODULE_10__.merge,
+    null: _common_null_js__WEBPACK_IMPORTED_MODULE_1__.nullTag,
+    omap: _yaml_1_1_omap_js__WEBPACK_IMPORTED_MODULE_11__.omap,
+    pairs: _yaml_1_1_pairs_js__WEBPACK_IMPORTED_MODULE_12__.pairs,
+    seq: _common_seq_js__WEBPACK_IMPORTED_MODULE_2__.seq,
+    set: _yaml_1_1_set_js__WEBPACK_IMPORTED_MODULE_14__.set,
+    timestamp: _yaml_1_1_timestamp_js__WEBPACK_IMPORTED_MODULE_15__.timestamp
+};
+const coreKnownTags = {
+    'tag:yaml.org,2002:binary': _yaml_1_1_binary_js__WEBPACK_IMPORTED_MODULE_9__.binary,
+    'tag:yaml.org,2002:merge': _yaml_1_1_merge_js__WEBPACK_IMPORTED_MODULE_10__.merge,
+    'tag:yaml.org,2002:omap': _yaml_1_1_omap_js__WEBPACK_IMPORTED_MODULE_11__.omap,
+    'tag:yaml.org,2002:pairs': _yaml_1_1_pairs_js__WEBPACK_IMPORTED_MODULE_12__.pairs,
+    'tag:yaml.org,2002:set': _yaml_1_1_set_js__WEBPACK_IMPORTED_MODULE_14__.set,
+    'tag:yaml.org,2002:timestamp': _yaml_1_1_timestamp_js__WEBPACK_IMPORTED_MODULE_15__.timestamp
+};
+function getTags(customTags, schemaName, addMergeTag) {
+    const schemaTags = schemas.get(schemaName);
+    if (schemaTags && !customTags) {
+        return addMergeTag && !schemaTags.includes(_yaml_1_1_merge_js__WEBPACK_IMPORTED_MODULE_10__.merge)
+            ? schemaTags.concat(_yaml_1_1_merge_js__WEBPACK_IMPORTED_MODULE_10__.merge)
+            : schemaTags.slice();
+    }
+    let tags = schemaTags;
+    if (!tags) {
+        if (Array.isArray(customTags))
+            tags = [];
+        else {
+            const keys = Array.from(schemas.keys())
+                .filter(key => key !== 'yaml11')
+                .map(key => JSON.stringify(key))
+                .join(', ');
+            throw new Error(`Unknown schema "${schemaName}"; use one of ${keys} or define customTags array`);
+        }
+    }
+    if (Array.isArray(customTags)) {
+        for (const tag of customTags)
+            tags = tags.concat(tag);
+    }
+    else if (typeof customTags === 'function') {
+        tags = customTags(tags.slice());
+    }
+    if (addMergeTag)
+        tags = tags.concat(_yaml_1_1_merge_js__WEBPACK_IMPORTED_MODULE_10__.merge);
+    return tags.reduce((tags, tag) => {
+        const tagObj = typeof tag === 'string' ? tagsByName[tag] : tag;
+        if (!tagObj) {
+            const tagName = JSON.stringify(tag);
+            const keys = Object.keys(tagsByName)
+                .map(key => JSON.stringify(key))
+                .join(', ');
+            throw new Error(`Unknown custom tag ${tagName}; use one of ${keys}`);
+        }
+        if (!tags.includes(tagObj))
+            tags.push(tagObj);
+        return tags;
+    }, []);
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/binary.js"
+/*!************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/binary.js ***!
+  \************************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   binary: () => (/* binding */ binary)
+/* harmony export */ });
+/* harmony import */ var _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../nodes/Scalar.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Scalar.js");
+/* harmony import */ var _stringify_stringifyString_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../stringify/stringifyString.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyString.js");
+
+
+
+const binary = {
+    identify: value => value instanceof Uint8Array, // Buffer inherits from Uint8Array
+    default: false,
+    tag: 'tag:yaml.org,2002:binary',
+    /**
+     * Returns a Buffer in node and an Uint8Array in browsers
+     *
+     * To use the resulting buffer as an image, you'll want to do something like:
+     *
+     *   const blob = new Blob([buffer], { type: 'image/jpeg' })
+     *   document.querySelector('#photo').src = URL.createObjectURL(blob)
+     */
+    resolve(src, onError) {
+        if (typeof atob === 'function') {
+            // On IE 11, atob() can't handle newlines
+            const str = atob(src.replace(/[\n\r]/g, ''));
+            const buffer = new Uint8Array(str.length);
+            for (let i = 0; i < str.length; ++i)
+                buffer[i] = str.charCodeAt(i);
+            return buffer;
+        }
+        else {
+            onError('This environment does not support reading binary tags; either Buffer or atob is required');
+            return src;
+        }
+    },
+    stringify({ comment, type, value }, ctx, onComment, onChompKeep) {
+        if (!value)
+            return '';
+        const buf = value; // checked earlier by binary.identify()
+        let str;
+        if (typeof btoa === 'function') {
+            let s = '';
+            for (let i = 0; i < buf.length; ++i)
+                s += String.fromCharCode(buf[i]);
+            str = btoa(s);
+        }
+        else {
+            throw new Error('This environment does not support writing binary tags; either Buffer or btoa is required');
+        }
+        type ?? (type = _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar.BLOCK_LITERAL);
+        if (type !== _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar.QUOTE_DOUBLE) {
+            const lineWidth = Math.max(ctx.options.lineWidth - ctx.indent.length, ctx.options.minContentWidth);
+            const n = Math.ceil(str.length / lineWidth);
+            const lines = new Array(n);
+            for (let i = 0, o = 0; i < n; ++i, o += lineWidth) {
+                lines[i] = str.substr(o, lineWidth);
+            }
+            str = lines.join(type === _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar.BLOCK_LITERAL ? '\n' : ' ');
+        }
+        return (0,_stringify_stringifyString_js__WEBPACK_IMPORTED_MODULE_1__.stringifyString)({ comment, type, value: str }, ctx, onComment, onChompKeep);
+    }
+};
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/bool.js"
+/*!**********************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/bool.js ***!
+  \**********************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   falseTag: () => (/* binding */ falseTag),
+/* harmony export */   trueTag: () => (/* binding */ trueTag)
+/* harmony export */ });
+/* harmony import */ var _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../nodes/Scalar.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Scalar.js");
+
+
+function boolStringify({ value, source }, ctx) {
+    const boolObj = value ? trueTag : falseTag;
+    if (source && boolObj.test.test(source))
+        return source;
+    return value ? ctx.options.trueStr : ctx.options.falseStr;
+}
+const trueTag = {
+    identify: value => value === true,
+    default: true,
+    tag: 'tag:yaml.org,2002:bool',
+    test: /^(?:Y|y|[Yy]es|YES|[Tt]rue|TRUE|[Oo]n|ON)$/,
+    resolve: () => new _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar(true),
+    stringify: boolStringify
+};
+const falseTag = {
+    identify: value => value === false,
+    default: true,
+    tag: 'tag:yaml.org,2002:bool',
+    test: /^(?:N|n|[Nn]o|NO|[Ff]alse|FALSE|[Oo]ff|OFF)$/,
+    resolve: () => new _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar(false),
+    stringify: boolStringify
+};
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/float.js"
+/*!***********************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/float.js ***!
+  \***********************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   float: () => (/* binding */ float),
+/* harmony export */   floatExp: () => (/* binding */ floatExp),
+/* harmony export */   floatNaN: () => (/* binding */ floatNaN)
+/* harmony export */ });
+/* harmony import */ var _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../nodes/Scalar.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Scalar.js");
+/* harmony import */ var _stringify_stringifyNumber_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../stringify/stringifyNumber.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyNumber.js");
+
+
+
+const floatNaN = {
+    identify: value => typeof value === 'number',
+    default: true,
+    tag: 'tag:yaml.org,2002:float',
+    test: /^(?:[-+]?\.(?:inf|Inf|INF)|\.nan|\.NaN|\.NAN)$/,
+    resolve: (str) => str.slice(-3).toLowerCase() === 'nan'
+        ? NaN
+        : str[0] === '-'
+            ? Number.NEGATIVE_INFINITY
+            : Number.POSITIVE_INFINITY,
+    stringify: _stringify_stringifyNumber_js__WEBPACK_IMPORTED_MODULE_1__.stringifyNumber
+};
+const floatExp = {
+    identify: value => typeof value === 'number',
+    default: true,
+    tag: 'tag:yaml.org,2002:float',
+    format: 'EXP',
+    test: /^[-+]?(?:[0-9][0-9_]*)?(?:\.[0-9_]*)?[eE][-+]?[0-9]+$/,
+    resolve: (str) => parseFloat(str.replace(/_/g, '')),
+    stringify(node) {
+        const num = Number(node.value);
+        return isFinite(num) ? num.toExponential() : (0,_stringify_stringifyNumber_js__WEBPACK_IMPORTED_MODULE_1__.stringifyNumber)(node);
+    }
+};
+const float = {
+    identify: value => typeof value === 'number',
+    default: true,
+    tag: 'tag:yaml.org,2002:float',
+    test: /^[-+]?(?:[0-9][0-9_]*)?\.[0-9_]*$/,
+    resolve(str) {
+        const node = new _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar(parseFloat(str.replace(/_/g, '')));
+        const dot = str.indexOf('.');
+        if (dot !== -1) {
+            const f = str.substring(dot + 1).replace(/_/g, '');
+            if (f[f.length - 1] === '0')
+                node.minFractionDigits = f.length;
+        }
+        return node;
+    },
+    stringify: _stringify_stringifyNumber_js__WEBPACK_IMPORTED_MODULE_1__.stringifyNumber
+};
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/int.js"
+/*!*********************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/int.js ***!
+  \*********************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   int: () => (/* binding */ int),
+/* harmony export */   intBin: () => (/* binding */ intBin),
+/* harmony export */   intHex: () => (/* binding */ intHex),
+/* harmony export */   intOct: () => (/* binding */ intOct)
+/* harmony export */ });
+/* harmony import */ var _stringify_stringifyNumber_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../stringify/stringifyNumber.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyNumber.js");
+
+
+const intIdentify = (value) => typeof value === 'bigint' || Number.isInteger(value);
+function intResolve(str, offset, radix, { intAsBigInt }) {
+    const sign = str[0];
+    if (sign === '-' || sign === '+')
+        offset += 1;
+    str = str.substring(offset).replace(/_/g, '');
+    if (intAsBigInt) {
+        switch (radix) {
+            case 2:
+                str = `0b${str}`;
+                break;
+            case 8:
+                str = `0o${str}`;
+                break;
+            case 16:
+                str = `0x${str}`;
+                break;
+        }
+        const n = BigInt(str);
+        return sign === '-' ? BigInt(-1) * n : n;
+    }
+    const n = parseInt(str, radix);
+    return sign === '-' ? -1 * n : n;
+}
+function intStringify(node, radix, prefix) {
+    const { value } = node;
+    if (intIdentify(value)) {
+        const str = value.toString(radix);
+        return value < 0 ? '-' + prefix + str.substr(1) : prefix + str;
+    }
+    return (0,_stringify_stringifyNumber_js__WEBPACK_IMPORTED_MODULE_0__.stringifyNumber)(node);
+}
+const intBin = {
+    identify: intIdentify,
+    default: true,
+    tag: 'tag:yaml.org,2002:int',
+    format: 'BIN',
+    test: /^[-+]?0b[0-1_]+$/,
+    resolve: (str, _onError, opt) => intResolve(str, 2, 2, opt),
+    stringify: node => intStringify(node, 2, '0b')
+};
+const intOct = {
+    identify: intIdentify,
+    default: true,
+    tag: 'tag:yaml.org,2002:int',
+    format: 'OCT',
+    test: /^[-+]?0[0-7_]+$/,
+    resolve: (str, _onError, opt) => intResolve(str, 1, 8, opt),
+    stringify: node => intStringify(node, 8, '0')
+};
+const int = {
+    identify: intIdentify,
+    default: true,
+    tag: 'tag:yaml.org,2002:int',
+    test: /^[-+]?[0-9][0-9_]*$/,
+    resolve: (str, _onError, opt) => intResolve(str, 0, 10, opt),
+    stringify: _stringify_stringifyNumber_js__WEBPACK_IMPORTED_MODULE_0__.stringifyNumber
+};
+const intHex = {
+    identify: intIdentify,
+    default: true,
+    tag: 'tag:yaml.org,2002:int',
+    format: 'HEX',
+    test: /^[-+]?0x[0-9a-fA-F_]+$/,
+    resolve: (str, _onError, opt) => intResolve(str, 2, 16, opt),
+    stringify: node => intStringify(node, 16, '0x')
+};
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/merge.js"
+/*!***********************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/merge.js ***!
+  \***********************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   addMergeToJSMap: () => (/* binding */ addMergeToJSMap),
+/* harmony export */   isMergeKey: () => (/* binding */ isMergeKey),
+/* harmony export */   merge: () => (/* binding */ merge)
+/* harmony export */ });
+/* harmony import */ var _nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../nodes/identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../nodes/Scalar.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Scalar.js");
+
+
+
+// If the value associated with a merge key is a single mapping node, each of
+// its key/value pairs is inserted into the current mapping, unless the key
+// already exists in it. If the value associated with the merge key is a
+// sequence, then this sequence is expected to contain mapping nodes and each
+// of these nodes is merged in turn according to its order in the sequence.
+// Keys in mapping nodes earlier in the sequence override keys specified in
+// later mapping nodes. -- http://yaml.org/type/merge.html
+const MERGE_KEY = '<<';
+const merge = {
+    identify: value => value === MERGE_KEY ||
+        (typeof value === 'symbol' && value.description === MERGE_KEY),
+    default: 'key',
+    tag: 'tag:yaml.org,2002:merge',
+    test: /^<<$/,
+    resolve: () => Object.assign(new _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_1__.Scalar(Symbol(MERGE_KEY)), {
+        addToJSMap: addMergeToJSMap
+    }),
+    stringify: () => MERGE_KEY
+};
+const isMergeKey = (ctx, key) => (merge.identify(key) ||
+    ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isScalar)(key) &&
+        (!key.type || key.type === _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_1__.Scalar.PLAIN) &&
+        merge.identify(key.value))) &&
+    ctx?.doc.schema.tags.some(tag => tag.tag === merge.tag && tag.default);
+function addMergeToJSMap(ctx, map, value) {
+    value = ctx && (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isAlias)(value) ? value.resolve(ctx.doc) : value;
+    if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isSeq)(value))
+        for (const it of value.items)
+            mergeValue(ctx, map, it);
+    else if (Array.isArray(value))
+        for (const it of value)
+            mergeValue(ctx, map, it);
+    else
+        mergeValue(ctx, map, value);
+}
+function mergeValue(ctx, map, value) {
+    const source = ctx && (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isAlias)(value) ? value.resolve(ctx.doc) : value;
+    if (!(0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isMap)(source))
+        throw new Error('Merge sources must be maps or map aliases');
+    const srcMap = source.toJSON(null, ctx, Map);
+    for (const [key, value] of srcMap) {
+        if (map instanceof Map) {
+            if (!map.has(key))
+                map.set(key, value);
+        }
+        else if (map instanceof Set) {
+            map.add(key);
+        }
+        else if (!Object.prototype.hasOwnProperty.call(map, key)) {
+            Object.defineProperty(map, key, {
+                value,
+                writable: true,
+                enumerable: true,
+                configurable: true
+            });
+        }
+    }
+    return map;
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/omap.js"
+/*!**********************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/omap.js ***!
+  \**********************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   YAMLOMap: () => (/* binding */ YAMLOMap),
+/* harmony export */   omap: () => (/* binding */ omap)
+/* harmony export */ });
+/* harmony import */ var _nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../nodes/identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _nodes_toJS_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../nodes/toJS.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/toJS.js");
+/* harmony import */ var _nodes_YAMLMap_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../nodes/YAMLMap.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/YAMLMap.js");
+/* harmony import */ var _nodes_YAMLSeq_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../nodes/YAMLSeq.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/YAMLSeq.js");
+/* harmony import */ var _pairs_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./pairs.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/pairs.js");
+
+
+
+
+
+
+class YAMLOMap extends _nodes_YAMLSeq_js__WEBPACK_IMPORTED_MODULE_3__.YAMLSeq {
+    constructor() {
+        super();
+        this.add = _nodes_YAMLMap_js__WEBPACK_IMPORTED_MODULE_2__.YAMLMap.prototype.add.bind(this);
+        this.delete = _nodes_YAMLMap_js__WEBPACK_IMPORTED_MODULE_2__.YAMLMap.prototype.delete.bind(this);
+        this.get = _nodes_YAMLMap_js__WEBPACK_IMPORTED_MODULE_2__.YAMLMap.prototype.get.bind(this);
+        this.has = _nodes_YAMLMap_js__WEBPACK_IMPORTED_MODULE_2__.YAMLMap.prototype.has.bind(this);
+        this.set = _nodes_YAMLMap_js__WEBPACK_IMPORTED_MODULE_2__.YAMLMap.prototype.set.bind(this);
+        this.tag = YAMLOMap.tag;
+    }
+    /**
+     * If `ctx` is given, the return type is actually `Map<unknown, unknown>`,
+     * but TypeScript won't allow widening the signature of a child method.
+     */
+    toJSON(_, ctx) {
+        if (!ctx)
+            return super.toJSON(_);
+        const map = new Map();
+        if (ctx?.onCreate)
+            ctx.onCreate(map);
+        for (const pair of this.items) {
+            let key, value;
+            if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isPair)(pair)) {
+                key = (0,_nodes_toJS_js__WEBPACK_IMPORTED_MODULE_1__.toJS)(pair.key, '', ctx);
+                value = (0,_nodes_toJS_js__WEBPACK_IMPORTED_MODULE_1__.toJS)(pair.value, key, ctx);
+            }
+            else {
+                key = (0,_nodes_toJS_js__WEBPACK_IMPORTED_MODULE_1__.toJS)(pair, '', ctx);
+            }
+            if (map.has(key))
+                throw new Error('Ordered maps must not include duplicate keys');
+            map.set(key, value);
+        }
+        return map;
+    }
+    static from(schema, iterable, ctx) {
+        const pairs = (0,_pairs_js__WEBPACK_IMPORTED_MODULE_4__.createPairs)(schema, iterable, ctx);
+        const omap = new this();
+        omap.items = pairs.items;
+        return omap;
+    }
+}
+YAMLOMap.tag = 'tag:yaml.org,2002:omap';
+const omap = {
+    collection: 'seq',
+    identify: value => value instanceof Map,
+    nodeClass: YAMLOMap,
+    default: false,
+    tag: 'tag:yaml.org,2002:omap',
+    resolve(seq, onError) {
+        const pairs = (0,_pairs_js__WEBPACK_IMPORTED_MODULE_4__.resolvePairs)(seq, onError);
+        const seenKeys = [];
+        for (const { key } of pairs.items) {
+            if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isScalar)(key)) {
+                if (seenKeys.includes(key.value)) {
+                    onError(`Ordered maps must not include duplicate keys: ${key.value}`);
+                }
+                else {
+                    seenKeys.push(key.value);
+                }
+            }
+        }
+        return Object.assign(new YAMLOMap(), pairs);
+    },
+    createNode: (schema, iterable, ctx) => YAMLOMap.from(schema, iterable, ctx)
+};
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/pairs.js"
+/*!***********************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/pairs.js ***!
+  \***********************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createPairs: () => (/* binding */ createPairs),
+/* harmony export */   pairs: () => (/* binding */ pairs),
+/* harmony export */   resolvePairs: () => (/* binding */ resolvePairs)
+/* harmony export */ });
+/* harmony import */ var _nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../nodes/identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _nodes_Pair_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../nodes/Pair.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Pair.js");
+/* harmony import */ var _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../nodes/Scalar.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Scalar.js");
+/* harmony import */ var _nodes_YAMLSeq_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../nodes/YAMLSeq.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/YAMLSeq.js");
+
+
+
+
+
+function resolvePairs(seq, onError) {
+    if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isSeq)(seq)) {
+        for (let i = 0; i < seq.items.length; ++i) {
+            let item = seq.items[i];
+            if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isPair)(item))
+                continue;
+            else if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isMap)(item)) {
+                if (item.items.length > 1)
+                    onError('Each pair must have its own sequence indicator');
+                const pair = item.items[0] || new _nodes_Pair_js__WEBPACK_IMPORTED_MODULE_1__.Pair(new _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_2__.Scalar(null));
+                if (item.commentBefore)
+                    pair.key.commentBefore = pair.key.commentBefore
+                        ? `${item.commentBefore}\n${pair.key.commentBefore}`
+                        : item.commentBefore;
+                if (item.comment) {
+                    const cn = pair.value ?? pair.key;
+                    cn.comment = cn.comment
+                        ? `${item.comment}\n${cn.comment}`
+                        : item.comment;
+                }
+                item = pair;
+            }
+            seq.items[i] = (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isPair)(item) ? item : new _nodes_Pair_js__WEBPACK_IMPORTED_MODULE_1__.Pair(item);
+        }
+    }
+    else
+        onError('Expected a sequence for this tag');
+    return seq;
+}
+function createPairs(schema, iterable, ctx) {
+    const { replacer } = ctx;
+    const pairs = new _nodes_YAMLSeq_js__WEBPACK_IMPORTED_MODULE_3__.YAMLSeq(schema);
+    pairs.tag = 'tag:yaml.org,2002:pairs';
+    let i = 0;
+    if (iterable && Symbol.iterator in Object(iterable))
+        for (let it of iterable) {
+            if (typeof replacer === 'function')
+                it = replacer.call(iterable, String(i++), it);
+            let key, value;
+            if (Array.isArray(it)) {
+                if (it.length === 2) {
+                    key = it[0];
+                    value = it[1];
+                }
+                else
+                    throw new TypeError(`Expected [key, value] tuple: ${it}`);
+            }
+            else if (it && it instanceof Object) {
+                const keys = Object.keys(it);
+                if (keys.length === 1) {
+                    key = keys[0];
+                    value = it[key];
+                }
+                else {
+                    throw new TypeError(`Expected tuple with one key, not ${keys.length} keys`);
+                }
+            }
+            else {
+                key = it;
+            }
+            pairs.items.push((0,_nodes_Pair_js__WEBPACK_IMPORTED_MODULE_1__.createPair)(key, value, ctx));
+        }
+    return pairs;
+}
+const pairs = {
+    collection: 'seq',
+    default: false,
+    tag: 'tag:yaml.org,2002:pairs',
+    resolve: resolvePairs,
+    createNode: createPairs
+};
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/schema.js"
+/*!************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/schema.js ***!
+  \************************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   schema: () => (/* binding */ schema)
+/* harmony export */ });
+/* harmony import */ var _common_map_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../common/map.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/common/map.js");
+/* harmony import */ var _common_null_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../common/null.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/common/null.js");
+/* harmony import */ var _common_seq_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../common/seq.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/common/seq.js");
+/* harmony import */ var _common_string_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../common/string.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/common/string.js");
+/* harmony import */ var _binary_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./binary.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/binary.js");
+/* harmony import */ var _bool_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./bool.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/bool.js");
+/* harmony import */ var _float_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./float.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/float.js");
+/* harmony import */ var _int_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./int.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/int.js");
+/* harmony import */ var _merge_js__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./merge.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/merge.js");
+/* harmony import */ var _omap_js__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./omap.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/omap.js");
+/* harmony import */ var _pairs_js__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./pairs.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/pairs.js");
+/* harmony import */ var _set_js__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./set.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/set.js");
+/* harmony import */ var _timestamp_js__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./timestamp.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/timestamp.js");
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const schema = [
+    _common_map_js__WEBPACK_IMPORTED_MODULE_0__.map,
+    _common_seq_js__WEBPACK_IMPORTED_MODULE_2__.seq,
+    _common_string_js__WEBPACK_IMPORTED_MODULE_3__.string,
+    _common_null_js__WEBPACK_IMPORTED_MODULE_1__.nullTag,
+    _bool_js__WEBPACK_IMPORTED_MODULE_5__.trueTag,
+    _bool_js__WEBPACK_IMPORTED_MODULE_5__.falseTag,
+    _int_js__WEBPACK_IMPORTED_MODULE_7__.intBin,
+    _int_js__WEBPACK_IMPORTED_MODULE_7__.intOct,
+    _int_js__WEBPACK_IMPORTED_MODULE_7__.int,
+    _int_js__WEBPACK_IMPORTED_MODULE_7__.intHex,
+    _float_js__WEBPACK_IMPORTED_MODULE_6__.floatNaN,
+    _float_js__WEBPACK_IMPORTED_MODULE_6__.floatExp,
+    _float_js__WEBPACK_IMPORTED_MODULE_6__.float,
+    _binary_js__WEBPACK_IMPORTED_MODULE_4__.binary,
+    _merge_js__WEBPACK_IMPORTED_MODULE_8__.merge,
+    _omap_js__WEBPACK_IMPORTED_MODULE_9__.omap,
+    _pairs_js__WEBPACK_IMPORTED_MODULE_10__.pairs,
+    _set_js__WEBPACK_IMPORTED_MODULE_11__.set,
+    _timestamp_js__WEBPACK_IMPORTED_MODULE_12__.intTime,
+    _timestamp_js__WEBPACK_IMPORTED_MODULE_12__.floatTime,
+    _timestamp_js__WEBPACK_IMPORTED_MODULE_12__.timestamp
+];
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/set.js"
+/*!*********************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/set.js ***!
+  \*********************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   YAMLSet: () => (/* binding */ YAMLSet),
+/* harmony export */   set: () => (/* binding */ set)
+/* harmony export */ });
+/* harmony import */ var _nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../nodes/identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _nodes_Pair_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../nodes/Pair.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Pair.js");
+/* harmony import */ var _nodes_YAMLMap_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../nodes/YAMLMap.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/YAMLMap.js");
+
+
+
+
+class YAMLSet extends _nodes_YAMLMap_js__WEBPACK_IMPORTED_MODULE_2__.YAMLMap {
+    constructor(schema) {
+        super(schema);
+        this.tag = YAMLSet.tag;
+    }
+    add(key) {
+        let pair;
+        if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isPair)(key))
+            pair = key;
+        else if (key &&
+            typeof key === 'object' &&
+            'key' in key &&
+            'value' in key &&
+            key.value === null)
+            pair = new _nodes_Pair_js__WEBPACK_IMPORTED_MODULE_1__.Pair(key.key, null);
+        else
+            pair = new _nodes_Pair_js__WEBPACK_IMPORTED_MODULE_1__.Pair(key, null);
+        const prev = (0,_nodes_YAMLMap_js__WEBPACK_IMPORTED_MODULE_2__.findPair)(this.items, pair.key);
+        if (!prev)
+            this.items.push(pair);
+    }
+    /**
+     * If `keepPair` is `true`, returns the Pair matching `key`.
+     * Otherwise, returns the value of that Pair's key.
+     */
+    get(key, keepPair) {
+        const pair = (0,_nodes_YAMLMap_js__WEBPACK_IMPORTED_MODULE_2__.findPair)(this.items, key);
+        return !keepPair && (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isPair)(pair)
+            ? (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isScalar)(pair.key)
+                ? pair.key.value
+                : pair.key
+            : pair;
+    }
+    set(key, value) {
+        if (typeof value !== 'boolean')
+            throw new Error(`Expected boolean value for set(key, value) in a YAML set, not ${typeof value}`);
+        const prev = (0,_nodes_YAMLMap_js__WEBPACK_IMPORTED_MODULE_2__.findPair)(this.items, key);
+        if (prev && !value) {
+            this.items.splice(this.items.indexOf(prev), 1);
+        }
+        else if (!prev && value) {
+            this.items.push(new _nodes_Pair_js__WEBPACK_IMPORTED_MODULE_1__.Pair(key));
+        }
+    }
+    toJSON(_, ctx) {
+        return super.toJSON(_, ctx, Set);
+    }
+    toString(ctx, onComment, onChompKeep) {
+        if (!ctx)
+            return JSON.stringify(this);
+        if (this.hasAllNullValues(true))
+            return super.toString(Object.assign({}, ctx, { allNullValues: true }), onComment, onChompKeep);
+        else
+            throw new Error('Set items must all have null values');
+    }
+    static from(schema, iterable, ctx) {
+        const { replacer } = ctx;
+        const set = new this(schema);
+        if (iterable && Symbol.iterator in Object(iterable))
+            for (let value of iterable) {
+                if (typeof replacer === 'function')
+                    value = replacer.call(iterable, value, value);
+                set.items.push((0,_nodes_Pair_js__WEBPACK_IMPORTED_MODULE_1__.createPair)(value, null, ctx));
+            }
+        return set;
+    }
+}
+YAMLSet.tag = 'tag:yaml.org,2002:set';
+const set = {
+    collection: 'map',
+    identify: value => value instanceof Set,
+    nodeClass: YAMLSet,
+    default: false,
+    tag: 'tag:yaml.org,2002:set',
+    createNode: (schema, iterable, ctx) => YAMLSet.from(schema, iterable, ctx),
+    resolve(map, onError) {
+        if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isMap)(map)) {
+            if (map.hasAllNullValues(true))
+                return Object.assign(new YAMLSet(), map);
+            else
+                onError('Set items must all have null values');
+        }
+        else
+            onError('Expected a mapping for this tag');
+        return map;
+    }
+};
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/timestamp.js"
+/*!***************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/schema/yaml-1.1/timestamp.js ***!
+  \***************************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   floatTime: () => (/* binding */ floatTime),
+/* harmony export */   intTime: () => (/* binding */ intTime),
+/* harmony export */   timestamp: () => (/* binding */ timestamp)
+/* harmony export */ });
+/* harmony import */ var _stringify_stringifyNumber_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../stringify/stringifyNumber.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyNumber.js");
+
+
+/** Internal types handle bigint as number, because TS can't figure it out. */
+function parseSexagesimal(str, asBigInt) {
+    const sign = str[0];
+    const parts = sign === '-' || sign === '+' ? str.substring(1) : str;
+    const num = (n) => asBigInt ? BigInt(n) : Number(n);
+    const res = parts
+        .replace(/_/g, '')
+        .split(':')
+        .reduce((res, p) => res * num(60) + num(p), num(0));
+    return (sign === '-' ? num(-1) * res : res);
+}
+/**
+ * hhhh:mm:ss.sss
+ *
+ * Internal types handle bigint as number, because TS can't figure it out.
+ */
+function stringifySexagesimal(node) {
+    let { value } = node;
+    let num = (n) => n;
+    if (typeof value === 'bigint')
+        num = n => BigInt(n);
+    else if (isNaN(value) || !isFinite(value))
+        return (0,_stringify_stringifyNumber_js__WEBPACK_IMPORTED_MODULE_0__.stringifyNumber)(node);
+    let sign = '';
+    if (value < 0) {
+        sign = '-';
+        value *= num(-1);
+    }
+    const _60 = num(60);
+    const parts = [value % _60]; // seconds, including ms
+    if (value < 60) {
+        parts.unshift(0); // at least one : is required
+    }
+    else {
+        value = (value - parts[0]) / _60;
+        parts.unshift(value % _60); // minutes
+        if (value >= 60) {
+            value = (value - parts[0]) / _60;
+            parts.unshift(value); // hours
+        }
+    }
+    return (sign +
+        parts
+            .map(n => String(n).padStart(2, '0'))
+            .join(':')
+            .replace(/000000\d*$/, '') // % 60 may introduce error
+    );
+}
+const intTime = {
+    identify: value => typeof value === 'bigint' || Number.isInteger(value),
+    default: true,
+    tag: 'tag:yaml.org,2002:int',
+    format: 'TIME',
+    test: /^[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+$/,
+    resolve: (str, _onError, { intAsBigInt }) => parseSexagesimal(str, intAsBigInt),
+    stringify: stringifySexagesimal
+};
+const floatTime = {
+    identify: value => typeof value === 'number',
+    default: true,
+    tag: 'tag:yaml.org,2002:float',
+    format: 'TIME',
+    test: /^[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\.[0-9_]*$/,
+    resolve: str => parseSexagesimal(str, false),
+    stringify: stringifySexagesimal
+};
+const timestamp = {
+    identify: value => value instanceof Date,
+    default: true,
+    tag: 'tag:yaml.org,2002:timestamp',
+    // If the time zone is omitted, the timestamp is assumed to be specified in UTC. The time part
+    // may be omitted altogether, resulting in a date format. In such a case, the time part is
+    // assumed to be 00:00:00Z (start of day, UTC).
+    test: RegExp('^([0-9]{4})-([0-9]{1,2})-([0-9]{1,2})' + // YYYY-Mm-Dd
+        '(?:' + // time is optional
+        '(?:t|T|[ \\t]+)' + // t | T | whitespace
+        '([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2}(\\.[0-9]+)?)' + // Hh:Mm:Ss(.ss)?
+        '(?:[ \\t]*(Z|[-+][012]?[0-9](?::[0-9]{2})?))?' + // Z | +5 | -03:30
+        ')?$'),
+    resolve(str) {
+        const match = str.match(timestamp.test);
+        if (!match)
+            throw new Error('!!timestamp expects a date, starting with yyyy-mm-dd');
+        const [, year, month, day, hour, minute, second] = match.map(Number);
+        const millisec = match[7] ? Number((match[7] + '00').substr(1, 3)) : 0;
+        let date = Date.UTC(year, month - 1, day, hour || 0, minute || 0, second || 0, millisec);
+        const tz = match[8];
+        if (tz && tz !== 'Z') {
+            let d = parseSexagesimal(tz, false);
+            if (Math.abs(d) < 30)
+                d *= 60;
+            date -= 60000 * d;
+        }
+        return new Date(date);
+    },
+    stringify: ({ value }) => value?.toISOString().replace(/(T00:00:00)?\.000Z$/, '') ?? ''
+};
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/foldFlowLines.js"
+/*!*************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/foldFlowLines.js ***!
+  \*************************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   FOLD_BLOCK: () => (/* binding */ FOLD_BLOCK),
+/* harmony export */   FOLD_FLOW: () => (/* binding */ FOLD_FLOW),
+/* harmony export */   FOLD_QUOTED: () => (/* binding */ FOLD_QUOTED),
+/* harmony export */   foldFlowLines: () => (/* binding */ foldFlowLines)
+/* harmony export */ });
+const FOLD_FLOW = 'flow';
+const FOLD_BLOCK = 'block';
+const FOLD_QUOTED = 'quoted';
+/**
+ * Tries to keep input at up to `lineWidth` characters, splitting only on spaces
+ * not followed by newlines or spaces unless `mode` is `'quoted'`. Lines are
+ * terminated with `\n` and started with `indent`.
+ */
+function foldFlowLines(text, indent, mode = 'flow', { indentAtStart, lineWidth = 80, minContentWidth = 20, onFold, onOverflow } = {}) {
+    if (!lineWidth || lineWidth < 0)
+        return text;
+    if (lineWidth < minContentWidth)
+        minContentWidth = 0;
+    const endStep = Math.max(1 + minContentWidth, 1 + lineWidth - indent.length);
+    if (text.length <= endStep)
+        return text;
+    const folds = [];
+    const escapedFolds = {};
+    let end = lineWidth - indent.length;
+    if (typeof indentAtStart === 'number') {
+        if (indentAtStart > lineWidth - Math.max(2, minContentWidth))
+            folds.push(0);
+        else
+            end = lineWidth - indentAtStart;
+    }
+    let split = undefined;
+    let prev = undefined;
+    let overflow = false;
+    let i = -1;
+    let escStart = -1;
+    let escEnd = -1;
+    if (mode === FOLD_BLOCK) {
+        i = consumeMoreIndentedLines(text, i, indent.length);
+        if (i !== -1)
+            end = i + endStep;
+    }
+    for (let ch; (ch = text[(i += 1)]);) {
+        if (mode === FOLD_QUOTED && ch === '\\') {
+            escStart = i;
+            switch (text[i + 1]) {
+                case 'x':
+                    i += 3;
+                    break;
+                case 'u':
+                    i += 5;
+                    break;
+                case 'U':
+                    i += 9;
+                    break;
+                default:
+                    i += 1;
+            }
+            escEnd = i;
+        }
+        if (ch === '\n') {
+            if (mode === FOLD_BLOCK)
+                i = consumeMoreIndentedLines(text, i, indent.length);
+            end = i + indent.length + endStep;
+            split = undefined;
+        }
+        else {
+            if (ch === ' ' &&
+                prev &&
+                prev !== ' ' &&
+                prev !== '\n' &&
+                prev !== '\t') {
+                // space surrounded by non-space can be replaced with newline + indent
+                const next = text[i + 1];
+                if (next && next !== ' ' && next !== '\n' && next !== '\t')
+                    split = i;
+            }
+            if (i >= end) {
+                if (split) {
+                    folds.push(split);
+                    end = split + endStep;
+                    split = undefined;
+                }
+                else if (mode === FOLD_QUOTED) {
+                    // white-space collected at end may stretch past lineWidth
+                    while (prev === ' ' || prev === '\t') {
+                        prev = ch;
+                        ch = text[(i += 1)];
+                        overflow = true;
+                    }
+                    // Account for newline escape, but don't break preceding escape
+                    const j = i > escEnd + 1 ? i - 2 : escStart - 1;
+                    // Bail out if lineWidth & minContentWidth are shorter than an escape string
+                    if (escapedFolds[j])
+                        return text;
+                    folds.push(j);
+                    escapedFolds[j] = true;
+                    end = j + endStep;
+                    split = undefined;
+                }
+                else {
+                    overflow = true;
+                }
+            }
+        }
+        prev = ch;
+    }
+    if (overflow && onOverflow)
+        onOverflow();
+    if (folds.length === 0)
+        return text;
+    if (onFold)
+        onFold();
+    let res = text.slice(0, folds[0]);
+    for (let i = 0; i < folds.length; ++i) {
+        const fold = folds[i];
+        const end = folds[i + 1] || text.length;
+        if (fold === 0)
+            res = `\n${indent}${text.slice(0, end)}`;
+        else {
+            if (mode === FOLD_QUOTED && escapedFolds[fold])
+                res += `${text[fold]}\\`;
+            res += `\n${indent}${text.slice(fold + 1, end)}`;
+        }
+    }
+    return res;
+}
+/**
+ * Presumes `i + 1` is at the start of a line
+ * @returns index of last newline in more-indented block
+ */
+function consumeMoreIndentedLines(text, i, indent) {
+    let end = i;
+    let start = i + 1;
+    let ch = text[start];
+    while (ch === ' ' || ch === '\t') {
+        if (i < start + indent) {
+            ch = text[++i];
+        }
+        else {
+            do {
+                ch = text[++i];
+            } while (ch && ch !== '\n');
+            end = i;
+            start = i + 1;
+            ch = text[start];
+        }
+    }
+    return end;
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringify.js"
+/*!*********************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringify.js ***!
+  \*********************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createStringifyContext: () => (/* binding */ createStringifyContext),
+/* harmony export */   stringify: () => (/* binding */ stringify)
+/* harmony export */ });
+/* harmony import */ var _doc_anchors_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../doc/anchors.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/doc/anchors.js");
+/* harmony import */ var _nodes_identity_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../nodes/identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _stringifyComment_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./stringifyComment.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyComment.js");
+/* harmony import */ var _stringifyString_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./stringifyString.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyString.js");
+
+
+
+
+
+function createStringifyContext(doc, options) {
+    const opt = Object.assign({
+        blockQuote: true,
+        commentString: _stringifyComment_js__WEBPACK_IMPORTED_MODULE_2__.stringifyComment,
+        defaultKeyType: null,
+        defaultStringType: 'PLAIN',
+        directives: null,
+        doubleQuotedAsJSON: false,
+        doubleQuotedMinMultiLineLength: 40,
+        falseStr: 'false',
+        flowCollectionPadding: true,
+        indentSeq: true,
+        lineWidth: 80,
+        minContentWidth: 20,
+        nullStr: 'null',
+        simpleKeys: false,
+        singleQuote: null,
+        trueStr: 'true',
+        verifyAliasOrder: true
+    }, doc.schema.toStringOptions, options);
+    let inFlow;
+    switch (opt.collectionStyle) {
+        case 'block':
+            inFlow = false;
+            break;
+        case 'flow':
+            inFlow = true;
+            break;
+        default:
+            inFlow = null;
+    }
+    return {
+        anchors: new Set(),
+        doc,
+        flowCollectionPadding: opt.flowCollectionPadding ? ' ' : '',
+        indent: '',
+        indentStep: typeof opt.indent === 'number' ? ' '.repeat(opt.indent) : '  ',
+        inFlow,
+        options: opt
+    };
+}
+function getTagObject(tags, item) {
+    if (item.tag) {
+        const match = tags.filter(t => t.tag === item.tag);
+        if (match.length > 0)
+            return match.find(t => t.format === item.format) ?? match[0];
+    }
+    let tagObj = undefined;
+    let obj;
+    if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_1__.isScalar)(item)) {
+        obj = item.value;
+        let match = tags.filter(t => t.identify?.(obj));
+        if (match.length > 1) {
+            const testMatch = match.filter(t => t.test);
+            if (testMatch.length > 0)
+                match = testMatch;
+        }
+        tagObj =
+            match.find(t => t.format === item.format) ?? match.find(t => !t.format);
+    }
+    else {
+        obj = item;
+        tagObj = tags.find(t => t.nodeClass && obj instanceof t.nodeClass);
+    }
+    if (!tagObj) {
+        const name = obj?.constructor?.name ?? (obj === null ? 'null' : typeof obj);
+        throw new Error(`Tag not resolved for ${name} value`);
+    }
+    return tagObj;
+}
+// needs to be called before value stringifier to allow for circular anchor refs
+function stringifyProps(node, tagObj, { anchors, doc }) {
+    if (!doc.directives)
+        return '';
+    const props = [];
+    const anchor = ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_1__.isScalar)(node) || (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_1__.isCollection)(node)) && node.anchor;
+    if (anchor && (0,_doc_anchors_js__WEBPACK_IMPORTED_MODULE_0__.anchorIsValid)(anchor)) {
+        anchors.add(anchor);
+        props.push(`&${anchor}`);
+    }
+    const tag = node.tag ?? (tagObj.default ? null : tagObj.tag);
+    if (tag)
+        props.push(doc.directives.tagString(tag));
+    return props.join(' ');
+}
+function stringify(item, ctx, onComment, onChompKeep) {
+    if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_1__.isPair)(item))
+        return item.toString(ctx, onComment, onChompKeep);
+    if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_1__.isAlias)(item)) {
+        if (ctx.doc.directives)
+            return item.toString(ctx);
+        if (ctx.resolvedAliases?.has(item)) {
+            throw new TypeError(`Cannot stringify circular structure without alias nodes`);
+        }
+        else {
+            if (ctx.resolvedAliases)
+                ctx.resolvedAliases.add(item);
+            else
+                ctx.resolvedAliases = new Set([item]);
+            item = item.resolve(ctx.doc);
+        }
+    }
+    let tagObj = undefined;
+    const node = (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_1__.isNode)(item)
+        ? item
+        : ctx.doc.createNode(item, { onTagObj: o => (tagObj = o) });
+    tagObj ?? (tagObj = getTagObject(ctx.doc.schema.tags, node));
+    const props = stringifyProps(node, tagObj, ctx);
+    if (props.length > 0)
+        ctx.indentAtStart = (ctx.indentAtStart ?? 0) + props.length + 1;
+    const str = typeof tagObj.stringify === 'function'
+        ? tagObj.stringify(node, ctx, onComment, onChompKeep)
+        : (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_1__.isScalar)(node)
+            ? (0,_stringifyString_js__WEBPACK_IMPORTED_MODULE_3__.stringifyString)(node, ctx, onComment, onChompKeep)
+            : node.toString(ctx, onComment, onChompKeep);
+    if (!props)
+        return str;
+    return (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_1__.isScalar)(node) || str[0] === '{' || str[0] === '['
+        ? `${props} ${str}`
+        : `${props}\n${ctx.indent}${str}`;
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyCollection.js"
+/*!*******************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyCollection.js ***!
+  \*******************************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   stringifyCollection: () => (/* binding */ stringifyCollection)
+/* harmony export */ });
+/* harmony import */ var _nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../nodes/identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _stringify_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./stringify.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringify.js");
+/* harmony import */ var _stringifyComment_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./stringifyComment.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyComment.js");
+
+
+
+
+function stringifyCollection(collection, ctx, options) {
+    const flow = ctx.inFlow ?? collection.flow;
+    const stringify = flow ? stringifyFlowCollection : stringifyBlockCollection;
+    return stringify(collection, ctx, options);
+}
+function stringifyBlockCollection({ comment, items }, ctx, { blockItemPrefix, flowChars, itemIndent, onChompKeep, onComment }) {
+    const { indent, options: { commentString } } = ctx;
+    const itemCtx = Object.assign({}, ctx, { indent: itemIndent, type: null });
+    let chompKeep = false; // flag for the preceding node's status
+    const lines = [];
+    for (let i = 0; i < items.length; ++i) {
+        const item = items[i];
+        let comment = null;
+        if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isNode)(item)) {
+            if (!chompKeep && item.spaceBefore)
+                lines.push('');
+            addCommentBefore(ctx, lines, item.commentBefore, chompKeep);
+            if (item.comment)
+                comment = item.comment;
+        }
+        else if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isPair)(item)) {
+            const ik = (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isNode)(item.key) ? item.key : null;
+            if (ik) {
+                if (!chompKeep && ik.spaceBefore)
+                    lines.push('');
+                addCommentBefore(ctx, lines, ik.commentBefore, chompKeep);
+            }
+        }
+        chompKeep = false;
+        let str = (0,_stringify_js__WEBPACK_IMPORTED_MODULE_1__.stringify)(item, itemCtx, () => (comment = null), () => (chompKeep = true));
+        if (comment)
+            str += (0,_stringifyComment_js__WEBPACK_IMPORTED_MODULE_2__.lineComment)(str, itemIndent, commentString(comment));
+        if (chompKeep && comment)
+            chompKeep = false;
+        lines.push(blockItemPrefix + str);
+    }
+    let str;
+    if (lines.length === 0) {
+        str = flowChars.start + flowChars.end;
+    }
+    else {
+        str = lines[0];
+        for (let i = 1; i < lines.length; ++i) {
+            const line = lines[i];
+            str += line ? `\n${indent}${line}` : '\n';
+        }
+    }
+    if (comment) {
+        str += '\n' + (0,_stringifyComment_js__WEBPACK_IMPORTED_MODULE_2__.indentComment)(commentString(comment), indent);
+        if (onComment)
+            onComment();
+    }
+    else if (chompKeep && onChompKeep)
+        onChompKeep();
+    return str;
+}
+function stringifyFlowCollection({ items }, ctx, { flowChars, itemIndent }) {
+    const { indent, indentStep, flowCollectionPadding: fcPadding, options: { commentString } } = ctx;
+    itemIndent += indentStep;
+    const itemCtx = Object.assign({}, ctx, {
+        indent: itemIndent,
+        inFlow: true,
+        type: null
+    });
+    let reqNewline = false;
+    let linesAtValue = 0;
+    const lines = [];
+    for (let i = 0; i < items.length; ++i) {
+        const item = items[i];
+        let comment = null;
+        if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isNode)(item)) {
+            if (item.spaceBefore)
+                lines.push('');
+            addCommentBefore(ctx, lines, item.commentBefore, false);
+            if (item.comment)
+                comment = item.comment;
+        }
+        else if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isPair)(item)) {
+            const ik = (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isNode)(item.key) ? item.key : null;
+            if (ik) {
+                if (ik.spaceBefore)
+                    lines.push('');
+                addCommentBefore(ctx, lines, ik.commentBefore, false);
+                if (ik.comment)
+                    reqNewline = true;
+            }
+            const iv = (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isNode)(item.value) ? item.value : null;
+            if (iv) {
+                if (iv.comment)
+                    comment = iv.comment;
+                if (iv.commentBefore)
+                    reqNewline = true;
+            }
+            else if (item.value == null && ik?.comment) {
+                comment = ik.comment;
+            }
+        }
+        if (comment)
+            reqNewline = true;
+        let str = (0,_stringify_js__WEBPACK_IMPORTED_MODULE_1__.stringify)(item, itemCtx, () => (comment = null));
+        if (i < items.length - 1)
+            str += ',';
+        if (comment)
+            str += (0,_stringifyComment_js__WEBPACK_IMPORTED_MODULE_2__.lineComment)(str, itemIndent, commentString(comment));
+        if (!reqNewline && (lines.length > linesAtValue || str.includes('\n')))
+            reqNewline = true;
+        lines.push(str);
+        linesAtValue = lines.length;
+    }
+    const { start, end } = flowChars;
+    if (lines.length === 0) {
+        return start + end;
+    }
+    else {
+        if (!reqNewline) {
+            const len = lines.reduce((sum, line) => sum + line.length + 2, 2);
+            reqNewline = ctx.options.lineWidth > 0 && len > ctx.options.lineWidth;
+        }
+        if (reqNewline) {
+            let str = start;
+            for (const line of lines)
+                str += line ? `\n${indentStep}${indent}${line}` : '\n';
+            return `${str}\n${indent}${end}`;
+        }
+        else {
+            return `${start}${fcPadding}${lines.join(' ')}${fcPadding}${end}`;
+        }
+    }
+}
+function addCommentBefore({ indent, options: { commentString } }, lines, comment, chompKeep) {
+    if (comment && chompKeep)
+        comment = comment.replace(/^\n+/, '');
+    if (comment) {
+        const ic = (0,_stringifyComment_js__WEBPACK_IMPORTED_MODULE_2__.indentComment)(commentString(comment), indent);
+        lines.push(ic.trimStart()); // Avoid double indent on first line
+    }
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyComment.js"
+/*!****************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyComment.js ***!
+  \****************************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   indentComment: () => (/* binding */ indentComment),
+/* harmony export */   lineComment: () => (/* binding */ lineComment),
+/* harmony export */   stringifyComment: () => (/* binding */ stringifyComment)
+/* harmony export */ });
+/**
+ * Stringifies a comment.
+ *
+ * Empty comment lines are left empty,
+ * lines consisting of a single space are replaced by `#`,
+ * and all other lines are prefixed with a `#`.
+ */
+const stringifyComment = (str) => str.replace(/^(?!$)(?: $)?/gm, '#');
+function indentComment(comment, indent) {
+    if (/^\n+$/.test(comment))
+        return comment.substring(1);
+    return indent ? comment.replace(/^(?! *$)/gm, indent) : comment;
+}
+const lineComment = (str, indent, comment) => str.endsWith('\n')
+    ? indentComment(comment, indent)
+    : comment.includes('\n')
+        ? '\n' + indentComment(comment, indent)
+        : (str.endsWith(' ') ? '' : ' ') + comment;
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyDocument.js"
+/*!*****************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyDocument.js ***!
+  \*****************************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   stringifyDocument: () => (/* binding */ stringifyDocument)
+/* harmony export */ });
+/* harmony import */ var _nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../nodes/identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _stringify_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./stringify.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringify.js");
+/* harmony import */ var _stringifyComment_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./stringifyComment.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyComment.js");
+
+
+
+
+function stringifyDocument(doc, options) {
+    const lines = [];
+    let hasDirectives = options.directives === true;
+    if (options.directives !== false && doc.directives) {
+        const dir = doc.directives.toString(doc);
+        if (dir) {
+            lines.push(dir);
+            hasDirectives = true;
+        }
+        else if (doc.directives.docStart)
+            hasDirectives = true;
+    }
+    if (hasDirectives)
+        lines.push('---');
+    const ctx = (0,_stringify_js__WEBPACK_IMPORTED_MODULE_1__.createStringifyContext)(doc, options);
+    const { commentString } = ctx.options;
+    if (doc.commentBefore) {
+        if (lines.length !== 1)
+            lines.unshift('');
+        const cs = commentString(doc.commentBefore);
+        lines.unshift((0,_stringifyComment_js__WEBPACK_IMPORTED_MODULE_2__.indentComment)(cs, ''));
+    }
+    let chompKeep = false;
+    let contentComment = null;
+    if (doc.contents) {
+        if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isNode)(doc.contents)) {
+            if (doc.contents.spaceBefore && hasDirectives)
+                lines.push('');
+            if (doc.contents.commentBefore) {
+                const cs = commentString(doc.contents.commentBefore);
+                lines.push((0,_stringifyComment_js__WEBPACK_IMPORTED_MODULE_2__.indentComment)(cs, ''));
+            }
+            // top-level block scalars need to be indented if followed by a comment
+            ctx.forceBlockIndent = !!doc.comment;
+            contentComment = doc.contents.comment;
+        }
+        const onChompKeep = contentComment ? undefined : () => (chompKeep = true);
+        let body = (0,_stringify_js__WEBPACK_IMPORTED_MODULE_1__.stringify)(doc.contents, ctx, () => (contentComment = null), onChompKeep);
+        if (contentComment)
+            body += (0,_stringifyComment_js__WEBPACK_IMPORTED_MODULE_2__.lineComment)(body, '', commentString(contentComment));
+        if ((body[0] === '|' || body[0] === '>') &&
+            lines[lines.length - 1] === '---') {
+            // Top-level block scalars with a preceding doc marker ought to use the
+            // same line for their header.
+            lines[lines.length - 1] = `--- ${body}`;
+        }
+        else
+            lines.push(body);
+    }
+    else {
+        lines.push((0,_stringify_js__WEBPACK_IMPORTED_MODULE_1__.stringify)(doc.contents, ctx));
+    }
+    if (doc.directives?.docEnd) {
+        if (doc.comment) {
+            const cs = commentString(doc.comment);
+            if (cs.includes('\n')) {
+                lines.push('...');
+                lines.push((0,_stringifyComment_js__WEBPACK_IMPORTED_MODULE_2__.indentComment)(cs, ''));
+            }
+            else {
+                lines.push(`... ${cs}`);
+            }
+        }
+        else {
+            lines.push('...');
+        }
+    }
+    else {
+        let dc = doc.comment;
+        if (dc && chompKeep)
+            dc = dc.replace(/^\n+/, '');
+        if (dc) {
+            if ((!chompKeep || contentComment) && lines[lines.length - 1] !== '')
+                lines.push('');
+            lines.push((0,_stringifyComment_js__WEBPACK_IMPORTED_MODULE_2__.indentComment)(commentString(dc), ''));
+        }
+    }
+    return lines.join('\n') + '\n';
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyNumber.js"
+/*!***************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyNumber.js ***!
+  \***************************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   stringifyNumber: () => (/* binding */ stringifyNumber)
+/* harmony export */ });
+function stringifyNumber({ format, minFractionDigits, tag, value }) {
+    if (typeof value === 'bigint')
+        return String(value);
+    const num = typeof value === 'number' ? value : Number(value);
+    if (!isFinite(num))
+        return isNaN(num) ? '.nan' : num < 0 ? '-.inf' : '.inf';
+    let n = Object.is(value, -0) ? '-0' : JSON.stringify(value);
+    if (!format &&
+        minFractionDigits &&
+        (!tag || tag === 'tag:yaml.org,2002:float') &&
+        /^\d/.test(n)) {
+        let i = n.indexOf('.');
+        if (i < 0) {
+            i = n.length;
+            n += '.';
+        }
+        let d = minFractionDigits - (n.length - i - 1);
+        while (d-- > 0)
+            n += '0';
+    }
+    return n;
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyPair.js"
+/*!*************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyPair.js ***!
+  \*************************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   stringifyPair: () => (/* binding */ stringifyPair)
+/* harmony export */ });
+/* harmony import */ var _nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../nodes/identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+/* harmony import */ var _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../nodes/Scalar.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Scalar.js");
+/* harmony import */ var _stringify_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./stringify.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringify.js");
+/* harmony import */ var _stringifyComment_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./stringifyComment.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyComment.js");
+
+
+
+
+
+function stringifyPair({ key, value }, ctx, onComment, onChompKeep) {
+    const { allNullValues, doc, indent, indentStep, options: { commentString, indentSeq, simpleKeys } } = ctx;
+    let keyComment = ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isNode)(key) && key.comment) || null;
+    if (simpleKeys) {
+        if (keyComment) {
+            throw new Error('With simple keys, key nodes cannot have comments');
+        }
+        if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isCollection)(key) || (!(0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isNode)(key) && typeof key === 'object')) {
+            const msg = 'With simple keys, collection cannot be used as a key value';
+            throw new Error(msg);
+        }
+    }
+    let explicitKey = !simpleKeys &&
+        (!key ||
+            (keyComment && value == null && !ctx.inFlow) ||
+            (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isCollection)(key) ||
+            ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isScalar)(key)
+                ? key.type === _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_1__.Scalar.BLOCK_FOLDED || key.type === _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_1__.Scalar.BLOCK_LITERAL
+                : typeof key === 'object'));
+    ctx = Object.assign({}, ctx, {
+        allNullValues: false,
+        implicitKey: !explicitKey && (simpleKeys || !allNullValues),
+        indent: indent + indentStep
+    });
+    let keyCommentDone = false;
+    let chompKeep = false;
+    let str = (0,_stringify_js__WEBPACK_IMPORTED_MODULE_2__.stringify)(key, ctx, () => (keyCommentDone = true), () => (chompKeep = true));
+    if (!explicitKey && !ctx.inFlow && str.length > 1024) {
+        if (simpleKeys)
+            throw new Error('With simple keys, single line scalar must not span more than 1024 characters');
+        explicitKey = true;
+    }
+    if (ctx.inFlow) {
+        if (allNullValues || value == null) {
+            if (keyCommentDone && onComment)
+                onComment();
+            return str === '' ? '?' : explicitKey ? `? ${str}` : str;
+        }
+    }
+    else if ((allNullValues && !simpleKeys) || (value == null && explicitKey)) {
+        str = `? ${str}`;
+        if (keyComment && !keyCommentDone) {
+            str += (0,_stringifyComment_js__WEBPACK_IMPORTED_MODULE_3__.lineComment)(str, ctx.indent, commentString(keyComment));
+        }
+        else if (chompKeep && onChompKeep)
+            onChompKeep();
+        return str;
+    }
+    if (keyCommentDone)
+        keyComment = null;
+    if (explicitKey) {
+        if (keyComment)
+            str += (0,_stringifyComment_js__WEBPACK_IMPORTED_MODULE_3__.lineComment)(str, ctx.indent, commentString(keyComment));
+        str = `? ${str}\n${indent}:`;
+    }
+    else {
+        str = `${str}:`;
+        if (keyComment)
+            str += (0,_stringifyComment_js__WEBPACK_IMPORTED_MODULE_3__.lineComment)(str, ctx.indent, commentString(keyComment));
+    }
+    let vsb, vcb, valueComment;
+    if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isNode)(value)) {
+        vsb = !!value.spaceBefore;
+        vcb = value.commentBefore;
+        valueComment = value.comment;
+    }
+    else {
+        vsb = false;
+        vcb = null;
+        valueComment = null;
+        if (value && typeof value === 'object')
+            value = doc.createNode(value);
+    }
+    ctx.implicitKey = false;
+    if (!explicitKey && !keyComment && (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isScalar)(value))
+        ctx.indentAtStart = str.length + 1;
+    chompKeep = false;
+    if (!indentSeq &&
+        indentStep.length >= 2 &&
+        !ctx.inFlow &&
+        !explicitKey &&
+        (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isSeq)(value) &&
+        !value.flow &&
+        !value.tag &&
+        !value.anchor) {
+        // If indentSeq === false, consider '- ' as part of indentation where possible
+        ctx.indent = ctx.indent.substring(2);
+    }
+    let valueCommentDone = false;
+    const valueStr = (0,_stringify_js__WEBPACK_IMPORTED_MODULE_2__.stringify)(value, ctx, () => (valueCommentDone = true), () => (chompKeep = true));
+    let ws = ' ';
+    if (keyComment || vsb || vcb) {
+        ws = vsb ? '\n' : '';
+        if (vcb) {
+            const cs = commentString(vcb);
+            ws += `\n${(0,_stringifyComment_js__WEBPACK_IMPORTED_MODULE_3__.indentComment)(cs, ctx.indent)}`;
+        }
+        if (valueStr === '' && !ctx.inFlow) {
+            if (ws === '\n' && valueComment)
+                ws = '\n\n';
+        }
+        else {
+            ws += `\n${ctx.indent}`;
+        }
+    }
+    else if (!explicitKey && (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isCollection)(value)) {
+        const vs0 = valueStr[0];
+        const nl0 = valueStr.indexOf('\n');
+        const hasNewline = nl0 !== -1;
+        const flow = ctx.inFlow ?? value.flow ?? value.items.length === 0;
+        if (hasNewline || !flow) {
+            let hasPropsLine = false;
+            if (hasNewline && (vs0 === '&' || vs0 === '!')) {
+                let sp0 = valueStr.indexOf(' ');
+                if (vs0 === '&' &&
+                    sp0 !== -1 &&
+                    sp0 < nl0 &&
+                    valueStr[sp0 + 1] === '!') {
+                    sp0 = valueStr.indexOf(' ', sp0 + 1);
+                }
+                if (sp0 === -1 || nl0 < sp0)
+                    hasPropsLine = true;
+            }
+            if (!hasPropsLine)
+                ws = `\n${ctx.indent}`;
+        }
+    }
+    else if (valueStr === '' || valueStr[0] === '\n') {
+        ws = '';
+    }
+    str += ws + valueStr;
+    if (ctx.inFlow) {
+        if (valueCommentDone && onComment)
+            onComment();
+    }
+    else if (valueComment && !valueCommentDone) {
+        str += (0,_stringifyComment_js__WEBPACK_IMPORTED_MODULE_3__.lineComment)(str, ctx.indent, commentString(valueComment));
+    }
+    else if (chompKeep && onChompKeep) {
+        onChompKeep();
+    }
+    return str;
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyString.js"
+/*!***************************************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/stringifyString.js ***!
+  \***************************************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   stringifyString: () => (/* binding */ stringifyString)
+/* harmony export */ });
+/* harmony import */ var _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../nodes/Scalar.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/Scalar.js");
+/* harmony import */ var _foldFlowLines_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./foldFlowLines.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/stringify/foldFlowLines.js");
+
+
+
+const getFoldOptions = (ctx, isBlock) => ({
+    indentAtStart: isBlock ? ctx.indent.length : ctx.indentAtStart,
+    lineWidth: ctx.options.lineWidth,
+    minContentWidth: ctx.options.minContentWidth
+});
+// Also checks for lines starting with %, as parsing the output as YAML 1.1 will
+// presume that's starting a new document.
+const containsDocumentMarker = (str) => /^(%|---|\.\.\.)/m.test(str);
+function lineLengthOverLimit(str, lineWidth, indentLength) {
+    if (!lineWidth || lineWidth < 0)
+        return false;
+    const limit = lineWidth - indentLength;
+    const strLen = str.length;
+    if (strLen <= limit)
+        return false;
+    for (let i = 0, start = 0; i < strLen; ++i) {
+        if (str[i] === '\n') {
+            if (i - start > limit)
+                return true;
+            start = i + 1;
+            if (strLen - start <= limit)
+                return false;
+        }
+    }
+    return true;
+}
+function doubleQuotedString(value, ctx) {
+    const json = JSON.stringify(value);
+    if (ctx.options.doubleQuotedAsJSON)
+        return json;
+    const { implicitKey } = ctx;
+    const minMultiLineLength = ctx.options.doubleQuotedMinMultiLineLength;
+    const indent = ctx.indent || (containsDocumentMarker(value) ? '  ' : '');
+    let str = '';
+    let start = 0;
+    for (let i = 0, ch = json[i]; ch; ch = json[++i]) {
+        if (ch === ' ' && json[i + 1] === '\\' && json[i + 2] === 'n') {
+            // space before newline needs to be escaped to not be folded
+            str += json.slice(start, i) + '\\ ';
+            i += 1;
+            start = i;
+            ch = '\\';
+        }
+        if (ch === '\\')
+            switch (json[i + 1]) {
+                case 'u':
+                    {
+                        str += json.slice(start, i);
+                        const code = json.substr(i + 2, 4);
+                        switch (code) {
+                            case '0000':
+                                str += '\\0';
+                                break;
+                            case '0007':
+                                str += '\\a';
+                                break;
+                            case '000b':
+                                str += '\\v';
+                                break;
+                            case '001b':
+                                str += '\\e';
+                                break;
+                            case '0085':
+                                str += '\\N';
+                                break;
+                            case '00a0':
+                                str += '\\_';
+                                break;
+                            case '2028':
+                                str += '\\L';
+                                break;
+                            case '2029':
+                                str += '\\P';
+                                break;
+                            default:
+                                if (code.substr(0, 2) === '00')
+                                    str += '\\x' + code.substr(2);
+                                else
+                                    str += json.substr(i, 6);
+                        }
+                        i += 5;
+                        start = i + 1;
+                    }
+                    break;
+                case 'n':
+                    if (implicitKey ||
+                        json[i + 2] === '"' ||
+                        json.length < minMultiLineLength) {
+                        i += 1;
+                    }
+                    else {
+                        // folding will eat first newline
+                        str += json.slice(start, i) + '\n\n';
+                        while (json[i + 2] === '\\' &&
+                            json[i + 3] === 'n' &&
+                            json[i + 4] !== '"') {
+                            str += '\n';
+                            i += 2;
+                        }
+                        str += indent;
+                        // space after newline needs to be escaped to not be folded
+                        if (json[i + 2] === ' ')
+                            str += '\\';
+                        i += 1;
+                        start = i + 1;
+                    }
+                    break;
+                default:
+                    i += 1;
+            }
+    }
+    str = start ? str + json.slice(start) : json;
+    return implicitKey
+        ? str
+        : (0,_foldFlowLines_js__WEBPACK_IMPORTED_MODULE_1__.foldFlowLines)(str, indent, _foldFlowLines_js__WEBPACK_IMPORTED_MODULE_1__.FOLD_QUOTED, getFoldOptions(ctx, false));
+}
+function singleQuotedString(value, ctx) {
+    if (ctx.options.singleQuote === false ||
+        (ctx.implicitKey && value.includes('\n')) ||
+        /[ \t]\n|\n[ \t]/.test(value) // single quoted string can't have leading or trailing whitespace around newline
+    )
+        return doubleQuotedString(value, ctx);
+    const indent = ctx.indent || (containsDocumentMarker(value) ? '  ' : '');
+    const res = "'" + value.replace(/'/g, "''").replace(/\n+/g, `$&\n${indent}`) + "'";
+    return ctx.implicitKey
+        ? res
+        : (0,_foldFlowLines_js__WEBPACK_IMPORTED_MODULE_1__.foldFlowLines)(res, indent, _foldFlowLines_js__WEBPACK_IMPORTED_MODULE_1__.FOLD_FLOW, getFoldOptions(ctx, false));
+}
+function quotedString(value, ctx) {
+    const { singleQuote } = ctx.options;
+    let qs;
+    if (singleQuote === false)
+        qs = doubleQuotedString;
+    else {
+        const hasDouble = value.includes('"');
+        const hasSingle = value.includes("'");
+        if (hasDouble && !hasSingle)
+            qs = singleQuotedString;
+        else if (hasSingle && !hasDouble)
+            qs = doubleQuotedString;
+        else
+            qs = singleQuote ? singleQuotedString : doubleQuotedString;
+    }
+    return qs(value, ctx);
+}
+// The negative lookbehind avoids a polynomial search,
+// but isn't supported yet on Safari: https://caniuse.com/js-regexp-lookbehind
+let blockEndNewlines;
+try {
+    blockEndNewlines = new RegExp('(^|(?<!\n))\n+(?!\n|$)', 'g');
+}
+catch {
+    blockEndNewlines = /\n+(?!\n|$)/g;
+}
+function blockString({ comment, type, value }, ctx, onComment, onChompKeep) {
+    const { blockQuote, commentString, lineWidth } = ctx.options;
+    // 1. Block can't end in whitespace unless the last line is non-empty.
+    // 2. Strings consisting of only whitespace are best rendered explicitly.
+    if (!blockQuote || /\n[\t ]+$/.test(value)) {
+        return quotedString(value, ctx);
+    }
+    const indent = ctx.indent ||
+        (ctx.forceBlockIndent || containsDocumentMarker(value) ? '  ' : '');
+    const literal = blockQuote === 'literal'
+        ? true
+        : blockQuote === 'folded' || type === _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar.BLOCK_FOLDED
+            ? false
+            : type === _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar.BLOCK_LITERAL
+                ? true
+                : !lineLengthOverLimit(value, lineWidth, indent.length);
+    if (!value)
+        return literal ? '|\n' : '>\n';
+    // determine chomping from whitespace at value end
+    let chomp;
+    let endStart;
+    for (endStart = value.length; endStart > 0; --endStart) {
+        const ch = value[endStart - 1];
+        if (ch !== '\n' && ch !== '\t' && ch !== ' ')
+            break;
+    }
+    let end = value.substring(endStart);
+    const endNlPos = end.indexOf('\n');
+    if (endNlPos === -1) {
+        chomp = '-'; // strip
+    }
+    else if (value === end || endNlPos !== end.length - 1) {
+        chomp = '+'; // keep
+        if (onChompKeep)
+            onChompKeep();
+    }
+    else {
+        chomp = ''; // clip
+    }
+    if (end) {
+        value = value.slice(0, -end.length);
+        if (end[end.length - 1] === '\n')
+            end = end.slice(0, -1);
+        end = end.replace(blockEndNewlines, `$&${indent}`);
+    }
+    // determine indent indicator from whitespace at value start
+    let startWithSpace = false;
+    let startEnd;
+    let startNlPos = -1;
+    for (startEnd = 0; startEnd < value.length; ++startEnd) {
+        const ch = value[startEnd];
+        if (ch === ' ')
+            startWithSpace = true;
+        else if (ch === '\n')
+            startNlPos = startEnd;
+        else
+            break;
+    }
+    let start = value.substring(0, startNlPos < startEnd ? startNlPos + 1 : startEnd);
+    if (start) {
+        value = value.substring(start.length);
+        start = start.replace(/\n+/g, `$&${indent}`);
+    }
+    const indentSize = indent ? '2' : '1'; // root is at -1
+    // Leading | or > is added later
+    let header = (startWithSpace ? indentSize : '') + chomp;
+    if (comment) {
+        header += ' ' + commentString(comment.replace(/ ?[\r\n]+/g, ' '));
+        if (onComment)
+            onComment();
+    }
+    if (!literal) {
+        const foldedValue = value
+            .replace(/\n+/g, '\n$&')
+            .replace(/(?:^|\n)([\t ].*)(?:([\n\t ]*)\n(?![\n\t ]))?/g, '$1$2') // more-indented lines aren't folded
+            //                ^ more-ind. ^ empty     ^ capture next empty lines only at end of indent
+            .replace(/\n+/g, `$&${indent}`);
+        let literalFallback = false;
+        const foldOptions = getFoldOptions(ctx, true);
+        if (blockQuote !== 'folded' && type !== _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar.BLOCK_FOLDED) {
+            foldOptions.onOverflow = () => {
+                literalFallback = true;
+            };
+        }
+        const body = (0,_foldFlowLines_js__WEBPACK_IMPORTED_MODULE_1__.foldFlowLines)(`${start}${foldedValue}${end}`, indent, _foldFlowLines_js__WEBPACK_IMPORTED_MODULE_1__.FOLD_BLOCK, foldOptions);
+        if (!literalFallback)
+            return `>${header}\n${indent}${body}`;
+    }
+    value = value.replace(/\n+/g, `$&${indent}`);
+    return `|${header}\n${indent}${start}${value}${end}`;
+}
+function plainString(item, ctx, onComment, onChompKeep) {
+    const { type, value } = item;
+    const { actualString, implicitKey, indent, indentStep, inFlow } = ctx;
+    if ((implicitKey && value.includes('\n')) ||
+        (inFlow && /[[\]{},]/.test(value))) {
+        return quotedString(value, ctx);
+    }
+    if (/^[\n\t ,[\]{}#&*!|>'"%@`]|^[?-]$|^[?-][ \t]|[\n:][ \t]|[ \t]\n|[\n\t ]#|[\n\t :]$/.test(value)) {
+        // not allowed:
+        // - '-' or '?'
+        // - start with an indicator character (except [?:-]) or /[?-] /
+        // - '\n ', ': ' or ' \n' anywhere
+        // - '#' not preceded by a non-space char
+        // - end with ' ' or ':'
+        return implicitKey || inFlow || !value.includes('\n')
+            ? quotedString(value, ctx)
+            : blockString(item, ctx, onComment, onChompKeep);
+    }
+    if (!implicitKey &&
+        !inFlow &&
+        type !== _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar.PLAIN &&
+        value.includes('\n')) {
+        // Where allowed & type not set explicitly, prefer block style for multiline strings
+        return blockString(item, ctx, onComment, onChompKeep);
+    }
+    if (containsDocumentMarker(value)) {
+        if (indent === '') {
+            ctx.forceBlockIndent = true;
+            return blockString(item, ctx, onComment, onChompKeep);
+        }
+        else if (implicitKey && indent === indentStep) {
+            return quotedString(value, ctx);
+        }
+    }
+    const str = value.replace(/\n+/g, `$&\n${indent}`);
+    // Verify that output will be parsed as a string, as e.g. plain numbers and
+    // booleans get parsed with those types in v1.2 (e.g. '42', 'true' & '0.9e-3'),
+    // and others in v1.1.
+    if (actualString) {
+        const test = (tag) => tag.default && tag.tag !== 'tag:yaml.org,2002:str' && tag.test?.test(str);
+        const { compat, tags } = ctx.doc.schema;
+        if (tags.some(test) || compat?.some(test))
+            return quotedString(value, ctx);
+    }
+    return implicitKey
+        ? str
+        : (0,_foldFlowLines_js__WEBPACK_IMPORTED_MODULE_1__.foldFlowLines)(str, indent, _foldFlowLines_js__WEBPACK_IMPORTED_MODULE_1__.FOLD_FLOW, getFoldOptions(ctx, false));
+}
+function stringifyString(item, ctx, onComment, onChompKeep) {
+    const { implicitKey, inFlow } = ctx;
+    const ss = typeof item.value === 'string'
+        ? item
+        : Object.assign({}, item, { value: String(item.value) });
+    let { type } = item;
+    if (type !== _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar.QUOTE_DOUBLE) {
+        // force double quotes on control characters & unpaired surrogates
+        if (/[\x00-\x08\x0b-\x1f\x7f-\x9f\u{D800}-\u{DFFF}]/u.test(ss.value))
+            type = _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar.QUOTE_DOUBLE;
+    }
+    const _stringify = (_type) => {
+        switch (_type) {
+            case _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar.BLOCK_FOLDED:
+            case _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar.BLOCK_LITERAL:
+                return implicitKey || inFlow
+                    ? quotedString(ss.value, ctx) // blocks are not valid inside flow containers
+                    : blockString(ss, ctx, onComment, onChompKeep);
+            case _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar.QUOTE_DOUBLE:
+                return doubleQuotedString(ss.value, ctx);
+            case _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar.QUOTE_SINGLE:
+                return singleQuotedString(ss.value, ctx);
+            case _nodes_Scalar_js__WEBPACK_IMPORTED_MODULE_0__.Scalar.PLAIN:
+                return plainString(ss, ctx, onComment, onChompKeep);
+            default:
+                return null;
+        }
+    };
+    let res = _stringify(type);
+    if (res === null) {
+        const { defaultKeyType, defaultStringType } = ctx.options;
+        const t = (implicitKey && defaultKeyType) || defaultStringType;
+        res = _stringify(t);
+        if (res === null)
+            throw new Error(`Unsupported default string type ${t}`);
+    }
+    return res;
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/visit.js"
+/*!*******************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/visit.js ***!
+  \*******************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   visit: () => (/* binding */ visit),
+/* harmony export */   visitAsync: () => (/* binding */ visitAsync)
+/* harmony export */ });
+/* harmony import */ var _nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./nodes/identity.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/nodes/identity.js");
+
+
+const BREAK = Symbol('break visit');
+const SKIP = Symbol('skip children');
+const REMOVE = Symbol('remove node');
+/**
+ * Apply a visitor to an AST node or document.
+ *
+ * Walks through the tree (depth-first) starting from `node`, calling a
+ * `visitor` function with three arguments:
+ *   - `key`: For sequence values and map `Pair`, the node's index in the
+ *     collection. Within a `Pair`, `'key'` or `'value'`, correspondingly.
+ *     `null` for the root node.
+ *   - `node`: The current node.
+ *   - `path`: The ancestry of the current node.
+ *
+ * The return value of the visitor may be used to control the traversal:
+ *   - `undefined` (default): Do nothing and continue
+ *   - `visit.SKIP`: Do not visit the children of this node, continue with next
+ *     sibling
+ *   - `visit.BREAK`: Terminate traversal completely
+ *   - `visit.REMOVE`: Remove the current node, then continue with the next one
+ *   - `Node`: Replace the current node, then continue by visiting it
+ *   - `number`: While iterating the items of a sequence or map, set the index
+ *     of the next step. This is useful especially if the index of the current
+ *     node has changed.
+ *
+ * If `visitor` is a single function, it will be called with all values
+ * encountered in the tree, including e.g. `null` values. Alternatively,
+ * separate visitor functions may be defined for each `Map`, `Pair`, `Seq`,
+ * `Alias` and `Scalar` node. To define the same visitor function for more than
+ * one node type, use the `Collection` (map and seq), `Value` (map, seq & scalar)
+ * and `Node` (alias, map, seq & scalar) targets. Of all these, only the most
+ * specific defined one will be used for each node.
+ */
+function visit(node, visitor) {
+    const visitor_ = initVisitor(visitor);
+    if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isDocument)(node)) {
+        const cd = visit_(null, node.contents, visitor_, Object.freeze([node]));
+        if (cd === REMOVE)
+            node.contents = null;
+    }
+    else
+        visit_(null, node, visitor_, Object.freeze([]));
+}
+// Without the `as symbol` casts, TS declares these in the `visit`
+// namespace using `var`, but then complains about that because
+// `unique symbol` must be `const`.
+/** Terminate visit traversal completely */
+visit.BREAK = BREAK;
+/** Do not visit the children of the current node */
+visit.SKIP = SKIP;
+/** Remove the current node */
+visit.REMOVE = REMOVE;
+function visit_(key, node, visitor, path) {
+    const ctrl = callVisitor(key, node, visitor, path);
+    if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isNode)(ctrl) || (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isPair)(ctrl)) {
+        replaceNode(key, path, ctrl);
+        return visit_(key, ctrl, visitor, path);
+    }
+    if (typeof ctrl !== 'symbol') {
+        if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isCollection)(node)) {
+            path = Object.freeze(path.concat(node));
+            for (let i = 0; i < node.items.length; ++i) {
+                const ci = visit_(i, node.items[i], visitor, path);
+                if (typeof ci === 'number')
+                    i = ci - 1;
+                else if (ci === BREAK)
+                    return BREAK;
+                else if (ci === REMOVE) {
+                    node.items.splice(i, 1);
+                    i -= 1;
+                }
+            }
+        }
+        else if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isPair)(node)) {
+            path = Object.freeze(path.concat(node));
+            const ck = visit_('key', node.key, visitor, path);
+            if (ck === BREAK)
+                return BREAK;
+            else if (ck === REMOVE)
+                node.key = null;
+            const cv = visit_('value', node.value, visitor, path);
+            if (cv === BREAK)
+                return BREAK;
+            else if (cv === REMOVE)
+                node.value = null;
+        }
+    }
+    return ctrl;
+}
+/**
+ * Apply an async visitor to an AST node or document.
+ *
+ * Walks through the tree (depth-first) starting from `node`, calling a
+ * `visitor` function with three arguments:
+ *   - `key`: For sequence values and map `Pair`, the node's index in the
+ *     collection. Within a `Pair`, `'key'` or `'value'`, correspondingly.
+ *     `null` for the root node.
+ *   - `node`: The current node.
+ *   - `path`: The ancestry of the current node.
+ *
+ * The return value of the visitor may be used to control the traversal:
+ *   - `Promise`: Must resolve to one of the following values
+ *   - `undefined` (default): Do nothing and continue
+ *   - `visit.SKIP`: Do not visit the children of this node, continue with next
+ *     sibling
+ *   - `visit.BREAK`: Terminate traversal completely
+ *   - `visit.REMOVE`: Remove the current node, then continue with the next one
+ *   - `Node`: Replace the current node, then continue by visiting it
+ *   - `number`: While iterating the items of a sequence or map, set the index
+ *     of the next step. This is useful especially if the index of the current
+ *     node has changed.
+ *
+ * If `visitor` is a single function, it will be called with all values
+ * encountered in the tree, including e.g. `null` values. Alternatively,
+ * separate visitor functions may be defined for each `Map`, `Pair`, `Seq`,
+ * `Alias` and `Scalar` node. To define the same visitor function for more than
+ * one node type, use the `Collection` (map and seq), `Value` (map, seq & scalar)
+ * and `Node` (alias, map, seq & scalar) targets. Of all these, only the most
+ * specific defined one will be used for each node.
+ */
+async function visitAsync(node, visitor) {
+    const visitor_ = initVisitor(visitor);
+    if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isDocument)(node)) {
+        const cd = await visitAsync_(null, node.contents, visitor_, Object.freeze([node]));
+        if (cd === REMOVE)
+            node.contents = null;
+    }
+    else
+        await visitAsync_(null, node, visitor_, Object.freeze([]));
+}
+// Without the `as symbol` casts, TS declares these in the `visit`
+// namespace using `var`, but then complains about that because
+// `unique symbol` must be `const`.
+/** Terminate visit traversal completely */
+visitAsync.BREAK = BREAK;
+/** Do not visit the children of the current node */
+visitAsync.SKIP = SKIP;
+/** Remove the current node */
+visitAsync.REMOVE = REMOVE;
+async function visitAsync_(key, node, visitor, path) {
+    const ctrl = await callVisitor(key, node, visitor, path);
+    if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isNode)(ctrl) || (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isPair)(ctrl)) {
+        replaceNode(key, path, ctrl);
+        return visitAsync_(key, ctrl, visitor, path);
+    }
+    if (typeof ctrl !== 'symbol') {
+        if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isCollection)(node)) {
+            path = Object.freeze(path.concat(node));
+            for (let i = 0; i < node.items.length; ++i) {
+                const ci = await visitAsync_(i, node.items[i], visitor, path);
+                if (typeof ci === 'number')
+                    i = ci - 1;
+                else if (ci === BREAK)
+                    return BREAK;
+                else if (ci === REMOVE) {
+                    node.items.splice(i, 1);
+                    i -= 1;
+                }
+            }
+        }
+        else if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isPair)(node)) {
+            path = Object.freeze(path.concat(node));
+            const ck = await visitAsync_('key', node.key, visitor, path);
+            if (ck === BREAK)
+                return BREAK;
+            else if (ck === REMOVE)
+                node.key = null;
+            const cv = await visitAsync_('value', node.value, visitor, path);
+            if (cv === BREAK)
+                return BREAK;
+            else if (cv === REMOVE)
+                node.value = null;
+        }
+    }
+    return ctrl;
+}
+function initVisitor(visitor) {
+    if (typeof visitor === 'object' &&
+        (visitor.Collection || visitor.Node || visitor.Value)) {
+        return Object.assign({
+            Alias: visitor.Node,
+            Map: visitor.Node,
+            Scalar: visitor.Node,
+            Seq: visitor.Node
+        }, visitor.Value && {
+            Map: visitor.Value,
+            Scalar: visitor.Value,
+            Seq: visitor.Value
+        }, visitor.Collection && {
+            Map: visitor.Collection,
+            Seq: visitor.Collection
+        }, visitor);
+    }
+    return visitor;
+}
+function callVisitor(key, node, visitor, path) {
+    if (typeof visitor === 'function')
+        return visitor(key, node, path);
+    if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isMap)(node))
+        return visitor.Map?.(key, node, path);
+    if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isSeq)(node))
+        return visitor.Seq?.(key, node, path);
+    if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isPair)(node))
+        return visitor.Pair?.(key, node, path);
+    if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isScalar)(node))
+        return visitor.Scalar?.(key, node, path);
+    if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isAlias)(node))
+        return visitor.Alias?.(key, node, path);
+    return undefined;
+}
+function replaceNode(key, path, node) {
+    const parent = path[path.length - 1];
+    if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isCollection)(parent)) {
+        parent.items[key] = node;
+    }
+    else if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isPair)(parent)) {
+        if (key === 'key')
+            parent.key = node;
+        else
+            parent.value = node;
+    }
+    else if ((0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isDocument)(parent)) {
+        parent.contents = node;
+    }
+    else {
+        const pt = (0,_nodes_identity_js__WEBPACK_IMPORTED_MODULE_0__.isAlias)(parent) ? 'alias' : 'scalar';
+        throw new Error(`Cannot replace node with ${pt} parent`);
+    }
+}
+
+
+
+
+/***/ },
+
+/***/ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/index.js"
+/*!**************************************************************************!*\
+  !*** ./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/index.js ***!
+  \**************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Alias: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.Alias),
+/* harmony export */   CST: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.CST),
+/* harmony export */   Composer: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.Composer),
+/* harmony export */   Document: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.Document),
+/* harmony export */   Lexer: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.Lexer),
+/* harmony export */   LineCounter: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.LineCounter),
+/* harmony export */   Pair: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.Pair),
+/* harmony export */   Parser: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.Parser),
+/* harmony export */   Scalar: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.Scalar),
+/* harmony export */   Schema: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.Schema),
+/* harmony export */   YAMLError: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.YAMLError),
+/* harmony export */   YAMLMap: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.YAMLMap),
+/* harmony export */   YAMLParseError: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.YAMLParseError),
+/* harmony export */   YAMLSeq: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.YAMLSeq),
+/* harmony export */   YAMLWarning: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.YAMLWarning),
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__),
+/* harmony export */   isAlias: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.isAlias),
+/* harmony export */   isCollection: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.isCollection),
+/* harmony export */   isDocument: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.isDocument),
+/* harmony export */   isMap: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.isMap),
+/* harmony export */   isNode: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.isNode),
+/* harmony export */   isPair: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.isPair),
+/* harmony export */   isScalar: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.isScalar),
+/* harmony export */   isSeq: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.isSeq),
+/* harmony export */   parse: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.parse),
+/* harmony export */   parseAllDocuments: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.parseAllDocuments),
+/* harmony export */   parseDocument: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.parseDocument),
+/* harmony export */   stringify: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.stringify),
+/* harmony export */   visit: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.visit),
+/* harmony export */   visitAsync: () => (/* reexport safe */ _dist_index_js__WEBPACK_IMPORTED_MODULE_0__.visitAsync)
+/* harmony export */ });
+/* harmony import */ var _dist_index_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./dist/index.js */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/dist/index.js");
+// `export * as default from ...` fails on Webpack v4
+// https://github.com/eemeli/yaml/issues/228
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (_dist_index_js__WEBPACK_IMPORTED_MODULE_0__);
 
 
 
@@ -61279,6 +71043,8 @@ const error = () => {
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   commitTask: () => (/* binding */ commitTask),
+/* harmony export */   discardBroadcasts: () => (/* binding */ discardBroadcasts),
+/* harmony export */   flushBroadcasts: () => (/* binding */ flushBroadcasts),
 /* harmony export */   releaseJournal: () => (/* binding */ releaseJournal),
 /* harmony export */   rollbackJournal: () => (/* binding */ rollbackJournal),
 /* harmony export */   validateTaskOutput: () => (/* binding */ validateTaskOutput)
@@ -61345,11 +71111,10 @@ function extract(text, write) {
 function validateTaskOutput(task, text) {
     if (!text.trim())
         throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_2__.TaskFailure('empty_result', '任务结果为空', 'extract');
-    if (task.output.mode === 'write')
-        for (const write of task.output.writes) {
-            if (!extract(text, write).trim())
-                throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_2__.TaskFailure('empty_result', `写入 ${write.id} 的提取内容为空`, 'extract');
-        }
+    for (const write of task.output.writes) {
+        if (!extract(text, write).trim())
+            throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_2__.TaskFailure('empty_result', `写入 ${write.id} 的提取内容为空`, 'extract');
+    }
 }
 function editsFor(text, content, write) {
     if (write.operation.kind === 'append')
@@ -61443,15 +71208,13 @@ async function worldTarget(write, identity, journal, result) {
     return { kind: 'worldbook', book: target.bookName, uid: entry.uid };
 }
 async function commitTask(task, text, identity, journal, taskResult, runResult, signal) {
-    if (task.output.mode === 'return')
-        return;
     const writes = task.output.writes;
     const prepared = writes.map(write => ({ write, content: extract(text, write) }));
     if (prepared.some(item => !item.content.trim()))
         throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_2__.TaskFailure('empty_result', '提取内容为空，未执行写入', 'extract');
     if (writes.some(write => write.target.kind === 'message'))
         await waitGlobalInitialized('Mvu');
-    const keys = writes.map(write => write.target.kind === 'message' ? messageKey(identity) : bookKey(write.target.bookName));
+    const keys = writes.flatMap(write => write.target.kind === 'event' ? [] : [write.target.kind === 'message' ? messageKey(identity) : bookKey(write.target.bookName)]);
     await (0,_utils_TargetLocks__WEBPACK_IMPORTED_MODULE_0__.withTargetLocks)(keys, async () => {
         (0,_generation_GenerationHost__WEBPACK_IMPORTED_MODULE_1__.assertMessage)(identity, signal);
         journal.commitOrder = ++commitSequence;
@@ -61468,6 +71231,16 @@ async function commitTask(task, text, identity, journal, taskResult, runResult, 
             (0,_generation_GenerationHost__WEBPACK_IMPORTED_MODULE_1__.assertMessage)(identity, signal);
             const writeResult = { writeId: write.id, target: '', status: 'failed' };
             taskResult.writes.push(writeResult);
+            if (write.target.kind === 'event') {
+                const eventName = (0,_TaskSchema__WEBPACK_IMPORTED_MODULE_2__.eventOutputChannel)(task.eventName);
+                writeResult.target = `event:${eventName}`;
+                writeResult.status = 'pending';
+                (journal.broadcasts ??= []).push({ eventName, result: writeResult, payload: {
+                        version: 1, scriptId: getScriptId(), runId: runResult.runId, requestId: runResult.requestId,
+                        taskId: task.id, writeId: write.id, chatId: identity.chatId, messageId: identity.messageId, swipeId: identity.swipeId, text: content,
+                    } });
+                continue;
+            }
             const target = write.target.kind === 'message' ? { kind: 'message' } : await worldTarget(write, identity, journal, writeResult);
             const key = targetKey(identity, target);
             writeResult.target = key;
@@ -61526,6 +71299,7 @@ async function commitTask(task, text, identity, journal, taskResult, runResult, 
     }
 }
 async function rollbackJournal(journal, warnings) {
+    discardBroadcasts(journal, '所属任务或运行未提交成功，未广播');
     const errors = [];
     const edits = [...journal.edits].reverse();
     const failedEdits = new Set();
@@ -61619,6 +71393,42 @@ async function rollbackJournal(journal, warnings) {
     journal.edits = journal.edits.filter(edit => failedEdits.has(edit));
     return errors;
 }
+function discardBroadcasts(journal, reason) {
+    for (const broadcast of journal.broadcasts ?? [])
+        if (broadcast.result.status === 'pending') {
+            broadcast.result.status = 'not_delivered';
+            broadcast.result.error = reason;
+        }
+}
+/** Delivery is irreversible and deliberately outside generation retry and rollback. */
+async function flushBroadcasts(journal, taskResult, runResult, identity, signal) {
+    for (const broadcast of journal.broadcasts ?? []) {
+        if (broadcast.result.status !== 'pending')
+            continue;
+        try {
+            (0,_generation_GenerationHost__WEBPACK_IMPORTED_MODULE_1__.assertMessage)(identity, signal);
+        }
+        catch {
+            discardBroadcasts(journal, '广播交付前运行已取消或消息身份已变化');
+            taskResult.status = 'failed';
+            taskResult.error = { code: 'broadcast_delivery_stopped', message: '写入与状态已提交，广播交付因取消或消息身份变化停止；已送达广播无法撤回', phase: 'commit' };
+            runResult.warnings.push({ code: 'broadcast_delivery_stopped', message: taskResult.error.message });
+            break;
+        }
+        try {
+            await eventEmit(broadcast.eventName, structuredClone(broadcast.payload));
+            broadcast.result.status = 'delivered';
+        }
+        catch (error) {
+            const message = `广播监听器执行失败，可能已部分送达，已送达内容无法撤回；未重试生成：${error instanceof Error ? error.message : String(error)}`;
+            broadcast.result.status = 'delivery_failed';
+            broadcast.result.error = message;
+            taskResult.status = 'failed';
+            taskResult.error = { code: 'broadcast_delivery_failed', message, phase: 'commit' };
+            runResult.warnings.push({ code: 'broadcast_delivery_failed', message, target: broadcast.result.target });
+        }
+    }
+}
 function releaseJournal(journal) {
     for (const edit of journal.edits) {
         if (edit.kind === 'mvu')
@@ -61684,16 +71494,19 @@ function validateTaskReadiness(settings, task) {
     const connection = settings.connections.find(item => item.id === task.connectionId);
     if (!connection)
         throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_0__.TaskFailure('missing_config', '任务尚未选择 API 配置，或所选 API 已删除', 'prepare');
+    const link = connection.links.find(item => item.id === connection.activeLinkId);
+    if (!link)
+        throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_0__.TaskFailure('missing_config', 'API 尚未选择当前链接，或当前链接已删除', 'prepare');
     let url;
     try {
-        url = new URL(connection.baseUrl);
+        url = new URL(link.baseUrl);
     }
     catch {
         return fail('API 根地址未填写或格式无效');
     }
     if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password)
         fail('API 根地址仅支持无内嵌凭据的 HTTP/HTTPS 地址');
-    if (!connection.model.trim())
+    if (!link.model.trim())
         fail('API 尚未填写模型');
     const record = settings.presets.find(item => item.id === connection.presetId);
     if (!record)
@@ -61716,18 +71529,94 @@ function validateTaskReadiness(settings, task) {
             fail('任务候选世界书尚未选择');
         book.nameRegexes.forEach(regex);
     }
-    if (task.output.mode === 'write') {
+    {
         if (!task.output.writes.length)
-            fail('写入模式尚未配置写入目标');
+            fail('尚未配置结果写入目标，请补选正文、世界书或事件广播');
         for (const write of task.output.writes) {
             if (write.target.kind === 'worldbook' && (!write.target.bookName.trim() || !write.target.entryName.trim()))
                 fail('世界书写入目标尚未填写书名或条目名');
+            if (write.target.kind === 'event') {
+                if (!task.eventName)
+                    fail('事件广播需要填写任务原有的事件名，结果将发送到该事件名加 :output');
+                const name = (0,_TaskSchema__WEBPACK_IMPORTED_MODULE_0__.eventOutputChannel)(task.eventName);
+                if (!(0,_TaskSchema__WEBPACK_IMPORTED_MODULE_0__.eventNameIsValid)(name))
+                    fail('广播频道与内部或宿主频道冲突');
+                if (settings.tasks.some(item => item.eventName === name))
+                    fail('派生广播频道不能与本配置任务的触发事件名相同，以免递归触发');
+            }
             write.extract.forEach(regex);
-            if (write.operation.kind === 'replace')
+            if ('operation' in write && write.operation.kind === 'replace')
                 regex(write.operation.regex);
         }
     }
-    return { connection, preset };
+    return { connection, link, preset };
+}
+
+
+/***/ },
+
+/***/ "./src/MVU助手/AsyncAnalyze/TaskDiagnostics.ts"
+/*!***************************************************!*\
+  !*** ./src/MVU助手/AsyncAnalyze/TaskDiagnostics.ts ***!
+  \***************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   diagnosticEndpoint: () => (/* binding */ diagnosticEndpoint),
+/* harmony export */   diagnosticText: () => (/* binding */ diagnosticText),
+/* harmony export */   showTaskNotice: () => (/* binding */ showTaskNotice),
+/* harmony export */   taskLog: () => (/* binding */ taskLog),
+/* harmony export */   taskNotices: () => (/* binding */ taskNotices),
+/* harmony export */   taskRunLogs: () => (/* binding */ taskRunLogs)
+/* harmony export */ });
+/* harmony import */ var _utils_MvuHelperLogger__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/MvuHelperLogger */ "./src/MVU助手/utils/MvuHelperLogger.ts");
+/* harmony import */ var vue__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! vue */ "./node_modules/.pnpm/vue@3.5.26_typescript@6.0.0-dev.20250807/node_modules/vue/dist/vue.runtime.esm-bundler.js");
+
+
+// Session-only diagnostics, shared by the running notification and result history.
+const taskRunLogs = (0,vue__WEBPACK_IMPORTED_MODULE_1__.shallowReactive)(new Map());
+const taskNotices = (0,vue__WEBPACK_IMPORTED_MODULE_1__.shallowReactive)(new Map());
+function showTaskNotice(notice) {
+    taskNotices.set(notice.runId, notice);
+}
+/** Sanitize before retaining diagnostics or passing them to a console formatter. */
+function diagnosticText(value, secret = '') {
+    let text = typeof value === 'string' ? value : (JSON.stringify(value, null, 2) ?? String(value));
+    if (secret)
+        for (const encoded of new Set([secret, encodeURIComponent(secret), JSON.stringify(secret).slice(1, -1)])) {
+            text = text.split(encoded).join('[已隐藏]');
+        }
+    return text
+        .replace(/(Bearer\s+)[^\s"'\\,;<>]+/gi, '$1[已隐藏]')
+        .replace(/((?:["']?(?:authorization|api[-_]?key|access[-_]?token|secret|password)["']?)\s*[:=]\s*["']?)[^"'\s,}&\\]+/gi, '$1[已隐藏]')
+        .replace(/(https?:\/\/)[^\s/"<>]+@/gi, '$1[已隐藏]@');
+}
+function diagnosticEndpoint(address) {
+    try {
+        const url = new URL(address);
+        return `${url.origin}${url.pathname}`;
+    }
+    catch {
+        return '(地址无效)';
+    }
+}
+/** Logs must never affect request, settlement or result delivery. */
+function taskLog(level, message, data, secret = '') {
+    try {
+        const text = diagnosticText(data, secret);
+        const runId = data?.runId;
+        if (runId)
+            taskRunLogs.set(runId, [
+                ...(taskRunLogs.get(runId) ?? []),
+                { time: new Date().toISOString(), level, message, text },
+            ]);
+        _utils_MvuHelperLogger__WEBPACK_IMPORTED_MODULE_0__.eraLogger[level](`[独立任务] ${message}`, text);
+    }
+    catch {
+        /* Console implementations supplied by the host may fail. */
+    }
 }
 
 
@@ -61752,13 +71641,17 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   taskRunResults: () => (/* binding */ taskRunResults)
 /* harmony export */ });
 /* harmony import */ var vue__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vue */ "./node_modules/.pnpm/vue@3.5.26_typescript@6.0.0-dev.20250807/node_modules/vue/dist/vue.runtime.esm-bundler.js");
-/* harmony import */ var _stores_TaskStore__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../stores/TaskStore */ "./src/MVU助手/stores/TaskStore.ts");
-/* harmony import */ var _generation_GenerationHost__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./generation/GenerationHost */ "./src/MVU助手/AsyncAnalyze/generation/GenerationHost.ts");
-/* harmony import */ var _generation_TaskGeneration__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./generation/TaskGeneration */ "./src/MVU助手/AsyncAnalyze/generation/TaskGeneration.ts");
-/* harmony import */ var _TaskCommit__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./TaskCommit */ "./src/MVU助手/AsyncAnalyze/TaskCommit.ts");
-/* harmony import */ var _TaskSchema__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./TaskSchema */ "./src/MVU助手/AsyncAnalyze/TaskSchema.ts");
-/* harmony import */ var _TaskConfiguration__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./TaskConfiguration */ "./src/MVU助手/AsyncAnalyze/TaskConfiguration.ts");
-/* harmony import */ var _TaskState__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./TaskState */ "./src/MVU助手/AsyncAnalyze/TaskState.ts");
+/* harmony import */ var zod__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! zod */ "./node_modules/.pnpm/zod@4.3.5/node_modules/zod/v4/classic/external.js");
+/* harmony import */ var _TaskDiagnostics__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./TaskDiagnostics */ "./src/MVU助手/AsyncAnalyze/TaskDiagnostics.ts");
+/* harmony import */ var _stores_TaskStore__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../stores/TaskStore */ "./src/MVU助手/stores/TaskStore.ts");
+/* harmony import */ var _generation_GenerationHost__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./generation/GenerationHost */ "./src/MVU助手/AsyncAnalyze/generation/GenerationHost.ts");
+/* harmony import */ var _generation_TaskGeneration__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./generation/TaskGeneration */ "./src/MVU助手/AsyncAnalyze/generation/TaskGeneration.ts");
+/* harmony import */ var _TaskCommit__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./TaskCommit */ "./src/MVU助手/AsyncAnalyze/TaskCommit.ts");
+/* harmony import */ var _TaskSchema__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./TaskSchema */ "./src/MVU助手/AsyncAnalyze/TaskSchema.ts");
+/* harmony import */ var _TaskConfiguration__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./TaskConfiguration */ "./src/MVU助手/AsyncAnalyze/TaskConfiguration.ts");
+/* harmony import */ var _TaskState__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./TaskState */ "./src/MVU助手/AsyncAnalyze/TaskState.ts");
+
+
 
 
 
@@ -61793,19 +71686,62 @@ let cleanup = [];
 let customCleanup = [];
 const uid = () => crypto.randomUUID();
 function errorOf(error, phase = 'prepare') {
-    return error instanceof _TaskSchema__WEBPACK_IMPORTED_MODULE_5__.TaskFailure ? { code: error.code, message: error.message, phase: error.phase } : { code: 'task_error', message: error instanceof Error ? error.message : String(error), phase };
+    return error instanceof _TaskSchema__WEBPACK_IMPORTED_MODULE_7__.TaskFailure ? { code: error.code, message: error.message, phase: error.phase, ...(error.details ? { details: structuredClone(error.details) } : {}) } : { code: 'task_error', message: error instanceof Error ? error.message : String(error), phase };
 }
 function resultFor(requestId, runId, trigger, messageId) {
     return { version: 1, requestId, runId, trigger, messageId, chatId: '', status: 'failed', tasks: [], warnings: [], rollback: { status: 'not_needed', errors: [] } };
 }
+function notifyRun(runId, level, title, message, running = false) {
+    try {
+        (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_2__.showTaskNotice)({ runId, level, title: `MVU助手 · ${title}`, message, running });
+    }
+    catch (error) {
+        // Notification failure must not change task settlement or prevent result delivery.
+        console.warn('[MVU助手] 无法显示任务通知', error);
+    }
+}
+function notifyResult(result) {
+    const automatic = result.trigger.kind === 'sent' || result.trigger.kind === 'received';
+    if (automatic && (result.status === 'skipped' || result.status === 'busy'))
+        return;
+    const context = `楼层 ${result.messageId}${result.trigger.kind === 'event' ? ` · 事件 ${result.trigger.eventName}` : ''}`;
+    const counts = new Map();
+    const labels = {
+        succeeded: '成功', failed: '失败', cancelled: '取消', skipped: '跳过', rolled_back: '已回滚', rollback_failed: '回滚失败',
+    };
+    for (const task of result.tasks) {
+        const label = labels[task.status];
+        counts.set(label, (counts.get(label) ?? 0) + 1);
+    }
+    const summary = [...counts].map(([label, count]) => `${label} ${count} 项`).join('，');
+    const failures = result.tasks.filter(task => task.error).map(task => `${task.taskName || '未命名任务'}：${task.error.message}`);
+    const skipped = result.status === 'skipped' ? result.tasks.map(task => `${task.taskName || '未命名任务'}：${task.reason?.message || '未执行'}`) : [];
+    const residue = ['partial', 'failed'].includes(result.rollback.status) || result.tasks.some(task => task.status === 'rollback_failed' || task.writes.some(write => write.status === 'rollback_failed'));
+    const detail = [context, summary,
+        result.status === 'busy' ? '已有任务正在运行，本次未重复启动' : result.reason === 'no_matching_tasks' ? '没有符合条件的任务' : result.reason,
+        ...failures, ...skipped,
+        residue ? '存在未恢复的修改，请打开运行结果检查' : result.rollback.status === 'completed' ? '本链提交已回滚' : '',
+        ...result.warnings.map(warning => warning.message),
+    ].filter(Boolean).join('；');
+    const titles = { succeeded: '任务完成', partial: '任务部分成功', failed: '任务失败', cancelled: '任务已取消', busy: '任务正在运行', skipped: '本次未执行' };
+    const level = result.status === 'failed' || residue ? 'error'
+        : result.status === 'succeeded' && !result.warnings.length ? 'success'
+            : result.status === 'busy' || result.status === 'cancelled' ? 'info' : 'warning';
+    notifyRun(result.runId, level, titles[result.status], detail);
+}
 async function publish(result) {
     const published = structuredClone(result);
+    (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_2__.taskLog)(published.status === 'failed' ? 'error' : published.status === 'partial' ? 'warn' : 'info', '运行结算', {
+        ...published, tasks: published.tasks.map(({ text, ...task }) => ({ ...task, outputChars: text?.length ?? 0 })),
+    });
     taskRunResults.value = [...taskRunResults.value.filter(item => item.runId !== published.runId), published];
+    notifyResult(published);
     try {
         await eventEmit(published.trigger.kind === 'event' ? `${published.trigger.eventName}:result` : 'kat_task_chain:result', structuredClone(published));
     }
     catch {
         published.warnings.push({ code: 'result_listener_failed', message: '结果已保留，但结果频道的监听器执行失败' });
+        (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_2__.taskLog)('warn', '结果监听器执行失败', { runId: published.runId, requestId: published.requestId, trigger: published.trigger });
     }
     return structuredClone(published);
 }
@@ -61813,17 +71749,22 @@ function cancelTaskRun(runId) {
     const run = activeTaskRuns.get(runId);
     if (!run)
         return false;
+    (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_2__.taskLog)('info', '请求取消运行', { runId, requestId: run.result.requestId, trigger: run.result.trigger });
     run.cancelled = true;
     run.controller.abort('cancelled');
     return true;
 }
 async function undoRun(run) {
+    (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_2__.taskLog)('warn', '开始回滚常规链', { runId: run.id, tasks: run.completed.map(item => item.result.taskId) });
     const errors = [...run.result.rollback.errors];
     for (const completed of [...run.completed].sort((a, b) => (b.journal.commitOrder ?? 0) - (a.journal.commitOrder ?? 0))) {
-        const failures = await (0,_TaskCommit__WEBPACK_IMPORTED_MODULE_4__.rollbackJournal)(completed.journal, run.result.warnings);
+        if (completed.journal.broadcasts?.some(item => ['delivered', 'delivery_failed'].includes(item.result.status))) {
+            run.result.warnings.push({ code: 'broadcast_cannot_rollback', message: '已送达或可能部分送达的广播无法撤回，重新计算可能再次交付；接收方应使用载荷标识去重', target: completed.result.taskId });
+        }
+        const failures = await (0,_TaskCommit__WEBPACK_IMPORTED_MODULE_6__.rollbackJournal)(completed.journal, run.result.warnings);
         let stateFailure = false;
         try {
-            await (0,_TaskState__WEBPACK_IMPORTED_MODULE_7__.rollbackTaskState)(completed.state, run.identity);
+            await (0,_TaskState__WEBPACK_IMPORTED_MODULE_9__.rollbackTaskState)(completed.state, run.identity);
         }
         catch (error) {
             stateFailure = true;
@@ -61835,33 +71776,41 @@ async function undoRun(run) {
         errors.push(...failures);
     }
     run.result.rollback = { status: errors.length ? (run.completed.some(item => item.result.status === 'rolled_back') ? 'partial' : 'failed') : 'completed', errors };
+    (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_2__.taskLog)(errors.length ? 'error' : 'info', '回滚结算', { runId: run.id, ...run.result.rollback });
 }
 async function executeTask(run, task, snapshot, result) {
+    const started = Date.now();
+    const logIdentity = { runId: run.id, requestId: run.result.requestId, taskId: task.id, taskName: task.name, messageId: run.identity.messageId };
+    (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_2__.taskLog)('info', '开始执行任务', { ...logIdentity, order: task.order, targets: task.output.writes.map(write => write.target.kind), trigger: run.result.trigger });
     const journal = { runId: run.id, edits: [] };
     let phase = 'prepare';
+    let savedState;
     try {
-        const store = (0,_stores_TaskStore__WEBPACK_IMPORTED_MODULE_1__.useTaskStore)();
-        const { connection } = (0,_TaskConfiguration__WEBPACK_IMPORTED_MODULE_6__.validateTaskReadiness)(snapshot, task);
-        const history = (0,_TaskState__WEBPACK_IMPORTED_MODULE_7__.readTaskHistory)(task.id, run.identity);
-        const beforeState = (0,_TaskState__WEBPACK_IMPORTED_MODULE_7__.timedSnapshot)(history);
+        const store = (0,_stores_TaskStore__WEBPACK_IMPORTED_MODULE_3__.useTaskStore)();
+        const { link } = (0,_TaskConfiguration__WEBPACK_IMPORTED_MODULE_8__.validateTaskReadiness)(snapshot, task);
+        const history = (0,_TaskState__WEBPACK_IMPORTED_MODULE_9__.readTaskHistory)(task.id, run.identity);
+        const beforeState = (0,_TaskState__WEBPACK_IMPORTED_MODULE_9__.timedSnapshot)(history);
         let generated;
         let text = '';
         for (let attempt = 0; attempt <= task.retryCount; attempt++) {
             result.attempts = attempt + 1;
+            (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_2__.taskLog)('info', '生成尝试', { ...logIdentity, attempt: result.attempts, maxAttempts: task.retryCount + 1 });
             run.controller.signal.throwIfAborted();
             const controller = new AbortController();
             const abort = () => controller.abort(run.controller.signal.reason);
             run.controller.signal.addEventListener('abort', abort, { once: true });
             try {
                 phase = 'prepare';
-                generated = await (0,_generation_GenerationHost__WEBPACK_IMPORTED_MODULE_2__.createGenerationContext)(run.id, task, snapshot, run.identity, controller, store.getSecret(connection.secretRef), beforeState);
+                generated = await (0,_generation_GenerationHost__WEBPACK_IMPORTED_MODULE_4__.createGenerationContext)(run.id, task, snapshot, run.identity, controller, store.getSecret(link.secretRef), beforeState);
                 phase = 'request';
-                text = await (0,_generation_TaskGeneration__WEBPACK_IMPORTED_MODULE_3__.generateTask)(generated);
+                text = await (0,_generation_TaskGeneration__WEBPACK_IMPORTED_MODULE_5__.generateTask)(generated);
                 phase = 'extract';
-                (0,_TaskCommit__WEBPACK_IMPORTED_MODULE_4__.validateTaskOutput)(task, text);
+                (0,_TaskCommit__WEBPACK_IMPORTED_MODULE_6__.validateTaskOutput)(task, text);
                 break;
             }
             catch (error) {
+                (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_2__.taskLog)('warn', '生成尝试未完成', { ...logIdentity, attempt: result.attempts, error: errorOf(error, phase),
+                    retrying: !run.controller.signal.aborted && attempt < task.retryCount });
                 if (run.controller.signal.aborted || attempt === task.retryCount)
                     throw error;
             }
@@ -61871,20 +71820,27 @@ async function executeTask(run, task, snapshot, result) {
         }
         result.text = text;
         phase = 'commit';
-        await (0,_TaskCommit__WEBPACK_IMPORTED_MODULE_4__.commitTask)(task, text, run.identity, journal, result, run.result, run.controller.signal);
-        (0,_generation_GenerationHost__WEBPACK_IMPORTED_MODULE_2__.assertMessage)(run.identity, run.controller.signal);
-        const state = await (0,_TaskState__WEBPACK_IMPORTED_MODULE_7__.settleTaskState)(task.id, run.identity, beforeState, generated.timedState, run.id, run.sequence);
-        run.completed.push({ journal, state, result });
+        (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_2__.taskLog)('info', '开始提交任务结果', { ...logIdentity, targets: task.output.writes.map(write => write.target.kind) });
+        await (0,_TaskCommit__WEBPACK_IMPORTED_MODULE_6__.commitTask)(task, text, run.identity, journal, result, run.result, run.controller.signal);
+        (0,_generation_GenerationHost__WEBPACK_IMPORTED_MODULE_4__.assertMessage)(run.identity, run.controller.signal);
+        savedState = await (0,_TaskState__WEBPACK_IMPORTED_MODULE_9__.settleTaskState)(task.id, run.identity, beforeState, generated.timedState, run.id, run.sequence);
+        (0,_generation_GenerationHost__WEBPACK_IMPORTED_MODULE_4__.assertMessage)(run.identity, run.controller.signal);
+        run.completed.push({ journal, state: savedState, result });
         result.status = 'succeeded';
+        if (run.result.trigger.kind === 'event')
+            await (0,_TaskCommit__WEBPACK_IMPORTED_MODULE_6__.flushBroadcasts)(journal, result, run.result, run.identity, run.controller.signal);
+        (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_2__.taskLog)('info', '任务执行成功', { ...logIdentity, elapsedMs: Date.now() - started, writes: result.writes });
     }
     catch (error) {
+        (0,_TaskCommit__WEBPACK_IMPORTED_MODULE_6__.discardBroadcasts)(journal, '所属任务未提交成功，未广播');
         const cancelled = run.controller.signal.aborted;
         result.status = cancelled ? 'cancelled' : 'failed';
         result.error = cancelled ? { code: 'cancelled', message: '所属运行已取消或失败', phase } : errorOf(error, phase);
-        if (error instanceof _TaskSchema__WEBPACK_IMPORTED_MODULE_5__.TaskFailure && error.rollbackErrors.length) {
+        (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_2__.taskLog)(cancelled ? 'warn' : 'error', '任务执行未完成', { ...logIdentity, elapsedMs: Date.now() - started, error: result.error });
+        if (error instanceof _TaskSchema__WEBPACK_IMPORTED_MODULE_7__.TaskFailure && error.rollbackErrors.length) {
             result.status = 'rollback_failed';
             run.result.rollback = { status: 'failed', errors: [...run.result.rollback.errors, ...error.rollbackErrors] };
-            retainUnrecovered(run, task.id, undefined, error instanceof _TaskState__WEBPACK_IMPORTED_MODULE_7__.StateSaveFailure ? error.undo : undefined, error.rollbackErrors);
+            retainUnrecovered(run, task.id, undefined, error instanceof _TaskState__WEBPACK_IMPORTED_MODULE_9__.StateSaveFailure ? error.undo : undefined, error.rollbackErrors);
         }
         for (const write of result.writes)
             if (write.status === 'failed')
@@ -61893,8 +71849,19 @@ async function executeTask(run, task, snapshot, result) {
             run.failed = true;
             run.controller.abort('task_failed');
         }
+        if (savedState) {
+            try {
+                await (0,_TaskState__WEBPACK_IMPORTED_MODULE_9__.rollbackTaskState)(savedState, run.identity);
+            }
+            catch (stateError) {
+                const errors = [String(stateError)];
+                result.status = 'rollback_failed';
+                run.result.rollback = { status: 'failed', errors: [...run.result.rollback.errors, ...errors] };
+                retainUnrecovered(run, task.id, undefined, savedState, errors);
+            }
+        }
         if (journal.edits.length) {
-            const errors = await (0,_TaskCommit__WEBPACK_IMPORTED_MODULE_4__.rollbackJournal)(journal, run.result.warnings);
+            const errors = await (0,_TaskCommit__WEBPACK_IMPORTED_MODULE_6__.rollbackJournal)(journal, run.result.warnings);
             if (errors.length) {
                 result.status = 'rollback_failed';
                 run.result.rollback = { status: 'failed', errors: [...run.result.rollback.errors, ...errors] };
@@ -61904,6 +71871,7 @@ async function executeTask(run, task, snapshot, result) {
     }
 }
 async function runTaskChain(options, resetPrevious = false) {
+    options = { ...options, trigger: { ...options.trigger } };
     const requestId = typeof options.requestId === 'string' ? options.requestId : uid();
     const runId = uid();
     const result = resultFor(requestId, runId, options.trigger, options.messageId);
@@ -61911,14 +71879,46 @@ async function runTaskChain(options, resetPrevious = false) {
     try {
         if ((options.requestId !== undefined && typeof options.requestId !== 'string')
             || !Number.isInteger(options.messageId) || options.messageId < 0
-            || (options.trigger.kind === 'event' && (typeof options.trigger.eventName !== 'string' || !options.trigger.eventName || !(0,_TaskSchema__WEBPACK_IMPORTED_MODULE_5__.eventNameIsValid)(options.trigger.eventName)))) {
-            throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_5__.TaskFailure('invalid_request', '请求关联 ID、事件名或消息楼层无效', 'prepare');
+            || !['event', 'sent', 'received', 'manual', 'task'].includes(options.trigger.kind)
+            || (options.taskId !== undefined && (typeof options.taskId !== 'string' || !options.taskId))
+            || (options.trigger.taskId !== undefined && (typeof options.trigger.taskId !== 'string' || !options.trigger.taskId))
+            || (options.taskId !== undefined && options.trigger.taskId !== undefined && options.taskId !== options.trigger.taskId)
+            || (options.trigger.kind === 'event' && (typeof options.trigger.eventName !== 'string' || !options.trigger.eventName || !(0,_TaskSchema__WEBPACK_IMPORTED_MODULE_7__.eventNameIsValid)(options.trigger.eventName)))) {
+            throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_7__.TaskFailure('invalid_request', '请求关联 ID、事件名或消息楼层无效', 'prepare');
         }
-        const identity = (0,_generation_GenerationHost__WEBPACK_IMPORTED_MODULE_2__.bindMessage)(options.messageId);
+        const identity = (0,_generation_GenerationHost__WEBPACK_IMPORTED_MODULE_4__.bindMessage)(options.messageId);
         result.chatId = identity.chatId;
+        result.swipeId = identity.swipeId;
+        const store = (0,_stores_TaskStore__WEBPACK_IMPORTED_MODULE_3__.useTaskStore)();
+        if (store.configurationError)
+            throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_7__.TaskFailure('unsupported_config', store.configurationError, 'prepare');
+        const snapshot = store.snapshot();
+        const group = snapshot.groups.find(item => item.id === snapshot.activeGroupId);
+        const taskId = options.taskId ?? options.trigger.taskId;
+        if (options.trigger.kind === 'task' && !taskId)
+            throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_7__.TaskFailure('invalid_request', '单任务运行必须提供任务 ID', 'prepare');
+        if (taskId !== undefined) {
+            const task = snapshot.tasks.find(item => item.id === taskId);
+            if (!task)
+                throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_7__.TaskFailure('missing_task', `任务不存在：${taskId}`, 'prepare');
+            if (!group?.taskIds.includes(taskId))
+                throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_7__.TaskFailure('task_not_in_active_group', '指定任务未关联当前活动组', 'prepare');
+            if (['sent', 'received'].includes(options.trigger.kind))
+                throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_7__.TaskFailure('invalid_request', '自动常规入口不接受单任务选择', 'prepare');
+            if (options.trigger.kind === 'event' && task.eventName !== options.trigger.eventName)
+                throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_7__.TaskFailure('event_task_mismatch', '指定任务不属于请求的事件', 'prepare');
+            options.trigger = task.eventName ? { kind: 'event', eventName: task.eventName, taskId } : { kind: 'task', taskId };
+            result.trigger = options.trigger;
+            if (task.eventName && !(0,_TaskSchema__WEBPACK_IMPORTED_MODULE_7__.eventNameIsValid)(task.eventName))
+                throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_7__.TaskFailure('invalid_request', '任务事件名与内部频道冲突或含首尾空白', 'prepare');
+        }
+        const regular = options.trigger.kind !== 'event' && options.trigger.kind !== 'task';
+        if (resetPrevious && !regular)
+            throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_7__.TaskFailure('invalid_request', '只有常规链支持回滚后重新计算', 'prepare');
         const key = JSON.stringify(options.trigger.kind === 'event'
             ? [getScriptId(), identity.chatKey, 'event', options.trigger.eventName]
-            : [getScriptId(), identity.chatKey, 'regular']);
+            : options.trigger.kind === 'task' ? [getScriptId(), identity.chatKey, 'task', taskId]
+                : [getScriptId(), identity.chatKey, 'regular']);
         const occupying = busy.get(key);
         if (occupying) {
             result.status = 'busy';
@@ -61926,55 +71926,66 @@ async function runTaskChain(options, resetPrevious = false) {
             result.activeRunId = occupying;
             return await publish(result);
         }
-        const store = (0,_stores_TaskStore__WEBPACK_IMPORTED_MODULE_1__.useTaskStore)();
-        if (store.configurationError)
-            throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_5__.TaskFailure('unsupported_config', store.configurationError, 'prepare');
-        const snapshot = store.snapshot();
-        const group = snapshot.groups.find(item => item.id === snapshot.activeGroupId);
-        sequence = Math.max(sequence, (0,_TaskState__WEBPACK_IMPORTED_MODULE_7__.stateSequenceHighWater)(identity)) + 1;
+        sequence = Math.max(sequence, (0,_TaskState__WEBPACK_IMPORTED_MODULE_9__.stateSequenceHighWater)(identity)) + 1;
         run = { id: runId, key, identity, sequence, controller: new AbortController(), cancelled: false, failed: false, result, completed: [] };
         busy.set(key, runId);
         activeTaskRuns.set(runId, run);
+        (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_2__.taskLog)('info', '运行准入', { runId, requestId, trigger: options.trigger, chatId: identity.chatId, messageId: identity.messageId, swipeId: identity.swipeId, groupId: group?.id, groupName: group?.name });
         if (resetPrevious) {
             const previous = latestChains.get(identity.chatKey);
             if (previous && previous.identity.raw === identity.raw && previous.identity.swipeId === identity.swipeId) {
                 await undoRun(previous);
-                (0,_generation_GenerationHost__WEBPACK_IMPORTED_MODULE_2__.assertMessage)(identity, run.controller.signal);
+                result.warnings.push(...previous.result.warnings.filter(warning => warning.code === 'broadcast_cannot_rollback'));
+                (0,_generation_GenerationHost__WEBPACK_IMPORTED_MODULE_4__.assertMessage)(identity, run.controller.signal);
                 if (previous.result.rollback.errors.length) {
                     result.rollback = structuredClone(previous.result.rollback);
-                    throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_5__.TaskFailure('rollback_failed', '重新计算前回滚失败，未启动新的生成', 'rollback');
+                    throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_7__.TaskFailure('rollback_failed', '重新计算前回滚失败，未启动新的生成', 'rollback');
                 }
                 latestChains.delete(identity.chatKey);
             }
             else if ((group?.taskIds ?? []).some(id => {
                 const task = snapshot.tasks.find(item => item.id === id);
-                return task.enabled && task.order >= 0 && (0,_TaskState__WEBPACK_IMPORTED_MODULE_7__.readTaskHistory)(id, identity).lastSuccessfulFloor === identity.messageId;
+                return task.enabled && task.order >= 0 && (0,_TaskState__WEBPACK_IMPORTED_MODULE_9__.readTaskHistory)(id, identity).lastSuccessfulFloor === identity.messageId;
             })) {
-                throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_5__.TaskFailure('rollback_unavailable', '当前楼层已有成功历史，但本会话没有可用的回滚日志；未恢复原数据或重新生成。', 'rollback');
+                throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_7__.TaskFailure('rollback_unavailable', '当前楼层已有成功历史，但本会话没有可用的回滚日志；未恢复原数据或重新生成。', 'rollback');
             }
         }
         const tasks = (group?.taskIds ?? []).map(id => snapshot.tasks.find(task => task.id === id));
-        const selected = tasks.filter(task => options.trigger.kind === 'event' ? task.eventName === options.trigger.eventName
-            : options.trigger.kind === 'sent' ? task.order < 0 : task.order >= 0);
+        const selected = tasks.filter(task => taskId !== undefined ? task.id === taskId
+            : options.trigger.kind === 'event' ? task.eventName === options.trigger.eventName
+                : options.trigger.kind === 'sent' ? task.order < 0 : task.order >= 0);
         const ready = [];
         for (const task of selected) {
             const taskResult = { taskId: task.id, taskName: task.name, status: 'skipped', attempts: 0, writes: [] };
             result.tasks.push(taskResult);
-            const history = (0,_TaskState__WEBPACK_IMPORTED_MODULE_7__.readTaskHistory)(task.id, identity);
+            const history = (0,_TaskState__WEBPACK_IMPORTED_MODULE_9__.readTaskHistory)(task.id, identity);
             let reason;
-            if (!task.enabled)
-                reason = { code: 'disabled', message: '任务已禁用' };
+            if (!task.enabled && options.trigger.kind !== 'event')
+                reason = { code: 'disabled', message: '任务已关闭常规链参与' };
             else if ((options.trigger.kind === 'sent' || options.trigger.kind === 'received') && options.messageId === 0)
                 reason = { code: 'initial_floor', message: '自动常规入口不执行第 0 楼' };
             else if (options.trigger.kind === 'received' && identity.raw.mes.length < snapshot.automatic.minReceivedChars)
                 reason = { code: 'short_message', message: `正文少于配置阈值 ${snapshot.automatic.minReceivedChars}` };
-            else if (options.trigger.kind !== 'event' && history.lastSuccessfulFloor !== undefined && options.messageId - history.lastSuccessfulFloor < task.triggerInterval)
-                reason = { code: 'interval_not_reached', message: '未达到楼层间隔', currentFloor: options.messageId, lastSuccessfulFloor: history.lastSuccessfulFloor };
-            if (reason)
+            else if (taskId === undefined && task.triggerInterval > 1) {
+                const lastTrigger = history.triggerBaseline?.floor ?? history.lastSuccessfulFloor ?? 0;
+                if (options.messageId - lastTrigger < task.triggerInterval) {
+                    reason = { code: 'interval_not_reached', message: '未达到楼层间隔', currentFloor: options.messageId,
+                        lastSuccessfulFloor: history.lastSuccessfulFloor, lastTriggerFloor: lastTrigger };
+                    if (lastTrigger > options.messageId) {
+                        await (0,_TaskState__WEBPACK_IMPORTED_MODULE_9__.resetTaskTriggerBaseline)(task.id, identity, runId, run.sequence);
+                        reason = { ...reason, code: 'trigger_baseline_reset', message: '楼层早于触发基线，本次跳过并重置间隔基线' };
+                    }
+                }
+            }
+            if (reason) {
                 taskResult.reason = reason;
+                (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_2__.taskLog)('info', '任务跳过', { runId, taskId: task.id, taskName: task.name, reason });
+            }
             else
                 ready.push({ task, result: taskResult });
         }
+        if (ready.length)
+            notifyRun(runId, 'info', '任务处理中', `楼层 ${options.messageId}${options.trigger.kind === 'event' ? ` · 事件 ${options.trigger.eventName}` : ''}：${ready.map(item => item.task.name || '未命名任务').join('、')}`, true);
         const orders = [...new Set(ready.map(item => item.task.order))].sort((a, b) => a - b);
         for (const order of orders) {
             if (run.controller.signal.aborted)
@@ -61990,19 +72001,26 @@ async function runTaskChain(options, resetPrevious = false) {
             result.status = run.cancelled ? 'cancelled' : 'failed';
         }
         else {
+            if (options.trigger.kind !== 'event') {
+                // All text/MVU writes and task states are durable before any explicit result delivery.
+                for (const completed of run.completed)
+                    await (0,_TaskCommit__WEBPACK_IMPORTED_MODULE_6__.flushBroadcasts)(completed.journal, completed.result, result, identity, run.controller.signal);
+            }
             const succeeded = result.tasks.filter(task => task.status === 'succeeded').length;
             const failed = result.tasks.filter(task => ['failed', 'rollback_failed'].includes(task.status)).length;
-            result.status = failed ? (succeeded ? 'partial' : 'failed') : succeeded ? 'succeeded' : 'skipped';
+            result.status = run.cancelled ? 'cancelled' : failed ? (succeeded ? 'partial' : 'failed') : succeeded ? 'succeeded' : 'skipped';
+            if (run.cancelled && run.completed.some(item => item.journal.broadcasts?.some(broadcast => ['delivered', 'delivery_failed'].includes(broadcast.result.status))))
+                result.warnings.push({ code: 'broadcast_cannot_rollback', message: '取消发生在提交后的广播交付阶段，写入和状态已保留；已送达或可能部分送达的广播无法撤回' });
             if (!result.tasks.length)
                 result.reason = 'no_matching_tasks';
         }
-        if (options.trigger.kind !== 'event' && result.status === 'succeeded') {
+        if (regular && run.completed.length && !run.failed && result.rollback.status === 'not_needed') {
             const previous = latestChains.get(identity.chatKey);
-            previous?.completed.forEach(item => (0,_TaskCommit__WEBPACK_IMPORTED_MODULE_4__.releaseJournal)(item.journal));
+            previous?.completed.forEach(item => (0,_TaskCommit__WEBPACK_IMPORTED_MODULE_6__.releaseJournal)(item.journal));
             latestChains.set(identity.chatKey, run);
         }
-        else if (options.trigger.kind === 'event')
-            run.completed.forEach(item => (0,_TaskCommit__WEBPACK_IMPORTED_MODULE_4__.releaseJournal)(item.journal));
+        else if (!regular)
+            run.completed.forEach(item => (0,_TaskCommit__WEBPACK_IMPORTED_MODULE_6__.releaseJournal)(item.journal));
     }
     catch (error) {
         result.status = run?.cancelled ? 'cancelled' : 'failed';
@@ -62022,15 +72040,35 @@ async function runTaskChain(options, resetPrevious = false) {
 async function rerunCurrentTasks() {
     return runTaskChain({ messageId: getLastMessageId(), trigger: { kind: 'manual' } }, true);
 }
+const EventRequestSchema = zod__WEBPACK_IMPORTED_MODULE_1__.union([zod__WEBPACK_IMPORTED_MODULE_1__.string().transform(requestId => ({ requestId })), zod__WEBPACK_IMPORTED_MODULE_1__.object({
+        requestId: zod__WEBPACK_IMPORTED_MODULE_1__.string().optional(), messageId: zod__WEBPACK_IMPORTED_MODULE_1__.number().int().nonnegative().optional(), taskId: zod__WEBPACK_IMPORTED_MODULE_1__.string().min(1).optional(),
+    }).strict()]).optional();
+async function handleTaskEvent(eventName, payload) {
+    const parsed = EventRequestSchema.safeParse(payload);
+    const suppliedRequestId = payload && typeof payload === 'object' && typeof payload.requestId === 'string'
+        ? payload.requestId : typeof payload === 'string' ? payload : undefined;
+    try {
+        if (!parsed.success)
+            throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_7__.TaskFailure('invalid_request', '事件请求应为 requestId 字符串或 { requestId?, messageId?, taskId? } 对象', 'prepare');
+        const request = parsed.data ?? {};
+        return await runTaskChain({ messageId: request.messageId ?? getLastMessageId(), requestId: request.requestId,
+            taskId: request.taskId, trigger: { kind: 'event', eventName } });
+    }
+    catch (error) {
+        const result = resultFor(suppliedRequestId ?? uid(), uid(), { kind: 'event', eventName }, -1);
+        result.reason = errorOf(error).message;
+        return publish(result);
+    }
+}
 function initializeTaskRuntime() {
-    const store = (0,_stores_TaskStore__WEBPACK_IMPORTED_MODULE_1__.useTaskStore)();
+    const store = (0,_stores_TaskStore__WEBPACK_IMPORTED_MODULE_3__.useTaskStore)();
     const registerCustom = () => {
         customCleanup.forEach(stop => stop());
         customCleanup = [];
         const group = store.settings.groups.find(item => item.id === store.settings.activeGroupId);
-        const events = new Set((group?.taskIds ?? []).map(id => store.settings.tasks.find(task => task.id === id)?.eventName).filter((name) => !!name && (0,_TaskSchema__WEBPACK_IMPORTED_MODULE_5__.eventNameIsValid)(name)));
+        const events = new Set((group?.taskIds ?? []).map(id => store.settings.tasks.find(task => task.id === id)?.eventName).filter((name) => !!name && (0,_TaskSchema__WEBPACK_IMPORTED_MODULE_7__.eventNameIsValid)(name)));
         for (const eventName of events) {
-            const handler = (requestId) => runTaskChain({ messageId: getLastMessageId(), trigger: { kind: 'event', eventName }, requestId });
+            const handler = (request) => handleTaskEvent(eventName, request);
             const listener = eventOn(eventName, handler);
             customCleanup.push(() => listener.stop());
         }
@@ -62042,13 +72080,14 @@ function initializeTaskRuntime() {
     cleanup.push(eventOn('kat_task_chain:rerun', rerunCurrentTasks).stop);
     cleanup.push(eventOn('kat_task_run:cancel', cancelTaskRun).stop);
     cleanup.push(eventOn(tavern_events.CHAT_CHANGED, () => {
-        const key = (0,_generation_GenerationHost__WEBPACK_IMPORTED_MODULE_2__.currentChatKey)();
+        const key = (0,_generation_GenerationHost__WEBPACK_IMPORTED_MODULE_4__.currentChatKey)();
         for (const run of activeTaskRuns.values())
             if (run.identity.chatKey !== key)
                 cancelTaskRun(run.id);
     }).stop);
     const api = { version: 1, getConfig: store.snapshot, setConfig: store.replaceSettings, setSecret: store.setSecret, deleteSecret: store.deleteSecret,
-        run: (options) => runTaskChain({ messageId: options.messageId, requestId: options.requestId, trigger: options.eventName !== undefined ? { kind: 'event', eventName: options.eventName } : { kind: 'manual' } }),
+        run: options => runTaskChain({ messageId: options.messageId, requestId: options.requestId, taskId: options.taskId,
+            trigger: options.eventName !== undefined ? { kind: 'event', eventName: options.eventName } : options.taskId !== undefined ? { kind: 'task', taskId: options.taskId } : { kind: 'manual' } }),
         cancel: cancelTaskRun, getActiveRuns: () => [...activeTaskRuns.values()].map(run => ({ runId: run.id, requestId: run.result.requestId, trigger: structuredClone(run.result.trigger), chatId: run.identity.chatId, messageId: run.identity.messageId })),
         getUnrecoveredJournals };
     window.KatTaskAPI = api;
@@ -62075,18 +72114,24 @@ function disposeTaskRuntime() {
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   ApiLinkSchema: () => (/* binding */ ApiLinkSchema),
 /* harmony export */   ConfigSchema: () => (/* binding */ ConfigSchema),
+/* harmony export */   EventWriteSchema: () => (/* binding */ EventWriteSchema),
 /* harmony export */   INTERNAL_EVENTS: () => (/* binding */ INTERNAL_EVENTS),
 /* harmony export */   RegexPresetSchema: () => (/* binding */ RegexPresetSchema),
 /* harmony export */   RegexSpecSchema: () => (/* binding */ RegexSpecSchema),
 /* harmony export */   ScanSchema: () => (/* binding */ ScanSchema),
 /* harmony export */   TaskFailure: () => (/* binding */ TaskFailure),
 /* harmony export */   TaskSchema: () => (/* binding */ TaskSchema),
+/* harmony export */   TextWriteSchema: () => (/* binding */ TextWriteSchema),
 /* harmony export */   WriteSchema: () => (/* binding */ WriteSchema),
 /* harmony export */   applyTaskRegex: () => (/* binding */ applyTaskRegex),
 /* harmony export */   emptySettings: () => (/* binding */ emptySettings),
 /* harmony export */   eventNameIsValid: () => (/* binding */ eventNameIsValid),
+/* harmony export */   eventOutputChannel: () => (/* binding */ eventOutputChannel),
+/* harmony export */   formatRegexInput: () => (/* binding */ formatRegexInput),
 /* harmony export */   matchTaskRegex: () => (/* binding */ matchTaskRegex),
+/* harmony export */   parseRegexInput: () => (/* binding */ parseRegexInput),
 /* harmony export */   parseRegexPresets: () => (/* binding */ parseRegexPresets),
 /* harmony export */   parseTaskSettings: () => (/* binding */ parseTaskSettings)
 /* harmony export */ });
@@ -62094,6 +72139,14 @@ __webpack_require__.r(__webpack_exports__);
 
 const integer = zod__WEBPACK_IMPORTED_MODULE_0__.number().int().nonnegative();
 const RegexSpecSchema = zod__WEBPACK_IMPORTED_MODULE_0__.object({ pattern: zod__WEBPACK_IMPORTED_MODULE_0__.string(), flags: zod__WEBPACK_IMPORTED_MODULE_0__.string() });
+/** Accept a plain expression or a complete /expression/flags literal in one field. */
+function parseRegexInput(value) {
+    const literal = value.match(/^\/(.*)\/([a-z]*)$/s);
+    return { pattern: literal ? literal[1] : value, flags: literal ? literal[2] : '' };
+}
+function formatRegexInput(spec) {
+    return spec.flags ? `/${spec.pattern}/${spec.flags}` : spec.pattern;
+}
 const RegexPresetSchema = RegexSpecSchema.safeExtend({
     id: zod__WEBPACK_IMPORTED_MODULE_0__.string().min(1),
     name: zod__WEBPACK_IMPORTED_MODULE_0__.string(),
@@ -62115,9 +72168,7 @@ function parseRegexPresets(value) {
             throw new Error('正则配置格式无效');
         let { pattern, flags } = item;
         if (typeof item.regex === 'string') {
-            const literal = item.regex.match(/^\/(.*)\/([a-z]*)$/s);
-            pattern = literal ? literal[1] : item.regex;
-            flags = literal ? literal[2] : '';
+            ({ pattern, flags } = parseRegexInput(item.regex));
         }
         return RegexPresetSchema.parse({ ...item, id: item.id || crypto.randomUUID(), pattern, flags: flags ?? '' });
     });
@@ -62128,7 +72179,7 @@ const ScanSchema = zod__WEBPACK_IMPORTED_MODULE_0__.object({
     includeNames: zod__WEBPACK_IMPORTED_MODULE_0__.boolean().default(true), recursive: zod__WEBPACK_IMPORTED_MODULE_0__.boolean().default(false), caseSensitive: zod__WEBPACK_IMPORTED_MODULE_0__.boolean().default(false),
     matchWholeWords: zod__WEBPACK_IMPORTED_MODULE_0__.boolean().default(false), useGroupScoring: zod__WEBPACK_IMPORTED_MODULE_0__.boolean().default(false), maxRecursionSteps: integer.default(0),
 });
-const WriteSchema = zod__WEBPACK_IMPORTED_MODULE_0__.object({
+const TextWriteSchema = zod__WEBPACK_IMPORTED_MODULE_0__.object({
     id: zod__WEBPACK_IMPORTED_MODULE_0__.string().min(1),
     target: zod__WEBPACK_IMPORTED_MODULE_0__.discriminatedUnion('kind', [zod__WEBPACK_IMPORTED_MODULE_0__.object({ kind: zod__WEBPACK_IMPORTED_MODULE_0__.literal('message') }), zod__WEBPACK_IMPORTED_MODULE_0__.object({
             kind: zod__WEBPACK_IMPORTED_MODULE_0__.literal('worldbook'), bookName: zod__WEBPACK_IMPORTED_MODULE_0__.string(), entryUid: integer.optional(), entryName: zod__WEBPACK_IMPORTED_MODULE_0__.string(),
@@ -62136,32 +72187,42 @@ const WriteSchema = zod__WEBPACK_IMPORTED_MODULE_0__.object({
     extract: zod__WEBPACK_IMPORTED_MODULE_0__.array(RegexSpecSchema),
     operation: zod__WEBPACK_IMPORTED_MODULE_0__.discriminatedUnion('kind', [zod__WEBPACK_IMPORTED_MODULE_0__.object({ kind: zod__WEBPACK_IMPORTED_MODULE_0__.literal('append') }), zod__WEBPACK_IMPORTED_MODULE_0__.object({ kind: zod__WEBPACK_IMPORTED_MODULE_0__.literal('replace'), regex: RegexSpecSchema })]),
 });
+const EventWriteSchema = zod__WEBPACK_IMPORTED_MODULE_0__.object({
+    id: zod__WEBPACK_IMPORTED_MODULE_0__.string().min(1), target: zod__WEBPACK_IMPORTED_MODULE_0__.object({ kind: zod__WEBPACK_IMPORTED_MODULE_0__.literal('event') }), extract: zod__WEBPACK_IMPORTED_MODULE_0__.array(RegexSpecSchema),
+});
+const eventOutputChannel = (eventName) => `${eventName}:output`;
+const WriteSchema = zod__WEBPACK_IMPORTED_MODULE_0__.union([TextWriteSchema, EventWriteSchema]);
 const INTERNAL_EVENTS = new Set(['kat_task_chain:result', 'kat_task_chain:rerun', 'kat_task_run:cancel']);
-const eventNameIsValid = (name) => name === '' || (name === name.trim() && !name.endsWith(':result') && !INTERNAL_EVENTS.has(name));
+const eventNameIsValid = (name) => name === '' || (name === name.trim() && !name.endsWith(':result') && !INTERNAL_EVENTS.has(name)
+    && !(typeof tavern_events !== 'undefined' && Object.values(tavern_events).includes(name))
+    && !(typeof iframe_events !== 'undefined' && Object.values(iframe_events).includes(name))
+    && !['mag_variable_update_started', 'mag_variable_update_ended'].includes(name));
 const TaskSchema = zod__WEBPACK_IMPORTED_MODULE_0__.object({
     id: zod__WEBPACK_IMPORTED_MODULE_0__.string().min(1), name: zod__WEBPACK_IMPORTED_MODULE_0__.string(), comment: zod__WEBPACK_IMPORTED_MODULE_0__.string().default(''), enabled: zod__WEBPACK_IMPORTED_MODULE_0__.boolean(),
     eventName: zod__WEBPACK_IMPORTED_MODULE_0__.string(), order: zod__WEBPACK_IMPORTED_MODULE_0__.number().int().default(0),
     historyDepth: integer.default(2), triggerInterval: integer.min(1).default(1), retryCount: integer.default(0),
+    useTavernRegex: zod__WEBPACK_IMPORTED_MODULE_0__.boolean().default(false),
     prompt: zod__WEBPACK_IMPORTED_MODULE_0__.string(), connectionId: zod__WEBPACK_IMPORTED_MODULE_0__.string(),
     candidateBooks: zod__WEBPACK_IMPORTED_MODULE_0__.array(zod__WEBPACK_IMPORTED_MODULE_0__.object({ bookName: zod__WEBPACK_IMPORTED_MODULE_0__.string(), entryUids: zod__WEBPACK_IMPORTED_MODULE_0__.array(integer), nameRegexes: zod__WEBPACK_IMPORTED_MODULE_0__.array(RegexSpecSchema) })),
     scan: ScanSchema,
     regexRules: zod__WEBPACK_IMPORTED_MODULE_0__.array(RegexSpecSchema.safeExtend({
         id: zod__WEBPACK_IMPORTED_MODULE_0__.string().min(1), stage: zod__WEBPACK_IMPORTED_MODULE_0__["enum"](['history', 'worldinfo', 'prompt', 'response']), replacement: zod__WEBPACK_IMPORTED_MODULE_0__.string(), enabled: zod__WEBPACK_IMPORTED_MODULE_0__.boolean(),
     })),
-    output: zod__WEBPACK_IMPORTED_MODULE_0__.discriminatedUnion('mode', [zod__WEBPACK_IMPORTED_MODULE_0__.object({ mode: zod__WEBPACK_IMPORTED_MODULE_0__.literal('return') }), zod__WEBPACK_IMPORTED_MODULE_0__.object({ mode: zod__WEBPACK_IMPORTED_MODULE_0__.literal('write'), writes: zod__WEBPACK_IMPORTED_MODULE_0__.array(WriteSchema) })]),
+    output: zod__WEBPACK_IMPORTED_MODULE_0__.object({ writes: zod__WEBPACK_IMPORTED_MODULE_0__.array(WriteSchema) }),
 }).superRefine((task, ctx) => {
-    for (const [field, list] of [['regexRules', task.regexRules], ['writes', task.output.mode === 'write' ? task.output.writes : []]]) {
+    for (const [field, list] of [['regexRules', task.regexRules], ['writes', task.output.writes]]) {
         const ids = list.map(item => item.id);
         if (new Set(ids).size !== ids.length)
             ctx.addIssue({ code: 'custom', path: field === 'writes' ? ['output', field] : [field], message: 'ID 重复' });
     }
 });
+const ApiLinkSchema = zod__WEBPACK_IMPORTED_MODULE_0__.object({ id: zod__WEBPACK_IMPORTED_MODULE_0__.string().min(1), name: zod__WEBPACK_IMPORTED_MODULE_0__.string(), baseUrl: zod__WEBPACK_IMPORTED_MODULE_0__.string(), model: zod__WEBPACK_IMPORTED_MODULE_0__.string(), secretRef: zod__WEBPACK_IMPORTED_MODULE_0__.string().min(1) });
 const ConfigSchema = zod__WEBPACK_IMPORTED_MODULE_0__.object({
-    schemaVersion: zod__WEBPACK_IMPORTED_MODULE_0__.literal(2), activeGroupId: zod__WEBPACK_IMPORTED_MODULE_0__.string().nullable(), automatic: zod__WEBPACK_IMPORTED_MODULE_0__.object({ minReceivedChars: integer.default(300) }),
+    schemaVersion: zod__WEBPACK_IMPORTED_MODULE_0__.literal(4), activeGroupId: zod__WEBPACK_IMPORTED_MODULE_0__.string().nullable(), automatic: zod__WEBPACK_IMPORTED_MODULE_0__.object({ minReceivedChars: integer.default(300) }),
     groups: zod__WEBPACK_IMPORTED_MODULE_0__.array(zod__WEBPACK_IMPORTED_MODULE_0__.object({ id: zod__WEBPACK_IMPORTED_MODULE_0__.string().min(1), name: zod__WEBPACK_IMPORTED_MODULE_0__.string(), comment: zod__WEBPACK_IMPORTED_MODULE_0__.string(), taskIds: zod__WEBPACK_IMPORTED_MODULE_0__.array(zod__WEBPACK_IMPORTED_MODULE_0__.string()) })),
     tasks: zod__WEBPACK_IMPORTED_MODULE_0__.array(TaskSchema),
     regexPresets: zod__WEBPACK_IMPORTED_MODULE_0__.array(RegexPresetSchema).default([]),
-    connections: zod__WEBPACK_IMPORTED_MODULE_0__.array(zod__WEBPACK_IMPORTED_MODULE_0__.object({ id: zod__WEBPACK_IMPORTED_MODULE_0__.string().min(1), name: zod__WEBPACK_IMPORTED_MODULE_0__.string(), comment: zod__WEBPACK_IMPORTED_MODULE_0__.string(), baseUrl: zod__WEBPACK_IMPORTED_MODULE_0__.string(), model: zod__WEBPACK_IMPORTED_MODULE_0__.string(), secretRef: zod__WEBPACK_IMPORTED_MODULE_0__.string().min(1), presetId: zod__WEBPACK_IMPORTED_MODULE_0__.string().min(1).nullable() })),
+    connections: zod__WEBPACK_IMPORTED_MODULE_0__.array(zod__WEBPACK_IMPORTED_MODULE_0__.object({ id: zod__WEBPACK_IMPORTED_MODULE_0__.string().min(1), name: zod__WEBPACK_IMPORTED_MODULE_0__.string(), comment: zod__WEBPACK_IMPORTED_MODULE_0__.string(), presetId: zod__WEBPACK_IMPORTED_MODULE_0__.string().min(1).nullable(), activeLinkId: zod__WEBPACK_IMPORTED_MODULE_0__.string().nullable(), links: zod__WEBPACK_IMPORTED_MODULE_0__.array(ApiLinkSchema) })),
     presets: zod__WEBPACK_IMPORTED_MODULE_0__.array(zod__WEBPACK_IMPORTED_MODULE_0__.object({ id: zod__WEBPACK_IMPORTED_MODULE_0__.string().min(1), name: zod__WEBPACK_IMPORTED_MODULE_0__.string(), raw: zod__WEBPACK_IMPORTED_MODULE_0__.record(zod__WEBPACK_IMPORTED_MODULE_0__.string(), zod__WEBPACK_IMPORTED_MODULE_0__.unknown()).refine(raw => zod__WEBPACK_IMPORTED_MODULE_0__.json().safeParse(raw).success, '预设必须为 JSON 对象') })),
 }).superRefine((config, ctx) => {
     for (const field of ['groups', 'tasks', 'connections', 'presets', 'regexPresets']) {
@@ -62172,6 +72233,10 @@ const ConfigSchema = zod__WEBPACK_IMPORTED_MODULE_0__.object({
             ids.add(entity.id);
         });
     }
+    config.connections.forEach((connection, index) => {
+        if (new Set(connection.links.map(link => link.id)).size !== connection.links.length)
+            ctx.addIssue({ code: 'custom', path: ['connections', index, 'links'], message: '链接 ID 重复' });
+    });
     const taskIds = new Set(config.tasks.map(task => task.id));
     config.groups.forEach((group, index) => {
         if (new Set(group.taskIds).size !== group.taskIds.length)
@@ -62184,10 +72249,29 @@ const ConfigSchema = zod__WEBPACK_IMPORTED_MODULE_0__.object({
         ctx.addIssue({ code: 'custom', path: ['activeGroupId'], message: '活动组不存在' });
     }
 });
-const emptySettings = () => ({ schemaVersion: 2, activeGroupId: null, automatic: { minReceivedChars: 300 }, groups: [], tasks: [], connections: [], presets: [], regexPresets: [] });
-/** Upgrade only independent-task v1, preserving each existing API/preset pair. */
+const emptySettings = () => ({ schemaVersion: 4, activeGroupId: null, automatic: { minReceivedChars: 300 }, groups: [], tasks: [], connections: [], presets: [], regexPresets: [] });
+/** Upgrade persisted v1/v2/v3 at this sole boundary; v4 is the internal model. */
 function parseTaskSettings(value) {
-    if (!value || typeof value !== 'object' || value.schemaVersion !== 1)
+    const version = value && typeof value === 'object' ? value.schemaVersion : undefined;
+    const upgradeOutputs = (config) => ConfigSchema.parse({ ...config, schemaVersion: 4,
+        tasks: zod__WEBPACK_IMPORTED_MODULE_0__.array(zod__WEBPACK_IMPORTED_MODULE_0__.object({ output: zod__WEBPACK_IMPORTED_MODULE_0__.discriminatedUnion('mode', [
+                zod__WEBPACK_IMPORTED_MODULE_0__.object({ mode: zod__WEBPACK_IMPORTED_MODULE_0__.literal('return') }), zod__WEBPACK_IMPORTED_MODULE_0__.object({ mode: zod__WEBPACK_IMPORTED_MODULE_0__.literal('event_result') }),
+                zod__WEBPACK_IMPORTED_MODULE_0__.object({ mode: zod__WEBPACK_IMPORTED_MODULE_0__.literal('write'), writes: zod__WEBPACK_IMPORTED_MODULE_0__.array(WriteSchema) }),
+            ]) }).passthrough()).parse(config.tasks).map(task => ({ ...task,
+            output: { writes: task.output.mode === 'write' ? task.output.writes : [] },
+        })),
+    });
+    if (version === 3)
+        return upgradeOutputs(value);
+    const upgradeLinks = (config) => {
+        const connections = zod__WEBPACK_IMPORTED_MODULE_0__.array(zod__WEBPACK_IMPORTED_MODULE_0__.object({ id: zod__WEBPACK_IMPORTED_MODULE_0__.string(), name: zod__WEBPACK_IMPORTED_MODULE_0__.string(), baseUrl: zod__WEBPACK_IMPORTED_MODULE_0__.string(), model: zod__WEBPACK_IMPORTED_MODULE_0__.string(), secretRef: zod__WEBPACK_IMPORTED_MODULE_0__.string().min(1) }).passthrough()).parse(config.connections);
+        return upgradeOutputs({ ...config, connections: connections.map(({ baseUrl, model, secretRef, ...connection }) => ({
+                ...connection, activeLinkId: connection.id + ':link', links: [{ id: connection.id + ':link', name: connection.name || '链接 1', baseUrl, model, secretRef }],
+            })) });
+    };
+    if (version === 2)
+        return upgradeLinks(value);
+    if (version !== 1)
         return ConfigSchema.parse(value);
     const old = zod__WEBPACK_IMPORTED_MODULE_0__.object({
         schemaVersion: zod__WEBPACK_IMPORTED_MODULE_0__.literal(1), tasks: zod__WEBPACK_IMPORTED_MODULE_0__.array(zod__WEBPACK_IMPORTED_MODULE_0__.object({ connectionId: zod__WEBPACK_IMPORTED_MODULE_0__.string(), presetId: zod__WEBPACK_IMPORTED_MODULE_0__.string().min(1) }).passthrough()),
@@ -62224,16 +72308,18 @@ function parseTaskSettings(value) {
             return { ...connection, id, presetId, name: index === 0 ? connection.name : `${connection.name} · ${old.presets.find(preset => preset.id === presetId).name}` };
         });
     });
-    return ConfigSchema.parse({ ...old, schemaVersion: 2, connections, tasks: tasks.map(({ presetId: _presetId, ...task }) => task) });
+    return upgradeLinks({ ...old, connections, tasks: tasks.map(({ presetId: _presetId, ...task }) => task) });
 }
 class TaskFailure extends Error {
     code;
     phase;
+    details;
     rollbackErrors = [];
-    constructor(code, message, phase) {
+    constructor(code, message, phase, details) {
         super(message);
         this.code = code;
         this.phase = phase;
+        this.details = details;
         this.name = 'TaskFailure';
     }
 }
@@ -62256,6 +72342,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   StateSaveFailure: () => (/* binding */ StateSaveFailure),
 /* harmony export */   readTaskHistory: () => (/* binding */ readTaskHistory),
+/* harmony export */   resetTaskTriggerBaseline: () => (/* binding */ resetTaskTriggerBaseline),
 /* harmony export */   rollbackTaskState: () => (/* binding */ rollbackTaskState),
 /* harmony export */   settleTaskState: () => (/* binding */ settleTaskState),
 /* harmony export */   stateSequenceHighWater: () => (/* binding */ stateSequenceHighWater),
@@ -62280,7 +72367,7 @@ function stateSequenceHighWater(identity) {
     (0,_generation_GenerationHost__WEBPACK_IMPORTED_MODULE_0__.assertMessage)(identity);
     let highest = 0;
     for (const state of Object.values(readRoot())) {
-        highest = Math.max(highest, state.sequence ?? 0);
+        highest = Math.max(highest, state.sequence ?? 0, state.triggerBaseline?.sequence ?? 0);
         for (const effect of Object.values(state.effects))
             highest = Math.max(highest, effect.sequence);
     }
@@ -62301,6 +72388,21 @@ function timedSnapshot(history) {
     }
     return result;
 }
+/** Moving to an earlier floor resets interval bookkeeping without inventing a success. */
+async function resetTaskTriggerBaseline(taskId, identity, runId, sequence) {
+    await (0,_utils_TargetLocks__WEBPACK_IMPORTED_MODULE_1__.withTargetLocks)([`state:${identity.chatKey}:${taskId}`], async () => {
+        (0,_generation_GenerationHost__WEBPACK_IMPORTED_MODULE_0__.assertMessage)(identity);
+        await updateVariablesWith(current => {
+            (0,_generation_GenerationHost__WEBPACK_IMPORTED_MODULE_0__.assertMessage)(identity);
+            const root = current[stateKey()] ?? {};
+            const state = Object.hasOwn(root, taskId) ? structuredClone(root[taskId]) : { effects: {} };
+            if (sequence >= (state.triggerBaseline?.sequence ?? 0))
+                state.triggerBaseline = { floor: identity.messageId, runId, sequence };
+            return { ...current, [stateKey()]: { ...root, [taskId]: state } };
+        }, { type: 'chat' });
+        (0,_generation_GenerationHost__WEBPACK_IMPORTED_MODULE_0__.assertMessage)(identity);
+    });
+}
 async function settleTaskState(taskId, identity, beforeScan, afterScan, runId, sequence) {
     return (0,_utils_TargetLocks__WEBPACK_IMPORTED_MODULE_1__.withTargetLocks)([`state:${identity.chatKey}:${taskId}`], async () => {
         (0,_generation_GenerationHost__WEBPACK_IMPORTED_MODULE_0__.assertMessage)(identity);
@@ -62308,6 +72410,8 @@ async function settleTaskState(taskId, identity, beforeScan, afterScan, runId, s
         const before = Object.hasOwn(root, taskId) ? structuredClone(root[taskId]) : undefined;
         const state = structuredClone(before ?? { effects: {} });
         const floor = identity.messageId;
+        if (sequence >= (state.triggerBaseline?.sequence ?? 0))
+            state.triggerBaseline = { floor, runId, sequence };
         if (state.lastSuccessfulFloor === undefined || floor > state.lastSuccessfulFloor || (floor === state.lastSuccessfulFloor && sequence > (state.sequence ?? -1))) {
             state.lastSuccessfulFloor = floor;
             state.ownerRunId = runId;
@@ -62371,6 +72475,12 @@ async function rollbackTaskState(undo, identity) {
         (0,_generation_GenerationHost__WEBPACK_IMPORTED_MODULE_0__.assertMessage)(identity);
         const root = readRoot();
         const state = structuredClone(Object.hasOwn(root, undo.taskId) ? root[undo.taskId] : { effects: {} });
+        if (state.triggerBaseline?.runId === undo.runId && _.isEqual(state.triggerBaseline, undo.after.triggerBaseline)) {
+            if (undo.before?.triggerBaseline)
+                state.triggerBaseline = undo.before.triggerBaseline;
+            else
+                delete state.triggerBaseline;
+        }
         if (state.ownerRunId === undo.runId && state.sequence === undo.after.sequence) {
             state.lastSuccessfulFloor = undo.before?.lastSuccessfulFloor;
             state.ownerRunId = undo.before?.ownerRunId;
@@ -62506,12 +72616,18 @@ class TokenCounter {
     }
 }
 async function createGenerationContext(runId, task, settings, identity, controller, secret, timedState) {
-    const { connection, preset } = (0,_TaskConfiguration__WEBPACK_IMPORTED_MODULE_1__.validateTaskReadiness)(settings, task);
+    const { connection, link, preset } = (0,_TaskConfiguration__WEBPACK_IMPORTED_MODULE_1__.validateTaskReadiness)(settings, task);
     const ctx = hostContext();
     assertMessage(identity, controller.signal);
-    const rawHistory = task.historyDepth === 0 ? [] : ctx.chat.slice(Math.max(0, identity.messageId - task.historyDepth + 1), identity.messageId + 1);
-    const history = rawHistory.map(message => {
-        let content = (0,_TaskSchema__WEBPACK_IMPORTED_MODULE_0__.applyTaskRegex)(message.mes, task, 'history').replace(/\r/g, '');
+    const historyStart = Math.max(0, identity.messageId - task.historyDepth + 1);
+    const rawHistory = task.historyDepth === 0 ? [] : ctx.chat.slice(historyStart, identity.messageId + 1);
+    const history = rawHistory.map((message, index) => {
+        const input = task.useTavernRegex
+            ? formatAsTavernRegexedString(message.mes, message.is_user ? 'user_input' : 'ai_output', 'prompt', {
+                depth: ctx.chat.length - 1 - (historyStart + index),
+            })
+            : message.mes;
+        let content = (0,_TaskSchema__WEBPACK_IMPORTED_MODULE_0__.applyTaskRegex)(input, task, 'history').replace(/\r/g, '');
         const role = message.is_system ? 'system' : message.is_user ? 'user' : 'assistant';
         const namesBehavior = preset.names_behavior ?? 0;
         if (namesBehavior === 2 || (namesBehavior === 0 && ((ctx.groupId && !message.is_user) || (message.force_avatar && !message.is_user))))
@@ -62523,8 +72639,8 @@ async function createGenerationContext(runId, task, settings, identity, controll
     const scanHistory = rawHistory.map((message, index) => (task.scan.includeNames ? `${message.name}: ` : '') + history[index].content).reverse();
     const candidates = await collectCandidates(task);
     assertMessage(identity, controller.signal);
-    return { runId, task, identity, controller, ctx, preset, connection: structuredClone(connection), secret, candidates, history, scanHistory,
-        timedState: structuredClone(timedState), tokenCounter: new TokenCounter(connection.model, controller.signal, ctx), messages: [] };
+    return { runId, task, identity, controller, ctx, preset, connection: structuredClone(connection), link: structuredClone(link), secret, candidates, history, scanHistory,
+        timedState: structuredClone(timedState), tokenCounter: new TokenCounter(link.model, controller.signal, ctx), messages: [] };
 }
 
 
@@ -63605,10 +73721,12 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   generationPayload: () => (/* binding */ generationPayload)
 /* harmony export */ });
 /* harmony import */ var _TaskSchema__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../TaskSchema */ "./src/MVU助手/AsyncAnalyze/TaskSchema.ts");
-/* harmony import */ var _GenerationHost__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./GenerationHost */ "./src/MVU助手/AsyncAnalyze/generation/GenerationHost.ts");
-/* harmony import */ var _NativePreset__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./NativePreset */ "./src/MVU助手/AsyncAnalyze/generation/NativePreset.ts");
-/* harmony import */ var _WorldInfoScanner__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./WorldInfoScanner */ "./src/MVU助手/AsyncAnalyze/generation/WorldInfoScanner.ts");
-/* harmony import */ var _TaskTemplate__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./TaskTemplate */ "./src/MVU助手/AsyncAnalyze/generation/TaskTemplate.ts");
+/* harmony import */ var _TaskDiagnostics__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../TaskDiagnostics */ "./src/MVU助手/AsyncAnalyze/TaskDiagnostics.ts");
+/* harmony import */ var _GenerationHost__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./GenerationHost */ "./src/MVU助手/AsyncAnalyze/generation/GenerationHost.ts");
+/* harmony import */ var _NativePreset__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./NativePreset */ "./src/MVU助手/AsyncAnalyze/generation/NativePreset.ts");
+/* harmony import */ var _WorldInfoScanner__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./WorldInfoScanner */ "./src/MVU助手/AsyncAnalyze/generation/WorldInfoScanner.ts");
+/* harmony import */ var _TaskTemplate__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./TaskTemplate */ "./src/MVU助手/AsyncAnalyze/generation/TaskTemplate.ts");
+
 
 
 
@@ -63622,7 +73740,7 @@ async function assemble(context, scan, template) {
     const depthSegments = [];
     const excluded = new Set(['charDescription', 'charPersonality', 'scenario', 'personaDescription']);
     let hasHistory = false;
-    for (const [order, prompt] of (0,_NativePreset__WEBPACK_IMPORTED_MODULE_2__.orderedPrompts)(context.preset).entries()) {
+    for (const [order, prompt] of (0,_NativePreset__WEBPACK_IMPORTED_MODULE_3__.orderedPrompts)(context.preset).entries()) {
         if (excluded.has(prompt.identifier))
             continue;
         if (prompt.identifier === 'chatHistory') {
@@ -63643,11 +73761,19 @@ async function assemble(context, scan, template) {
             continue;
         const message = { role: prompt.role, content };
         if (prompt.injection_position === 1)
-            depthSegments.push({ depth: prompt.injection_depth ?? 4, order: prompt.injection_order ?? 100, messages: [message] });
+            depthSegments.push({
+                depth: prompt.injection_depth ?? 4,
+                order: prompt.injection_order ?? 100,
+                messages: [message],
+            });
         else
             segments.push({ order, messages: [message] });
     }
-    depthSegments.push(...scan.WIDepthEntries.map(item => ({ depth: item.depth ?? 4, order: 100, messages: [{ role: roles[item.role ?? 0], content: item.entries.join('\n') }] })));
+    depthSegments.push(...scan.WIDepthEntries.map(item => ({
+        depth: item.depth ?? 4,
+        order: 100,
+        messages: [{ role: roles[item.role ?? 0], content: item.entries.join('\n') }],
+    })));
     if (!hasHistory)
         throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_0__.TaskFailure('invalid_preset', '预设必须启用 chatHistory 占位符以承载任务提示词', 'prepare');
     // Upstream only attaches ANTop/ANBottom to the author's-note extension prompt when
@@ -63663,8 +73789,14 @@ async function assemble(context, scan, template) {
             const injected = [];
             for (const order of [...new Set(atDepth.map(segment => segment.order))].sort((a, b) => b - a)) {
                 for (const role of roles) {
-                    const content = atDepth.filter(segment => segment.order === order).flatMap(segment => segment.messages)
-                        .filter(message => message.role === role).map(message => message.content).filter(Boolean).join('\n').trim();
+                    const content = atDepth
+                        .filter(segment => segment.order === order)
+                        .flatMap(segment => segment.messages)
+                        .filter(message => message.role === role)
+                        .map(message => message.content)
+                        .filter(Boolean)
+                        .join('\n')
+                        .trim();
                     if (content)
                         injected.push({ role, content });
                 }
@@ -63673,16 +73805,16 @@ async function assemble(context, scan, template) {
             inserted += injected.length;
         }
         const chat = reversePool.reverse();
-        return segments.flatMap(segment => segment.historyIndex !== undefined ? chat : segment.messages);
+        return segments.flatMap(segment => (segment.historyIndex !== undefined ? chat : segment.messages));
     };
     const inputBudget = context.preset.openai_max_context - context.preset.openai_max_tokens;
     template.setAuthorNotePartitions(scan.ANBeforeEntries, scan.ANAfterEntries);
     let messages = rebuild();
-    while (await context.tokenCounter.messages(messages) > inputBudget && history.length > 1) {
+    while ((await context.tokenCounter.messages(messages)) > inputBudget && history.length > 1) {
         history.shift();
         messages = rebuild();
     }
-    if (await context.tokenCounter.messages(messages) > inputBudget)
+    if ((await context.tokenCounter.messages(messages)) > inputBudget)
         throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_0__.TaskFailure('context_overflow', '固定提示词与任务提示词超过预设上下文预算', 'prepare');
     messages = await template.finalize(messages, scan.outletEntries);
     if (context.preset.squash_system_messages === true)
@@ -63694,62 +73826,191 @@ async function assemble(context, scan, template) {
                 result.push({ ...message });
             return result;
         }, []);
-    if (await context.tokenCounter.messages(messages) > inputBudget)
+    if ((await context.tokenCounter.messages(messages)) > inputBudget)
         throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_0__.TaskFailure('context_overflow', '模板或注入后的请求超过预设上下文预算', 'template');
     return messages;
 }
 function generationPayload(context) {
     const preset = context.preset;
     return {
-        chat_completion_source: 'custom', custom_url: context.connection.baseUrl.replace(/\/+$/, ''),
-        custom_include_headers: JSON.stringify({ Authorization: `Bearer ${context.secret}` }), custom_include_body: '', custom_exclude_body: '', custom_prompt_post_processing: 'none',
-        model: context.connection.model, messages: context.messages, stream: false, n: 1,
-        temperature: preset.temp_openai, frequency_penalty: preset.freq_pen_openai, presence_penalty: preset.pres_pen_openai,
-        top_p: preset.top_p_openai, top_k: preset.top_k_openai, max_tokens: preset.openai_max_tokens,
+        chat_completion_source: 'custom',
+        custom_url: context.link.baseUrl.replace(/\/+$/, ''),
+        custom_include_headers: JSON.stringify({ Authorization: `Bearer ${context.secret}` }),
+        custom_include_body: '',
+        custom_exclude_body: '',
+        custom_prompt_post_processing: 'none',
+        model: context.link.model,
+        messages: context.messages,
+        stream: false,
+        n: 1,
+        temperature: preset.temp_openai,
+        frequency_penalty: preset.freq_pen_openai,
+        presence_penalty: preset.pres_pen_openai,
+        top_p: preset.top_p_openai,
+        top_k: preset.top_k_openai,
+        max_tokens: preset.openai_max_tokens,
         ...(preset.seed >= 0 ? { seed: preset.seed } : {}),
     };
 }
 async function generateTask(context) {
     let phase = 'prepare';
+    const started = Date.now();
+    const label = {
+        runId: context.runId,
+        taskId: context.task.id,
+        taskName: context.task.name,
+        chatId: context.identity.chatId,
+        messageId: context.identity.messageId,
+        swipeId: context.identity.swipeId,
+    };
+    let requestDetails;
+    let requestedAt = started;
     try {
-        (0,_NativePreset__WEBPACK_IMPORTED_MODULE_2__.assertTextFeatures)(context.preset);
+        (0,_NativePreset__WEBPACK_IMPORTED_MODULE_3__.assertTextFeatures)(context.preset);
         phase = 'template';
-        const template = new _TaskTemplate__WEBPACK_IMPORTED_MODULE_4__.TaskTemplate(context);
+        const template = new _TaskTemplate__WEBPACK_IMPORTED_MODULE_5__.TaskTemplate(context);
         await template.initialize();
         const entries = await template.preprocess();
         phase = 'scan';
-        const scan = await (0,_WorldInfoScanner__WEBPACK_IMPORTED_MODULE_3__.scanWorldInfo)(context, entries);
+        const scan = await (0,_WorldInfoScanner__WEBPACK_IMPORTED_MODULE_4__.scanWorldInfo)(context, entries);
+        (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_1__.taskLog)('info', '世界书扫描完成', { ...label, candidates: entries.length, activated: scan.allActivatedEntries.size }, context.secret);
         context.timedState = scan.timedState;
         phase = 'template';
         context.messages = await assemble(context, scan, template);
-        (0,_GenerationHost__WEBPACK_IMPORTED_MODULE_1__.assertMessage)(context.identity, context.controller.signal);
+        (0,_GenerationHost__WEBPACK_IMPORTED_MODULE_2__.assertMessage)(context.identity, context.controller.signal);
         phase = 'request';
+        const payload = generationPayload(context);
+        requestedAt = Date.now();
+        requestDetails = {
+            connectionName: context.connection.name,
+            model: context.link.model,
+            endpoint: (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_1__.diagnosticEndpoint)(context.link.baseUrl),
+            elapsedMs: 0,
+        };
+        (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_1__.taskLog)('info', '发送模型请求', { ...label, ...requestDetails, messages: context.messages.length, presetId: context.connection.presetId }, context.secret);
+        // Keep the original request/output inspection capability without logging credentials.
+        (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_1__.taskLog)('debug', '模型请求内容', { ...label, ...payload, custom_include_headers: '[已隐藏]', custom_url: requestDetails.endpoint }, context.secret);
         const response = await fetch(new URL('/api/backends/chat-completions/generate', window.parent.location.origin), {
-            method: 'POST', credentials: 'same-origin', headers: context.ctx.getRequestHeaders(), signal: context.controller.signal,
-            body: JSON.stringify(generationPayload(context)),
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: context.ctx.getRequestHeaders(),
+            signal: context.controller.signal,
+            body: JSON.stringify(payload),
         });
-        if (!response.ok)
-            throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_0__.TaskFailure('request_http_error', `模型后端 HTTP ${response.status}`, 'request');
+        requestDetails.httpStatus = response.status;
+        requestDetails.statusText = (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_1__.diagnosticText)(response.statusText ?? '', context.secret);
+        // Retain a copy before parsing so text/HTML errors aren't discarded by response.json().
+        const rawResponse = response.clone?.();
         let result;
+        let rawText = '';
         try {
             result = await response.json();
         }
         catch {
-            throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_0__.TaskFailure('invalid_response', '模型后端响应不是有效 JSON', 'request');
+            rawText = (await rawResponse?.text().catch(() => '')) ?? '';
         }
-        if (result.error)
-            throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_0__.TaskFailure('backend_error', '模型后端返回错误，请检查连接配置和宿主日志', 'request');
-        const text = result.choices?.[0]?.message?.content;
+        requestDetails.elapsedMs = Date.now() - requestedAt;
+        const responseText = (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_1__.diagnosticText)(result ?? rawText, context.secret);
+        (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_1__.taskLog)('debug', '后端原始响应', { ...label, httpStatus: response.status, response: responseText }, context.secret);
+        requestDetails.response =
+            responseText.length > 12000 ? responseText.slice(0, 12000) + '\n[响应过长，已截断]' : responseText;
+        const backend = result?.error;
+        const scalar = (value) => typeof value === 'string' || typeof value === 'number'
+            ? (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_1__.diagnosticText)(String(value), context.secret)
+            : undefined;
+        requestDetails.backendCode = scalar(backend?.code ?? result?.code);
+        requestDetails.backendType = scalar(backend?.type ?? result?.type);
+        const reason = scalar(backend?.message) ??
+            scalar(backend?.error?.message) ??
+            scalar(backend) ??
+            scalar(result?.message) ??
+            scalar(result?.detail) ??
+            (rawText ? (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_1__.diagnosticText)(rawText, context.secret).slice(0, 500) : '后端未提供错误说明，展开详情查看返回内容');
+        if (!response.ok)
+            throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_0__.TaskFailure('request_http_error', `模型后端 HTTP ${response.status}${response.statusText ? ` ${requestDetails.statusText}` : ''}：${reason}`, 'request', requestDetails);
+        if (result === undefined)
+            throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_0__.TaskFailure('invalid_response', `模型后端响应不是有效 JSON${rawText ? `：${reason}` : '（响应为空或无法读取）'}`, 'request', requestDetails);
+        if (backend)
+            throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_0__.TaskFailure('backend_error', `模型后端返回错误：${reason}`, 'request', requestDetails);
+        const text = result?.choices?.[0]?.message?.content;
         if (typeof text !== 'string' || !text.trim())
-            throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_0__.TaskFailure('empty_result', '模型后端未返回非空文本', 'request');
+            throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_0__.TaskFailure('empty_result', '模型后端未返回非空文本，展开详情查看响应结构', 'request', requestDetails);
         context.controller.signal.throwIfAborted();
+        (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_1__.taskLog)('info', '模型响应完成', { ...label, httpStatus: response.status, elapsedMs: requestDetails.elapsedMs, outputChars: text.length }, context.secret);
+        (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_1__.taskLog)('debug', '模型原始输出', { ...label, text }, context.secret);
         return (0,_TaskSchema__WEBPACK_IMPORTED_MODULE_0__.applyTaskRegex)(text, context.task, 'response');
     }
     catch (error) {
-        if (error instanceof _TaskSchema__WEBPACK_IMPORTED_MODULE_0__.TaskFailure)
-            throw error;
-        throw new _TaskSchema__WEBPACK_IMPORTED_MODULE_0__.TaskFailure('host_error', error instanceof Error ? error.message : String(error), phase);
+        if (requestDetails)
+            requestDetails.elapsedMs = Date.now() - requestedAt;
+        const failure = error instanceof _TaskSchema__WEBPACK_IMPORTED_MODULE_0__.TaskFailure
+            ? error
+            : new _TaskSchema__WEBPACK_IMPORTED_MODULE_0__.TaskFailure('host_error', (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_1__.diagnosticText)(error instanceof Error ? error.message : String(error), context.secret), phase, requestDetails);
+        failure.message = (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_1__.diagnosticText)(failure.message, context.secret);
+        (0,_TaskDiagnostics__WEBPACK_IMPORTED_MODULE_1__.taskLog)('error', '生成失败', {
+            ...label,
+            code: failure.code,
+            phase: failure.phase,
+            message: failure.message,
+            elapsedMs: Date.now() - started,
+            details: failure.details,
+        }, context.secret);
+        throw failure;
     }
+}
+
+
+/***/ },
+
+/***/ "./src/MVU助手/AsyncAnalyze/generation/TaskMacros.ts"
+/*!*********************************************************!*\
+  !*** ./src/MVU助手/AsyncAnalyze/generation/TaskMacros.ts ***!
+  \*********************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   substituteTaskMacros: () => (/* binding */ substituteTaskMacros)
+/* harmony export */ });
+/* harmony import */ var yaml__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! yaml */ "./node_modules/.pnpm/yaml@2.8.2/node_modules/yaml/browser/index.js");
+
+// Helper variable macros normally run on the global GENERATE_AFTER_DATA event.
+// Independent requests must expand them locally instead of broadcasting that event.
+function substituteTaskMacros(ctx, text) {
+    const read = (type, path) => {
+        const option = type === 'message'
+            ? { type, message_id: ctx.chat.findLastIndex(message => _.isObject(message.variables?.[message.swipe_id ?? 0])) }
+            : { type };
+        const value = _.get(getVariables(option), _.unescape(path), null);
+        const withoutPrivate = (item) => {
+            if (Array.isArray(item))
+                return item.map(withoutPrivate);
+            if (_.isPlainObject(item))
+                return Object.fromEntries(Object.entries(item)
+                    .filter(([key]) => !key.startsWith('$')).map(([key, child]) => [key, withoutPrivate(child)]));
+            return item;
+        };
+        return withoutPrivate(value);
+    };
+    text = ctx.substituteParams(text);
+    text = text.replace(/\{\{get_(message|chat|character|preset|global)_variable::(.*?)\}\}/gi, (_match, type, path) => {
+        const value = read(type.toLowerCase(), path);
+        return typeof value === 'string' ? value : JSON.stringify(value);
+    });
+    for (const quoted of [true, false]) {
+        const source = `^(.*)\\{\\{format_(message|chat|character|preset|global)_variable${quoted ? '_quoted' : ''}::(.*?)\\}\\}`;
+        const format = (_match, prefix, type, path) => {
+            prefix = prefix.replace(new RegExp(source, 'im'), format);
+            const value = read(type.toLowerCase(), path);
+            const formatted = typeof value === 'string' ? value : yaml__WEBPACK_IMPORTED_MODULE_0__["default"].stringify(value, {
+                blockQuote: 'literal', ...(quoted ? { defaultKeyType: 'PLAIN', defaultStringType: 'QUOTE_DOUBLE' } : {}),
+            }).trimEnd();
+            return prefix + formatted.replaceAll('\n', '\n' + ' '.repeat(prefix.length));
+        };
+        text = text.replace(new RegExp(source, 'gim'), format);
+    }
+    return text;
 }
 
 
@@ -63769,6 +74030,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var _TaskSchema__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../TaskSchema */ "./src/MVU助手/AsyncAnalyze/TaskSchema.ts");
 /* harmony import */ var _GenerationHost__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./GenerationHost */ "./src/MVU助手/AsyncAnalyze/generation/GenerationHost.ts");
+/* harmony import */ var _TaskMacros__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./TaskMacros */ "./src/MVU助手/AsyncAnalyze/generation/TaskMacros.ts");
+
 
 
 const known = new Set(['@@activate', '@@dont_activate', '@@message_formatting', '@@generate_before', '@@generate_after', '@@render_before', '@@render_after', '@@dont_preload', '@@initial_variables', '@@always_enabled', '@@only_preload', '@@iframe', '@@preprocessing', '@@if', '@@private']);
@@ -63806,7 +74069,7 @@ class TaskTemplate {
     }
     async initialize() {
         const env = { runID: this.context.runId, runType: 'generate', generateType: 'normal', isDryRun: false,
-            message_id: undefined, swipe_id: undefined, generateData: this.context.messages, model: this.context.connection.model };
+            message_id: undefined, swipe_id: undefined, generateData: this.context.messages, model: this.context.link.model };
         this.env = this.api ? await this.api.prepareContext(env, this.context.identity.messageId) : env;
         const getPreset = async (name, data = {}) => {
             const prompt = this.context.preset.prompts.find(item => item.name === name || item.name.match(name));
@@ -63855,7 +74118,7 @@ class TaskTemplate {
     }
     async render(text, data = {}) {
         this.context.controller.signal.throwIfAborted();
-        const input = this.context.ctx.substituteParams(text);
+        const input = (0,_TaskMacros__WEBPACK_IMPORTED_MODULE_2__.substituteTaskMacros)(this.context.ctx, text);
         if (!input.includes('<%'))
             return input;
         if (!this.api)
@@ -63865,7 +74128,7 @@ class TaskTemplate {
         try {
             const output = await this.api.evalTemplate(input, this.env, { cache: false, filename: `kat-task/${this.context.runId}/${this.context.task.id}` });
             this.context.controller.signal.throwIfAborted();
-            return this.context.ctx.substituteParams(String(output));
+            return (0,_TaskMacros__WEBPACK_IMPORTED_MODULE_2__.substituteTaskMacros)(this.context.ctx, String(output));
         }
         finally {
             for (const [key, existed, value] of previous) {
@@ -63877,7 +74140,7 @@ class TaskTemplate {
         }
     }
     keyMatch(haystack, key, entry) {
-        const needle = this.context.ctx.substituteParams(key).trim();
+        const needle = (0,_TaskMacros__WEBPACK_IMPORTED_MODULE_2__.substituteTaskMacros)(this.context.ctx, key).trim();
         if (!needle)
             return false;
         if (needle.startsWith('/')) {
@@ -64117,6 +74380,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   scanWorldInfo: () => (/* binding */ scanWorldInfo)
 /* harmony export */ });
 /* harmony import */ var _NativeWorldInfo_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./NativeWorldInfo.js */ "./src/MVU助手/AsyncAnalyze/generation/NativeWorldInfo.js");
+/* harmony import */ var _TaskMacros__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./TaskMacros */ "./src/MVU助手/AsyncAnalyze/generation/TaskMacros.ts");
+
 
 async function scanWorldInfo(context, entries) {
     const character = context.ctx.characters[context.ctx.characterId];
@@ -64126,7 +74391,7 @@ async function scanWorldInfo(context, entries) {
         floor: context.identity.messageId + 1, timedState: context.timedState,
         context: { tagMap: { ...(context.ctx.tagMap ?? {}), ...(character?.avatar ? { [character.avatar]: context.ctx.tagMap?.[character.avatar] ?? [] } : {}) } }, characterFilename: character?.avatar?.replace(/\.[^.]+$/, '') ?? '',
         characterTagKey: character?.avatar,
-        signal: context.controller.signal, substitute: (text) => context.ctx.substituteParams(text), countTokens: context.tokenCounter.count,
+        signal: context.controller.signal, substitute: (text) => (0,_TaskMacros__WEBPACK_IMPORTED_MODULE_1__.substituteTaskMacros)(context.ctx, text), countTokens: context.tokenCounter.count,
         scanData: {
             trigger: 'normal', personaDescription: context.ctx.chatMetadata.persona_description ?? '',
             characterDescription: data.description ?? character?.description ?? '', characterPersonality: data.personality ?? character?.personality ?? '',
@@ -64195,6 +74460,160 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   render: () => (/* reexport safe */ _node_modules_pnpm_ts_loader_9_5_4_typescript_1325e46b45641fb4b445955fad1b3b9a_node_modules_ts_loader_index_js_clonedRuleSet_1_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_templateLoader_js_ruleSet_1_rules_2_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_index_js_ruleSet_1_rules_5_use_0_App_vue_vue_type_template_id_7b5a4700_ts_true__WEBPACK_IMPORTED_MODULE_0__.render)
 /* harmony export */ });
 /* harmony import */ var _node_modules_pnpm_ts_loader_9_5_4_typescript_1325e46b45641fb4b445955fad1b3b9a_node_modules_ts_loader_index_js_clonedRuleSet_1_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_templateLoader_js_ruleSet_1_rules_2_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_index_js_ruleSet_1_rules_5_use_0_App_vue_vue_type_template_id_7b5a4700_ts_true__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../node_modules/.pnpm/ts-loader@9.5.4_typescript@_1325e46b45641fb4b445955fad1b3b9a/node_modules/ts-loader/index.js??clonedRuleSet-1!../../../node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/templateLoader.js??ruleSet[1].rules[2]!../../../node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./App.vue?vue&type=template&id=7b5a4700&ts=true */ "./node_modules/.pnpm/ts-loader@9.5.4_typescript@_1325e46b45641fb4b445955fad1b3b9a/node_modules/ts-loader/index.js??clonedRuleSet-1!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/templateLoader.js??ruleSet[1].rules[2]!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/App.vue?vue&type=template&id=7b5a4700&ts=true");
+
+
+/***/ },
+
+/***/ "./src/MVU助手/UI/components/AsyncAnalyze/RunLog.vue"
+/*!*********************************************************!*\
+  !*** ./src/MVU助手/UI/components/AsyncAnalyze/RunLog.vue ***!
+  \*********************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _RunLog_vue_vue_type_template_id_25a7eb60_scoped_true_ts_true__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./RunLog.vue?vue&type=template&id=25a7eb60&scoped=true&ts=true */ "./src/MVU助手/UI/components/AsyncAnalyze/RunLog.vue?vue&type=template&id=25a7eb60&scoped=true&ts=true");
+/* harmony import */ var _RunLog_vue_vue_type_script_setup_true_lang_ts__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./RunLog.vue?vue&type=script&setup=true&lang=ts */ "./src/MVU助手/UI/components/AsyncAnalyze/RunLog.vue?vue&type=script&setup=true&lang=ts");
+/* harmony import */ var _RunLog_vue_vue_type_style_index_0_id_25a7eb60_scoped_true_lang_css__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./RunLog.vue?vue&type=style&index=0&id=25a7eb60&scoped=true&lang=css */ "./src/MVU助手/UI/components/AsyncAnalyze/RunLog.vue?vue&type=style&index=0&id=25a7eb60&scoped=true&lang=css");
+/* harmony import */ var _node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_exportHelper_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../../node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/exportHelper.js */ "./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/exportHelper.js");
+
+
+
+
+;
+
+
+const __exports__ = /*#__PURE__*/(0,_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_exportHelper_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_RunLog_vue_vue_type_script_setup_true_lang_ts__WEBPACK_IMPORTED_MODULE_1__["default"], [['render',_RunLog_vue_vue_type_template_id_25a7eb60_scoped_true_ts_true__WEBPACK_IMPORTED_MODULE_0__.render],['__scopeId',"data-v-25a7eb60"],['__file',"src/MVU助手/UI/components/AsyncAnalyze/RunLog.vue"]])
+/* hot reload */
+if (false) // removed by dead control flow
+{}
+
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (__exports__);
+
+/***/ },
+
+/***/ "./src/MVU助手/UI/components/AsyncAnalyze/RunLog.vue?vue&type=script&setup=true&lang=ts"
+/*!********************************************************************************************!*\
+  !*** ./src/MVU助手/UI/components/AsyncAnalyze/RunLog.vue?vue&type=script&setup=true&lang=ts ***!
+  \********************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (/* reexport safe */ _node_modules_pnpm_ts_loader_9_5_4_typescript_1325e46b45641fb4b445955fad1b3b9a_node_modules_ts_loader_index_js_clonedRuleSet_1_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_index_js_ruleSet_1_rules_5_use_0_RunLog_vue_vue_type_script_setup_true_lang_ts__WEBPACK_IMPORTED_MODULE_0__["default"])
+/* harmony export */ });
+/* harmony import */ var _node_modules_pnpm_ts_loader_9_5_4_typescript_1325e46b45641fb4b445955fad1b3b9a_node_modules_ts_loader_index_js_clonedRuleSet_1_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_index_js_ruleSet_1_rules_5_use_0_RunLog_vue_vue_type_script_setup_true_lang_ts__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../../../node_modules/.pnpm/ts-loader@9.5.4_typescript@_1325e46b45641fb4b445955fad1b3b9a/node_modules/ts-loader/index.js??clonedRuleSet-1!../../../../../node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./RunLog.vue?vue&type=script&setup=true&lang=ts */ "./node_modules/.pnpm/ts-loader@9.5.4_typescript@_1325e46b45641fb4b445955fad1b3b9a/node_modules/ts-loader/index.js??clonedRuleSet-1!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/components/AsyncAnalyze/RunLog.vue?vue&type=script&setup=true&lang=ts");
+ 
+
+/***/ },
+
+/***/ "./src/MVU助手/UI/components/AsyncAnalyze/RunLog.vue?vue&type=style&index=0&id=25a7eb60&scoped=true&lang=css"
+/*!*****************************************************************************************************************!*\
+  !*** ./src/MVU助手/UI/components/AsyncAnalyze/RunLog.vue?vue&type=style&index=0&id=25a7eb60&scoped=true&lang=css ***!
+  \*****************************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_cjs_js_node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_cjs_js_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_stylePostLoader_js_node_modules_pnpm_sass_loader_16_0_6_sass_1_97_2_webpack_5_104_1_node_modules_sass_loader_dist_cjs_js_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_index_js_ruleSet_1_rules_5_use_0_RunLog_vue_vue_type_style_index_0_id_25a7eb60_scoped_true_lang_css__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../../../node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/cjs.js!../../../../../node_modules/.pnpm/css-loader@7.1.2_webpack@5.104.1/node_modules/css-loader/dist/cjs.js!../../../../../node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/stylePostLoader.js!../../../../../node_modules/.pnpm/sass-loader@16.0.6_sass@1.97.2_webpack@5.104.1/node_modules/sass-loader/dist/cjs.js!../../../../../node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./RunLog.vue?vue&type=style&index=0&id=25a7eb60&scoped=true&lang=css */ "./node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/cjs.js!./node_modules/.pnpm/css-loader@7.1.2_webpack@5.104.1/node_modules/css-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/stylePostLoader.js!./node_modules/.pnpm/sass-loader@16.0.6_sass@1.97.2_webpack@5.104.1/node_modules/sass-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/components/AsyncAnalyze/RunLog.vue?vue&type=style&index=0&id=25a7eb60&scoped=true&lang=css");
+
+
+/***/ },
+
+/***/ "./src/MVU助手/UI/components/AsyncAnalyze/RunLog.vue?vue&type=template&id=25a7eb60&scoped=true&ts=true"
+/*!***********************************************************************************************************!*\
+  !*** ./src/MVU助手/UI/components/AsyncAnalyze/RunLog.vue?vue&type=template&id=25a7eb60&scoped=true&ts=true ***!
+  \***********************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   render: () => (/* reexport safe */ _node_modules_pnpm_ts_loader_9_5_4_typescript_1325e46b45641fb4b445955fad1b3b9a_node_modules_ts_loader_index_js_clonedRuleSet_1_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_templateLoader_js_ruleSet_1_rules_2_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_index_js_ruleSet_1_rules_5_use_0_RunLog_vue_vue_type_template_id_25a7eb60_scoped_true_ts_true__WEBPACK_IMPORTED_MODULE_0__.render)
+/* harmony export */ });
+/* harmony import */ var _node_modules_pnpm_ts_loader_9_5_4_typescript_1325e46b45641fb4b445955fad1b3b9a_node_modules_ts_loader_index_js_clonedRuleSet_1_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_templateLoader_js_ruleSet_1_rules_2_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_index_js_ruleSet_1_rules_5_use_0_RunLog_vue_vue_type_template_id_25a7eb60_scoped_true_ts_true__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../../../node_modules/.pnpm/ts-loader@9.5.4_typescript@_1325e46b45641fb4b445955fad1b3b9a/node_modules/ts-loader/index.js??clonedRuleSet-1!../../../../../node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/templateLoader.js??ruleSet[1].rules[2]!../../../../../node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./RunLog.vue?vue&type=template&id=25a7eb60&scoped=true&ts=true */ "./node_modules/.pnpm/ts-loader@9.5.4_typescript@_1325e46b45641fb4b445955fad1b3b9a/node_modules/ts-loader/index.js??clonedRuleSet-1!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/templateLoader.js??ruleSet[1].rules[2]!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/components/AsyncAnalyze/RunLog.vue?vue&type=template&id=25a7eb60&scoped=true&ts=true");
+
+
+/***/ },
+
+/***/ "./src/MVU助手/UI/components/AsyncAnalyze/TaskNotifications.vue"
+/*!********************************************************************!*\
+  !*** ./src/MVU助手/UI/components/AsyncAnalyze/TaskNotifications.vue ***!
+  \********************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _TaskNotifications_vue_vue_type_template_id_0fede79c_scoped_true_ts_true__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./TaskNotifications.vue?vue&type=template&id=0fede79c&scoped=true&ts=true */ "./src/MVU助手/UI/components/AsyncAnalyze/TaskNotifications.vue?vue&type=template&id=0fede79c&scoped=true&ts=true");
+/* harmony import */ var _TaskNotifications_vue_vue_type_script_setup_true_lang_ts__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./TaskNotifications.vue?vue&type=script&setup=true&lang=ts */ "./src/MVU助手/UI/components/AsyncAnalyze/TaskNotifications.vue?vue&type=script&setup=true&lang=ts");
+/* harmony import */ var _TaskNotifications_vue_vue_type_style_index_0_id_0fede79c_scoped_true_lang_css__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./TaskNotifications.vue?vue&type=style&index=0&id=0fede79c&scoped=true&lang=css */ "./src/MVU助手/UI/components/AsyncAnalyze/TaskNotifications.vue?vue&type=style&index=0&id=0fede79c&scoped=true&lang=css");
+/* harmony import */ var _node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_exportHelper_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../../node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/exportHelper.js */ "./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/exportHelper.js");
+
+
+
+
+;
+
+
+const __exports__ = /*#__PURE__*/(0,_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_exportHelper_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_TaskNotifications_vue_vue_type_script_setup_true_lang_ts__WEBPACK_IMPORTED_MODULE_1__["default"], [['render',_TaskNotifications_vue_vue_type_template_id_0fede79c_scoped_true_ts_true__WEBPACK_IMPORTED_MODULE_0__.render],['__scopeId',"data-v-0fede79c"],['__file',"src/MVU助手/UI/components/AsyncAnalyze/TaskNotifications.vue"]])
+/* hot reload */
+if (false) // removed by dead control flow
+{}
+
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (__exports__);
+
+/***/ },
+
+/***/ "./src/MVU助手/UI/components/AsyncAnalyze/TaskNotifications.vue?vue&type=script&setup=true&lang=ts"
+/*!*******************************************************************************************************!*\
+  !*** ./src/MVU助手/UI/components/AsyncAnalyze/TaskNotifications.vue?vue&type=script&setup=true&lang=ts ***!
+  \*******************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (/* reexport safe */ _node_modules_pnpm_ts_loader_9_5_4_typescript_1325e46b45641fb4b445955fad1b3b9a_node_modules_ts_loader_index_js_clonedRuleSet_1_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_index_js_ruleSet_1_rules_5_use_0_TaskNotifications_vue_vue_type_script_setup_true_lang_ts__WEBPACK_IMPORTED_MODULE_0__["default"])
+/* harmony export */ });
+/* harmony import */ var _node_modules_pnpm_ts_loader_9_5_4_typescript_1325e46b45641fb4b445955fad1b3b9a_node_modules_ts_loader_index_js_clonedRuleSet_1_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_index_js_ruleSet_1_rules_5_use_0_TaskNotifications_vue_vue_type_script_setup_true_lang_ts__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../../../node_modules/.pnpm/ts-loader@9.5.4_typescript@_1325e46b45641fb4b445955fad1b3b9a/node_modules/ts-loader/index.js??clonedRuleSet-1!../../../../../node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./TaskNotifications.vue?vue&type=script&setup=true&lang=ts */ "./node_modules/.pnpm/ts-loader@9.5.4_typescript@_1325e46b45641fb4b445955fad1b3b9a/node_modules/ts-loader/index.js??clonedRuleSet-1!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/components/AsyncAnalyze/TaskNotifications.vue?vue&type=script&setup=true&lang=ts");
+ 
+
+/***/ },
+
+/***/ "./src/MVU助手/UI/components/AsyncAnalyze/TaskNotifications.vue?vue&type=style&index=0&id=0fede79c&scoped=true&lang=css"
+/*!****************************************************************************************************************************!*\
+  !*** ./src/MVU助手/UI/components/AsyncAnalyze/TaskNotifications.vue?vue&type=style&index=0&id=0fede79c&scoped=true&lang=css ***!
+  \****************************************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _node_modules_pnpm_style_loader_4_0_0_webpack_5_104_1_node_modules_style_loader_dist_cjs_js_node_modules_pnpm_css_loader_7_1_2_webpack_5_104_1_node_modules_css_loader_dist_cjs_js_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_stylePostLoader_js_node_modules_pnpm_sass_loader_16_0_6_sass_1_97_2_webpack_5_104_1_node_modules_sass_loader_dist_cjs_js_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_index_js_ruleSet_1_rules_5_use_0_TaskNotifications_vue_vue_type_style_index_0_id_0fede79c_scoped_true_lang_css__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../../../node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/cjs.js!../../../../../node_modules/.pnpm/css-loader@7.1.2_webpack@5.104.1/node_modules/css-loader/dist/cjs.js!../../../../../node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/stylePostLoader.js!../../../../../node_modules/.pnpm/sass-loader@16.0.6_sass@1.97.2_webpack@5.104.1/node_modules/sass-loader/dist/cjs.js!../../../../../node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./TaskNotifications.vue?vue&type=style&index=0&id=0fede79c&scoped=true&lang=css */ "./node_modules/.pnpm/style-loader@4.0.0_webpack@5.104.1/node_modules/style-loader/dist/cjs.js!./node_modules/.pnpm/css-loader@7.1.2_webpack@5.104.1/node_modules/css-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/stylePostLoader.js!./node_modules/.pnpm/sass-loader@16.0.6_sass@1.97.2_webpack@5.104.1/node_modules/sass-loader/dist/cjs.js!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/components/AsyncAnalyze/TaskNotifications.vue?vue&type=style&index=0&id=0fede79c&scoped=true&lang=css");
+
+
+/***/ },
+
+/***/ "./src/MVU助手/UI/components/AsyncAnalyze/TaskNotifications.vue?vue&type=template&id=0fede79c&scoped=true&ts=true"
+/*!**********************************************************************************************************************!*\
+  !*** ./src/MVU助手/UI/components/AsyncAnalyze/TaskNotifications.vue?vue&type=template&id=0fede79c&scoped=true&ts=true ***!
+  \**********************************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   render: () => (/* reexport safe */ _node_modules_pnpm_ts_loader_9_5_4_typescript_1325e46b45641fb4b445955fad1b3b9a_node_modules_ts_loader_index_js_clonedRuleSet_1_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_templateLoader_js_ruleSet_1_rules_2_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_index_js_ruleSet_1_rules_5_use_0_TaskNotifications_vue_vue_type_template_id_0fede79c_scoped_true_ts_true__WEBPACK_IMPORTED_MODULE_0__.render)
+/* harmony export */ });
+/* harmony import */ var _node_modules_pnpm_ts_loader_9_5_4_typescript_1325e46b45641fb4b445955fad1b3b9a_node_modules_ts_loader_index_js_clonedRuleSet_1_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_templateLoader_js_ruleSet_1_rules_2_node_modules_pnpm_vue_loader_17_4_2_vue_3_5_2_fcc8164c33ab268660e3819796c9f485_node_modules_vue_loader_dist_index_js_ruleSet_1_rules_5_use_0_TaskNotifications_vue_vue_type_template_id_0fede79c_scoped_true_ts_true__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../../../node_modules/.pnpm/ts-loader@9.5.4_typescript@_1325e46b45641fb4b445955fad1b3b9a/node_modules/ts-loader/index.js??clonedRuleSet-1!../../../../../node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/templateLoader.js??ruleSet[1].rules[2]!../../../../../node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./TaskNotifications.vue?vue&type=template&id=0fede79c&scoped=true&ts=true */ "./node_modules/.pnpm/ts-loader@9.5.4_typescript@_1325e46b45641fb4b445955fad1b3b9a/node_modules/ts-loader/index.js??clonedRuleSet-1!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/templateLoader.js??ruleSet[1].rules[2]!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.2_fcc8164c33ab268660e3819796c9f485/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[5].use[0]!./src/MVU助手/UI/components/AsyncAnalyze/TaskNotifications.vue?vue&type=template&id=0fede79c&scoped=true&ts=true");
 
 
 /***/ },
@@ -64355,7 +74774,7 @@ const router = (0,vue_router__WEBPACK_IMPORTED_MODULE_0__.createRouter)({
                 {
                     path: '/AsyncAnalyze',
                     name: 'AsyncAnalyze',
-                    component: () => __webpack_require__.e(/*! import() */ "src_MVU_UI_view_AsyncAnalyze_vue").then(__webpack_require__.bind(__webpack_require__, /*! ../view/AsyncAnalyze.vue */ "./src/MVU助手/UI/view/AsyncAnalyze.vue")),
+                    component: () => Promise.all(/*! import() */[__webpack_require__.e("vendors-node_modules_pnpm_floating-ui_vue_1_1_10_vue_51878ad9a973ecf42c4f38c7ca3cc5dc_node_mo-922829"), __webpack_require__.e("src_MVU_UI_view_AsyncAnalyze_vue")]).then(__webpack_require__.bind(__webpack_require__, /*! ../view/AsyncAnalyze.vue */ "./src/MVU助手/UI/view/AsyncAnalyze.vue")),
                 },
                 {
                     path: '/EraDataEdit',
@@ -64367,11 +74786,6 @@ const router = (0,vue_router__WEBPACK_IMPORTED_MODULE_0__.createRouter)({
                     name: 'Version',
                     component: () => __webpack_require__.e(/*! import() */ "src_MVU_UI_view_VersionInformation_vue").then(__webpack_require__.bind(__webpack_require__, /*! ../view/VersionInformation.vue */ "./src/MVU助手/UI/view/VersionInformation.vue")),
                 },
-                {
-                    path: '/VersionUpdater',
-                    name: 'VersionUpdater',
-                    component: () => __webpack_require__.e(/*! import() */ "src_MVU_UI_view_VersionUpdater_vue").then(__webpack_require__.bind(__webpack_require__, /*! ../view/VersionUpdater.vue */ "./src/MVU助手/UI/view/VersionUpdater.vue")),
-                }
             ],
         },
     ],
@@ -64541,7 +74955,7 @@ const useTaskStore = (0,pinia__WEBPACK_IMPORTED_MODULE_0__.defineStore)('KatTask
         configurationWarning.value = '';
         // Credential cleanup cannot undo or misreport a successful configuration save.
         try {
-            const retainedReferences = new Set(parsed.connections.map(connection => connection.secretRef));
+            const retainedReferences = new Set(parsed.connections.flatMap(connection => connection.links.map(link => link.secretRef)));
             const secrets = readSecrets();
             let changed = false;
             for (const reference of Object.keys(secrets))
@@ -64661,346 +75075,21 @@ const useUiStore = (0,pinia__WEBPACK_IMPORTED_MODULE_0__.defineStore)('KatUI', (
 
 /***/ },
 
-/***/ "./src/MVU助手/stores/UseVersionControlStore.ts"
-/*!****************************************************!*\
-  !*** ./src/MVU助手/stores/UseVersionControlStore.ts ***!
-  \****************************************************/
+/***/ "./src/MVU助手/utils/MvuHelperLogger.ts"
+/*!********************************************!*\
+  !*** ./src/MVU助手/utils/MvuHelperLogger.ts ***!
+  \********************************************/
 (__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   UseVersionControlStore: () => (/* binding */ UseVersionControlStore)
+/* harmony export */   eraLogger: () => (/* binding */ eraLogger)
 /* harmony export */ });
-/* harmony import */ var pinia__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! pinia */ "./node_modules/.pnpm/pinia@3.0.4_typescript@6.0._1035626c717f138a4ca30621e1ecb91e/node_modules/pinia/dist/pinia.mjs");
-/* harmony import */ var vue__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! vue */ "./node_modules/.pnpm/vue@3.5.26_typescript@6.0.0-dev.20250807/node_modules/vue/dist/vue.runtime.esm-bundler.js");
-/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! lodash */ "./node_modules/.pnpm/lodash@4.17.21/node_modules/lodash/lodash.js");
-/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_2__);
-/* harmony import */ var _utils_MvuEditTarget__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/MvuEditTarget */ "./src/MVU助手/utils/MvuEditTarget.ts");
+/* harmony import */ var _Utils_LogUtil__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../Utils/LogUtil */ "./src/Utils/LogUtil.ts");
+//定义日志
 
-
-
-
-const describe = (cause) => cause instanceof Error ? cause.message : String(cause);
-// eslint-disable-next-line pinia/prefer-use-store-naming-convention
-const UseVersionControlStore = (0,pinia__WEBPACK_IMPORTED_MODULE_0__.defineStore)('EraVersionControl', () => {
-    const settings = (0,vue__WEBPACK_IMPORTED_MODULE_1__.ref)({ enable: false, lore_name: '' });
-    const settingsError = (0,vue__WEBPACK_IMPORTED_MODULE_1__.ref)('');
-    const settingsOperation = (0,vue__WEBPACK_IMPORTED_MODULE_1__.ref)('read');
-    const currentVersion = (0,vue__WEBPACK_IMPORTED_MODULE_1__.ref)(0);
-    const targetVersion = (0,vue__WEBPACK_IMPORTED_MODULE_1__.ref)(0);
-    const availableUpdates = (0,vue__WEBPACK_IMPORTED_MODULE_1__.ref)([]);
-    const updateLogs = (0,vue__WEBPACK_IMPORTED_MODULE_1__.ref)([]);
-    const checkError = (0,vue__WEBPACK_IMPORTED_MODULE_1__.ref)('');
-    const previewDiff = (0,vue__WEBPACK_IMPORTED_MODULE_1__.shallowRef)(null);
-    let source = null;
-    async function loadSettings() {
-        settingsOperation.value = 'read';
-        settingsError.value = '';
-        try {
-            const rule = getVariables({ type: 'script', script_id: getScriptId() }).era_data_rule?.version_control;
-            settings.value = { enable: rule?.enable ?? false, lore_name: rule?.lore_name || '' };
-        }
-        catch (cause) {
-            settingsError.value = `无法读取版本设置：${describe(cause)}。请重试。`;
-        }
-    }
-    async function saveSettings() {
-        settingsOperation.value = 'save';
-        settingsError.value = '';
-        try {
-            const saved = (0,lodash__WEBPACK_IMPORTED_MODULE_2__.cloneDeep)(settings.value);
-            await updateVariablesWith(vars => ({ ...vars, era_data_rule: { ...vars.era_data_rule, version_control: saved } }), { type: 'script', script_id: getScriptId() });
-        }
-        catch (cause) {
-            settingsError.value = `版本设置保存失败：${describe(cause)}。请重试。`;
-            throw new Error(settingsError.value);
-        }
-    }
-    function versionOf(data) {
-        const raw = (0,lodash__WEBPACK_IMPORTED_MODULE_2__.get)(data, 'system.当前版本');
-        const version = raw === undefined || raw === null ? 0 : Number(raw);
-        if (!Number.isFinite(version))
-            throw new Error('当前数据的 system.当前版本 不是有效数值，无法判断更新范围。');
-        return version;
-    }
-    async function fetchCurrentVersion() {
-        currentVersion.value = versionOf((await (0,_utils_MvuEditTarget__WEBPACK_IMPORTED_MODULE_3__.captureEditTarget)()).baseline);
-        return currentVersion.value;
-    }
-    async function readSource(bookName, loreName) {
-        if (!bookName || !loreName)
-            throw new Error('请选择包含版本记录的世界书条目。');
-        const entries = (await getWorldbook(bookName)).filter(entry => entry.name === loreName);
-        if (entries.length !== 1)
-            throw new Error(entries.length ? '版本记录存在重名条目，请先在世界书中改为唯一名称。' : '找不到版本记录条目，请刷新来源后重新选择。');
-        if (!entries[0].content.trim())
-            throw new Error('版本记录条目为空，无法检查更新。');
-        return entries[0].content;
-    }
-    async function parseUpdateRules(bookName, loreName) {
-        checkError.value = '';
-        availableUpdates.value = [];
-        source = null;
-        try {
-            const content = await readSource(bookName, loreName);
-            const regex = /<(del|edit)\|v="([^"]+)">([\s\S]*?)<\/\1>/g;
-            const matches = [...content.matchAll(regex)];
-            if (!matches.length)
-                throw new Error('条目中没有有效更新块，应使用 <edit|v="版本号">JSON</edit> 或 del 格式。');
-            if (/<(?:del|edit)\|/.test(content.replace(regex, '')))
-                throw new Error('存在格式损坏或未闭合的更新块，请修正条目后重试。');
-            const parsed = matches.map(match => {
-                const version = Number(match[2]);
-                if (!match[2].trim() || !Number.isFinite(version))
-                    throw new Error(`版本号“${match[2]}”无效。`);
-                let block;
-                try {
-                    block = JSON.parse(match[3]);
-                }
-                catch (cause) {
-                    throw new Error(`版本 ${match[2]} 的 JSON 损坏：${describe(cause)}`);
-                }
-                if (!(0,lodash__WEBPACK_IMPORTED_MODULE_2__.isPlainObject)(block))
-                    throw new Error(`版本 ${match[2]} 的更新内容必须是 JSON 对象。`);
-                return { version, type: match[1], content: block };
-            }).sort((a, b) => a.version - b.version);
-            availableUpdates.value = parsed;
-            targetVersion.value = Math.max(currentVersion.value, ...parsed.map(block => block.version));
-            source = { bookName, loreName, content };
-        }
-        catch (cause) {
-            checkError.value = `检查失败：${describe(cause)}`;
-            updateLogs.value = [checkError.value];
-            throw new Error(checkError.value);
-        }
-    }
-    async function checkAndNotify(bookName) {
-        if (!settings.value.enable || !settings.value.lore_name || !bookName)
-            return;
-        try {
-            await fetchCurrentVersion();
-            await parseUpdateRules(bookName, settings.value.lore_name);
-            if (targetVersion.value > currentVersion.value)
-                toastr.info(`发现变量更新 v${targetVersion.value}，请前往 MVU 助手的变量更新页面查看。`);
-        }
-        catch (cause) {
-            checkError.value = describe(cause);
-            toastr.error(checkError.value, '变量更新检查失败');
-        }
-    }
-    function applyDelete(target, rule) {
-        if (!target || typeof target !== 'object' || !rule || typeof rule !== 'object')
-            return;
-        for (const key of Object.keys(rule)) {
-            if (key === '$all')
-                Object.keys(target).forEach(child => applyDelete(target[child], rule[key]));
-            else if (rule[key] && Object.keys(rule[key]).length > 0) {
-                if (Object.hasOwn(target, key) && target[key])
-                    applyDelete(target[key], rule[key]);
-            }
-            else
-                delete target[key];
-        }
-    }
-    function applyEdit(target, rule) {
-        if (!target || typeof target !== 'object' || !(0,lodash__WEBPACK_IMPORTED_MODULE_2__.isPlainObject)(rule))
-            return;
-        for (const key of Object.keys(rule)) {
-            // JSON may contain these names; defining them must not mutate an object's prototype.
-            if (key === '$all')
-                Object.keys(target).forEach(child => { if (target[child] && typeof target[child] === 'object')
-                    applyEdit(target[child], rule[key]); });
-            else if ((0,lodash__WEBPACK_IMPORTED_MODULE_2__.isPlainObject)(rule[key])) {
-                if (!Object.hasOwn(target, key) || !(0,lodash__WEBPACK_IMPORTED_MODULE_2__.isPlainObject)(target[key]))
-                    Object.defineProperty(target, key, { value: {}, enumerable: true, configurable: true, writable: true });
-                applyEdit(target[key], rule[key]);
-            }
-            else
-                Object.defineProperty(target, key, { value: (0,lodash__WEBPACK_IMPORTED_MODULE_2__.cloneDeep)(rule[key]), enumerable: true, configurable: true, writable: true });
-        }
-    }
-    function changesOf(before, after, path = []) {
-        const changes = [];
-        for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
-            const nextPath = [...path, key];
-            if (!Object.hasOwn(before, key))
-                changes.push({ path: nextPath, kind: 'added', after: (0,lodash__WEBPACK_IMPORTED_MODULE_2__.cloneDeep)(after[key]) });
-            else if (!Object.hasOwn(after, key))
-                changes.push({ path: nextPath, kind: 'deleted', before: (0,lodash__WEBPACK_IMPORTED_MODULE_2__.cloneDeep)(before[key]) });
-            else if ((0,lodash__WEBPACK_IMPORTED_MODULE_2__.isPlainObject)(before[key]) && (0,lodash__WEBPACK_IMPORTED_MODULE_2__.isPlainObject)(after[key]))
-                changes.push(...changesOf(before[key], after[key], nextPath));
-            else if (!(0,lodash__WEBPACK_IMPORTED_MODULE_2__.isEqual)(before[key], after[key]))
-                changes.push({ path: nextPath, kind: 'updated', before: (0,lodash__WEBPACK_IMPORTED_MODULE_2__.cloneDeep)(before[key]), after: (0,lodash__WEBPACK_IMPORTED_MODULE_2__.cloneDeep)(after[key]) });
-        }
-        return changes;
-    }
-    async function calculateUpdate(boundTarget) {
-        if (!source || checkError.value)
-            throw new Error('请先成功检查版本记录。');
-        const checkedSource = source;
-        const blocks = (0,lodash__WEBPACK_IMPORTED_MODULE_2__.cloneDeep)(availableUpdates.value);
-        const target = boundTarget ?? await (0,_utils_MvuEditTarget__WEBPACK_IMPORTED_MODULE_3__.captureEditTarget)();
-        (0,_utils_MvuEditTarget__WEBPACK_IMPORTED_MODULE_3__.assertEditBaseline)(target);
-        if (checkedSource !== source)
-            throw new Error('检查来源已变化，请重新检查更新。');
-        const fromVersion = versionOf(target.baseline);
-        currentVersion.value = fromVersion;
-        const pending = blocks.filter(block => block.version > fromVersion);
-        updateLogs.value = [];
-        if (!pending.length) {
-            targetVersion.value = fromVersion;
-            previewDiff.value = null;
-            updateLogs.value = ['检查完成，当前已是最新版本。'];
-            return;
-        }
-        const finalData = (0,lodash__WEBPACK_IMPORTED_MODULE_2__.cloneDeep)(target.baseline);
-        for (const update of pending) {
-            updateLogs.value.push(`应用 v${update.version} · ${update.type === 'del' ? '删除' : '合并'}`);
-            if (update.type === 'del')
-                applyDelete(finalData, update.content);
-            else
-                applyEdit(finalData, update.content);
-        }
-        const toVersion = pending[pending.length - 1].version;
-        if (!(0,lodash__WEBPACK_IMPORTED_MODULE_2__.isPlainObject)(finalData.system))
-            finalData.system = {};
-        finalData.system['当前版本'] = toVersion;
-        targetVersion.value = toVersion;
-        previewDiff.value = { finalData, changes: changesOf(target.baseline, finalData), target, source: { ...checkedSource }, fromVersion, toVersion };
-    }
-    async function executeFullUpdate() {
-        const preview = previewDiff.value;
-        if (!preview)
-            throw new Error('没有可执行的预览，请先检查更新。');
-        if (checkError.value)
-            throw new Error('版本来源检查失败，请成功重新检查后再更新。');
-        await waitGlobalInitialized('Mvu');
-        (0,_utils_MvuEditTarget__WEBPACK_IMPORTED_MODULE_3__.assertEditBaseline)(preview.target);
-        const content = await readSource(preview.source.bookName, preview.source.loreName);
-        (0,_utils_MvuEditTarget__WEBPACK_IMPORTED_MODULE_3__.assertEditBaseline)(preview.target);
-        if (content !== preview.source.content)
-            throw new Error('版本记录已变化，旧预览已停止执行。请重新检查更新。');
-        const savedTarget = await (0,_utils_MvuEditTarget__WEBPACK_IMPORTED_MODULE_3__.saveEditTarget)(preview.target, preview.finalData);
-        currentVersion.value = preview.toVersion;
-        targetVersion.value = preview.toVersion;
-        previewDiff.value = null;
-        updateLogs.value = [`已成功更新至 v${preview.toVersion}。`];
-        return savedTarget;
-    }
-    return { settings, settingsError, settingsOperation, currentVersion, targetVersion, updateLogs, checkError, previewDiff,
-        loadSettings, saveSettings, fetchCurrentVersion, parseUpdateRules, calculateUpdate, executeFullUpdate, checkAndNotify };
-});
-
-
-/***/ },
-
-/***/ "./src/MVU助手/utils/MvuEditTarget.ts"
-/*!******************************************!*\
-  !*** ./src/MVU助手/utils/MvuEditTarget.ts ***!
-  \******************************************/
-(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   assertEditBaseline: () => (/* binding */ assertEditBaseline),
-/* harmony export */   assertEditIdentity: () => (/* binding */ assertEditIdentity),
-/* harmony export */   captureEditTarget: () => (/* binding */ captureEditTarget),
-/* harmony export */   saveEditTarget: () => (/* binding */ saveEditTarget),
-/* harmony export */   targetDescription: () => (/* binding */ targetDescription)
-/* harmony export */ });
-/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lodash */ "./node_modules/.pnpm/lodash@4.17.21/node_modules/lodash/lodash.js");
-/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var vue__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! vue */ "./node_modules/.pnpm/vue@3.5.26_typescript@6.0.0-dev.20250807/node_modules/vue/dist/vue.runtime.esm-bundler.js");
-/* harmony import */ var _TargetLocks__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./TargetLocks */ "./src/MVU助手/utils/TargetLocks.ts");
-
-
-
-function context() {
-    return window.parent.SillyTavern.getContext();
-}
-function chatKey(ctx = context()) {
-    return JSON.stringify([ctx.getCurrentChatId(), ctx.groupId ?? '', ctx.characters[ctx.characterId]?.avatar ?? '']);
-}
-function targetDescription(target) {
-    return `聊天 ${target.chatId} · 楼层 ${target.messageId} · 消息页 ${target.swipeId + 1}`;
-}
-function assertEditIdentity(target) {
-    const ctx = context();
-    if (chatKey(ctx) !== target.chatKey || getLastMessageId() !== target.messageId ||
-        ctx.chat[target.messageId] !== target.message || (ctx.chat[target.messageId]?.swipe_id ?? 0) !== target.swipeId) {
-        throw new Error('聊天、最后楼层或消息页已变化，已停止操作。草稿 / 预览仍保留；请导出备份后重新加载目标。');
-    }
-}
-function assertEditBaseline(target) {
-    assertEditIdentity(target);
-    const data = Mvu.getMvuData({ type: 'message', message_id: target.messageId });
-    if (!(0,lodash__WEBPACK_IMPORTED_MODULE_0__.isEqual)(data.stat_data ?? {}, target.baseline)) {
-        throw new Error('目标变量已被外部更新，已禁止旧快照覆盖。草稿 / 预览仍保留；请导出备份并重新加载比较。');
-    }
-    return data;
-}
-async function captureEditTarget() {
-    const ctx = context();
-    const messageId = getLastMessageId();
-    const message = ctx.chat[messageId];
-    if (!message)
-        throw new Error('当前没有可编辑的消息，请先选择聊天并生成消息。');
-    const target = (0,vue__WEBPACK_IMPORTED_MODULE_1__.markRaw)({ chatKey: chatKey(ctx), chatId: String(ctx.getCurrentChatId()), messageId,
-        swipeId: message.swipe_id ?? 0, message, baseline: {} });
-    await waitGlobalInitialized('Mvu');
-    assertEditIdentity(target);
-    const data = Mvu.getMvuData({ type: 'message', message_id: messageId });
-    if (data.stat_data !== undefined && !(0,lodash__WEBPACK_IMPORTED_MODULE_0__.isPlainObject)(data.stat_data))
-        throw new Error('目标 stat_data 不是 JSON 对象，无法安全编辑。');
-    target.baseline = (0,lodash__WEBPACK_IMPORTED_MODULE_0__.cloneDeep)(data.stat_data ?? {});
-    return target;
-}
-/** Checks again after every asynchronous boundary; never redirects to the new last message. */
-async function saveEditTarget(target, value) {
-    if (!(0,lodash__WEBPACK_IMPORTED_MODULE_0__.isPlainObject)(value))
-        throw new Error('变量数据必须是 JSON 对象，不能是数组、null 或标量。');
-    const draft = (0,lodash__WEBPACK_IMPORTED_MODULE_0__.cloneDeep)(value);
-    assertEditIdentity(target);
-    await waitGlobalInitialized('Mvu');
-    const { previous, next } = await (0,_TargetLocks__WEBPACK_IMPORTED_MODULE_2__.withTargetLocks)([`message:${target.chatKey}:${target.messageId}:${target.swipeId}`], async () => {
-        const previous = (0,lodash__WEBPACK_IMPORTED_MODULE_0__.cloneDeep)(assertEditBaseline(target));
-        const next = { ...(0,lodash__WEBPACK_IMPORTED_MODULE_0__.cloneDeep)(previous), stat_data: draft };
-        try {
-            await Mvu.replaceMvuData(next, { type: 'message', message_id: target.messageId });
-        }
-        catch (cause) {
-            throw new Error(`保存未能确认完成，可能已有部分写入。草稿 / 预览仍保留，请重新加载核对后再操作。${cause instanceof Error ? cause.message : String(cause)}`);
-        }
-        try {
-            assertEditIdentity(target);
-            if (!(0,lodash__WEBPACK_IMPORTED_MODULE_0__.isEqual)(Mvu.getMvuData({ type: 'message', message_id: target.messageId }).stat_data, next.stat_data)) {
-                throw new Error('保存后的数据与提交内容不同');
-            }
-        }
-        catch (cause) {
-            throw new Error(`写入已发出，但完成确认失败。请核对原目标，禁止直接覆盖重试；草稿 / 预览仍保留。${cause instanceof Error ? cause.message : String(cause)}`);
-        }
-        return { previous, next };
-    });
-    // Notify outside the shared target lock: listeners may start their own target writes.
-    try {
-        assertEditIdentity(target);
-        if (!(0,lodash__WEBPACK_IMPORTED_MODULE_0__.isEqual)(Mvu.getMvuData({ type: 'message', message_id: target.messageId }).stat_data, next.stat_data)) {
-            throw new Error('保存后的数据与提交内容不同');
-        }
-        await eventEmit('mag_variable_update_ended', (0,lodash__WEBPACK_IMPORTED_MODULE_0__.cloneDeep)(next), previous);
-        assertEditIdentity(target);
-        if (!(0,lodash__WEBPACK_IMPORTED_MODULE_0__.isEqual)(Mvu.getMvuData({ type: 'message', message_id: target.messageId }).stat_data, next.stat_data)) {
-            throw new Error('保存通知期间目标变量已变化');
-        }
-    }
-    catch (cause) {
-        throw new Error(`写入已发出，但完成确认失败。请核对原目标，禁止直接覆盖重试；草稿 / 预览仍保留。${cause instanceof Error ? cause.message : String(cause)}`);
-    }
-    return (0,vue__WEBPACK_IMPORTED_MODULE_1__.markRaw)({ ...target, baseline: (0,lodash__WEBPACK_IMPORTED_MODULE_0__.cloneDeep)(next.stat_data) });
-}
+const eraLogger = new _Utils_LogUtil__WEBPACK_IMPORTED_MODULE_0__.KatLogger('[MvuHelperLog]: ');
 
 
 /***/ },
@@ -65236,6 +75325,43 @@ function useDialogFocus(root, open, close) {
         cleanup?.();
         cleanup = undefined;
     });
+}
+
+
+/***/ },
+
+/***/ "./src/Utils/LogUtil.ts"
+/*!******************************!*\
+  !*** ./src/Utils/LogUtil.ts ***!
+  \******************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   KatLogger: () => (/* binding */ KatLogger)
+/* harmony export */ });
+// logger.ts
+class KatLogger {
+    prefix;
+    constructor(prefix = '[app] ') {
+        this.prefix = prefix;
+    }
+    log(...args) {
+        console.log(`%c🗒️ ${this.prefix}`, 'color: green; font-weight: bold;', ...args);
+    }
+    debug(...args) {
+        console.debug(`%c⚙️ ${this.prefix}`, 'color: orange; font-weight: bold;', ...args);
+    }
+    info(...args) {
+        console.info(`%cℹ️ ${this.prefix}`, 'color: blue; font-weight: bold;', ...args);
+    }
+    warn(...args) {
+        console.warn(`%c⚠️ ${this.prefix}`, 'color: orange; font-weight: bold;', ...args);
+    }
+    error(...args) {
+        console.error(`%c❌ ${this.prefix}`, 'color: red; font-weight: bold;', ...args);
+    }
 }
 
 

@@ -10,7 +10,7 @@
       {{
         variant === 'preset'
           ? '将提示词与原生预设 JSON 一起交给模型转换，再导入返回的 JSON。'
-          : '将这段说明交给编写前端的模型，让前端监听并处理本任务的广播结果。'
+          : '将这段提示词与前端代码交给模型，接入触发、等待、结果处理和界面更新；只需约定任务事件名，分发无需修改脚本 ID。'
       }}
     </p>
     <details>
@@ -26,13 +26,9 @@ import { computed, ref } from 'vue';
 import { presetConversionPrompt } from '@/MVU助手/AsyncAnalyze/PresetConversionPrompt';
 import { createEventIntegrationRules } from '@/MVU助手/AsyncAnalyze/EventIntegrationRules';
 
-const props = defineProps<{ variant: 'preset' | 'event'; eventName?: string; taskId?: string }>();
+const props = defineProps<{ variant: 'preset' | 'event' }>();
 const feedback = ref('');
-const content = computed(() =>
-  props.variant === 'preset'
-    ? presetConversionPrompt
-    : createEventIntegrationRules(getScriptId(), props.eventName || '', props.taskId),
-);
+const content = computed(() => (props.variant === 'preset' ? presetConversionPrompt : createEventIntegrationRules()));
 async function copy() {
   try {
     await navigator.clipboard.writeText(content.value);

@@ -136,7 +136,7 @@
               <template v-for="task in result.tasks" :key="task.taskId">
                 <li v-for="write in task.writes" :key="write.writeId">
                   <span>{{ write.target || '未命名目标' }}</span>
-                  <span :class="{ error: write.status === 'failed' || write.status === 'rollback_failed' }">{{
+                  <span :class="{ error: ['failed', 'rollback_failed', 'delivery_failed'].includes(write.status) }">{{
                     labels[write.status]
                   }}</span>
                   <p v-if="write.error" class="error">{{ write.error }}</p>
@@ -169,7 +169,7 @@
                 </p>
                 <details v-if="task.text" class="returned-text">
                   <summary>
-                    查看返回文本 <span class="muted">{{ task.text.length }} 字符</span>
+                    查看响应全文（诊断） <span class="muted">{{ task.text.length }} 字符</span>
                   </summary>
                   <pre>{{ task.text }}</pre>
                 </details>
@@ -204,9 +204,7 @@
                   </div>
                   <p class="muted">错误代码：{{ task.error.code }}</p>
                   <pre v-if="task.error.details?.response">{{ task.error.details.response }}</pre>
-                  <p v-else>
-                    本阶段未取得后端响应内容。下方过程日志可查看已执行阶段、请求和错误。
-                  </p>
+                  <p v-else>本阶段未取得后端响应内容。下方过程日志可查看已执行阶段、请求和错误。</p>
                 </details>
               </section>
             </details>
@@ -237,7 +235,7 @@ import {
   rerunCurrentTasks,
   cancelTaskRun,
 } from '../../AsyncAnalyze/TaskRuntime';
-import type { RunResult, Trigger } from '../../AsyncAnalyze/TaskSchema';
+import { eventOutputChannel, type RunResult, type Trigger } from '../../AsyncAnalyze/TaskSchema';
 import { Modal } from '../../utils/modal';
 import TaskManager from '../components/AsyncAnalyze/TaskManager.vue';
 import Settings from '../components/AsyncAnalyze/Settings.vue';
@@ -253,6 +251,7 @@ const phaseLabels: Record<string, string> = {
   request: '请求模型',
   extract: '提取响应',
   commit: '提交结果',
+  delivery: '广播交付',
   rollback: '回滚',
 };
 const labels: Record<string, string> = {
@@ -265,6 +264,10 @@ const labels: Record<string, string> = {
   rolled_back: '已回滚',
   rollback_failed: '回滚失败',
   committed: '已写入',
+  pending: '待提交后广播',
+  delivered: '已广播（不可撤回）',
+  delivery_failed: '广播失败，可能部分送达',
+  not_delivered: '未广播',
   completed: '已完成',
   not_needed: '无需回滚',
 };
@@ -290,13 +293,13 @@ const canRun = computed(() => !!target.value.chatId && target.value.messageId >=
 const writeTargets = computed(() => [
   ...new Set(
     candidateTasks.value.flatMap(task =>
-      task.output.mode === 'return'
-        ? []
-        : task.output.mode === 'event_result'
-          ? ['事件结果广播（无持久写入）']
-          : task.output.writes.map(write =>
-              write.target.kind === 'worldbook' ? `世界书 · ${write.target.bookName}` : '消息正文及其中的MVU更新',
-            ),
+      task.output.writes.map(write =>
+        write.target.kind === 'worldbook'
+          ? `世界书 · ${write.target.bookName}`
+          : write.target.kind === 'event'
+            ? `广播 · ${task.eventName ? eventOutputChannel(task.eventName) : '请先填写附加事件名'}`
+            : '消息正文及其中的MVU更新',
+      ),
     ),
   ),
 ]);
@@ -349,7 +352,7 @@ async function rerun() {
   if (!checkTarget()) return;
   const confirmed = await Modal.confirm(
     '回滚后重新计算',
-    `目标：${target.value.chatId}，楼层 ${target.value.messageId}。\n将先撤销本楼层上一条常规链的提交，再按已保存配置运行。仅本次脚本会话保留的日志可用。`,
+    `目标：${target.value.chatId}，楼层 ${target.value.messageId}。\n将先撤销本楼层上一条常规链可回滚的提交，再按已保存配置运行。已交付的广播无法撤回，重新计算可能再次广播。仅本次脚本会话保留的日志可用。`,
   );
   if (confirmed) await execute(true);
 }
@@ -379,16 +382,23 @@ function taskOverview(result: RunResult) {
   );
 }
 function dataImpact(result: RunResult) {
-  if (hasResidue(result)) return '存在未恢复的修改或任务状态，请检查受影响目标。';
-  if (result.rollback.status === 'completed') return '已撤销本链需要回滚的提交。';
-  const committed = result.tasks.flatMap(task => task.writes).filter(write => write.status === 'committed');
-  if (committed.length) return `已写入 ${committed.length} 个目标，请核对下方明细。`;
-  if (result.tasks.some(task => task.text && task.status === 'succeeded')) return '已返回文本，无成功写入记录。';
-  return '无成功写入记录。';
+  const writes = result.tasks.flatMap(task => task.writes);
+  const committed = writes.filter(write => write.status === 'committed').length;
+  const delivered = writes.filter(write => write.status === 'delivered').length;
+  const failedDelivery = writes.filter(write => write.status === 'delivery_failed').length;
+  const parts: string[] = [];
+  if (hasResidue(result)) parts.push('存在未恢复的修改或任务状态，请检查受影响目标。');
+  else if (result.rollback.status === 'completed') parts.push('已撤销本链需要回滚的提交。');
+  if (committed) parts.push(`已写入 ${committed} 个文本目标。`);
+  if (delivered) parts.push(`已交付 ${delivered} 个广播，无法撤回。`);
+  if (failedDelivery) parts.push(`${failedDelivery} 个广播交付失败，可能部分送达；请检查接收方。`);
+  return parts.length ? parts.join('') : '无成功写入或广播交付记录。';
 }
 async function copyDiagnostic(result: RunResult) {
   try {
-    await navigator.clipboard.writeText(JSON.stringify({ ...result, logs: taskRunLogs.get(result.runId) ?? [] }, null, 2));
+    await navigator.clipboard.writeText(
+      JSON.stringify({ ...result, logs: taskRunLogs.get(result.runId) ?? [] }, null, 2),
+    );
     feedback.value = '已复制运行诊断。内容包含返回文本与写入目标，请按需分享。';
   } catch {
     feedback.value = '无法访问剪贴板，请展开运行诊断查看信息。';

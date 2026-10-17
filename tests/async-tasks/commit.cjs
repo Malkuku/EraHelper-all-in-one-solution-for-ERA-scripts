@@ -32,7 +32,7 @@ const identity = { chatKey: JSON.stringify(['chat-commit', '', 'Char.png']), cha
 const runResult = () => ({ warnings: [] });
 const taskResult = () => ({ taskId: 'task', taskName: 'task', status: 'failed', attempts: 1, writes: [] });
 const write = (id, target, pattern) => ({ id, target, extract: [], operation: pattern ? { kind: 'replace', regex: { pattern, flags: '' } } : { kind: 'append' } });
-const task = writes => ({ output: { mode: 'write', writes } });
+const task = writes => ({ output: { writes } });
 const signal = new AbortController().signal;
 async function main() {
   const a = { runId: 'regular-A', edits: [] }; const b = { runId: 'event-B', edits: [] };

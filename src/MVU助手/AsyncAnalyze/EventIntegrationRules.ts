@@ -1,65 +1,74 @@
-/** Copyable integration contract; kept alongside the runtime rather than in UI markup. */
-export function createEventIntegrationRules(scriptId: string, eventName: string, taskId?: string): string {
-  const channel = eventName ? `${eventName}:result` : 'kat_task_chain:result';
-  const invocation = eventName
-    ? `await eventEmit(eventName, { requestId, messageId${taskId ? ', taskId' : ''} });`
-    : `await KatTaskAPI.run({ requestId, messageId${taskId ? ', taskId' : ''} });`;
-  return `# MVU助手：事件任务与其它前端联动
+﻿/** Copyable frontend implementation prompt, shared across tasks and installations. */
+export function createEventIntegrationRules(): string {
+  return `# 为角色卡前端接入 MVU助手事件任务
 
-助手脚本 ID：${JSON.stringify(scriptId)}
-示例事件名：${JSON.stringify(eventName)}
-任务 ID：${JSON.stringify(taskId ?? '')}
+请根据我提供的前端代码和任务用途，完成 MVU助手联动。先理解现有界面的数据流，沿用已有组件、结果解析和状态管理，实现触发任务、显示等待、接收处理结果、更新界面的完整流程。
 
-## 配置规则
-- 任务需关联当前活动规则组。需要通过自定义事件触发时填写事件名；常规或手动运行无需填写。
-- “参加常规链”只控制普通消息/手工常规链；关闭后，事件仍可触发任务。开启则两种入口都可执行。
-- 触发间隔为1时不限制重复触发；大于1时，当前楼层减上次触发楼层达到间隔才执行，首次从0起算。事件也遵守间隔。楼层回退时，本次跳过并重置间隔基线。
-- 输出选择“事件结果广播”，所有触发方式都可使用。事件执行通过“事件名:result”广播；常规、自动消息及无事件的单任务执行通过“kat_task_chain:result”广播。不将结果持久化到聊天变量，不写正文、世界书或MVU。
-- 同一事件在同一聊天中只允许一个在途运行，重复请求返回busy，不排队。不同事件可并发。
+## 1. 只约定一个任务事件名
 
-## 调用与监听
-先等待助手初始化，再注册结果监听，最后触发。每次使用新的requestId关联结果，不要只按事件名认领。广播载荷为RunResult，正文在tasks[].text；不要把整个载荷当字符串。前端应在卸载时移除监听。
+用 EVENT_NAME 表示 MVU助手任务中配置的“附加事件名”。请从我提供的配置或现有前端中取得这个名称；如果没有提供，先向我确认，不要自行编造。
+
+- 触发任务：EVENT_NAME。
+- 接收处理结果：EVENT_NAME + ':output'。
+- 查询本次运行终态：EVENT_NAME + ':result'。
+
+例如任务事件名为 Chat_On_WeChat，前端触发 Chat_On_WeChat，监听 Chat_On_WeChat:output 获取处理后的结果。不要再设置一份独立的广播事件名。
+
+助手侧需将任务关联到当前活动规则组，并在“结果处理”添加写入、将“目标”选为“事件广播”。广播可以和正文、世界书目标同时使用；常规运行也可以产生广播。
+
+## 2. 接收的是处理链完成后的结果
+
+模型响应先经过任务的响应阶段正则，再经过该广播写入的提取规则，最后通过 EVENT_NAME + ':output' 发送以下对象：
 
 \`\`\`ts
-await waitGlobalInitialized('KatTaskAPI');
-const eventName = ${JSON.stringify(eventName)};
-const taskId = ${JSON.stringify(taskId ?? '')};
-const resultChannel = ${JSON.stringify(channel)};
-const requestId = crypto.randomUUID();
-const messageId = getLastMessageId();
-const chatId = SillyTavern.getCurrentChatId();
-const listener = eventOn(resultChannel, result => {
-  if (result.requestId !== requestId) return;
-  listener.stop();
-  if (result.chatId !== chatId || result.messageId !== messageId) return;
-  // busy/skipped/failed/cancelled 都是终态，需展示原因；partial需逐任务判断。
-  for (const task of result.tasks) {
-    if (taskId && task.taskId !== taskId) continue;
-    if (task.status === 'succeeded') {
-      console.log(task.taskId, task.taskName, task.text);
-      // 在此更新前端；按taskId区分同一事件关联的多个任务。
-    } else {
-      console.warn(task.taskId, task.error?.message || task.reason?.message || task.status);
-    }
-  }
-  console.log(result.status, result.reason, result.warnings);
-});
-// 其它前端的卸载清理：listener.stop()。
-try {
-  ${invocation}
-} catch (error) {
-  listener.stop();
-  throw error;
-}
+ type OutputPayload = {
+  version: 1;
+  scriptId: string;
+  runId: string;
+  requestId: string;
+  taskId: string;
+  writeId: string;
+  chatId: string;
+  messageId: number;
+  swipeId: number;
+  text: string;
+};
 \`\`\`
 
-也可直接await KatTaskAPI.run({ messageId, requestId, ...(eventName ? { eventName } : {}), ...(taskId ? { taskId } : {}) })获取同样结构；无事件时必须省略eventName，不能传空字符串。该调用仍会广播一次结果，避免同时用Promise和监听重复处理。字符串旧调用eventEmit(eventName, requestId)仅在有事件名时可用，目标为触发时最新楼层。可选taskId只运行该活动组内的指定任务；事件名必须匹配。显式单任务测试跳过间隔。
+使用 payload.text 作为前端的业务输入。它已经完成助手侧的正则处理与提取，不要改读 tasks[].text 或运行诊断全文，也不要重复执行助手的提取规则。如果业务约定 text 为 JSON，再按约定解析；解析失败应保留原界面数据并展示错误，不要伪造空结果当作成功。
 
-上例由前端主动触发，使用requestId认领一次结果。如果需要被动接收自动运行结果，应保持监听，不按上例的requestId过滤或收到一次就stop；改为按当前chatId、messageId（以及swipeId）和taskId筛选。即使任务配置了事件名，只要由常规链触发，仍需监听kat_task_chain:result；有两种触发入口时分别订阅两个频道。只在前端卸载时清理这些常驻监听。
+## 3. 角色卡分发不依赖安装 ID
 
-## 结果规则
-每次请求发一次终态结果，version=1，包含requestId、runId、trigger、chatId、messageId、status、tasks、warnings和rollback。已绑定楼层时另有swipeId，可用于拒绝前端已切换消息页后的迟到结果。busy另含activeRunId。tasks含taskId、taskName、status、attempts、text及错误/跳过原因；间隔原因包含lastTriggerFloor。只有succeeded任务的text才可作为成功结果使用；事件一组独立结算，部分成功需保留成功项并显示失败项。
+前端按 EVENT_NAME + ':output' 监听即可。角色卡和任务配置发给别人后，继续使用相同事件名，不需要知道或修改对方的脚本 ID。
 
-广播只通知当前监听者，不持久保存、不重放。请在发送前完成监听；前端需要保留结果时自行管理。结果监听回调应自行捕获异常，避免妨碍同频道的其它消费者。不要在结果监听器中无条件重发触发事件。
+不要硬编码作者的 scriptId、taskId 或 writeId 作为接收条件。payload 中这些字段是当前运行的来源信息；需要去重时可组合 scriptId、runId、taskId、writeId，而不能把作者安装实例的 ID 当作白名单。
+
+## 4. 主动触发与被动接收
+
+在界面挂载时先通过 eventOn(EVENT_NAME + ':output', handler) 注册监听，再允许用户触发任务。保持监听以接收后续任务结果，界面卸载时调用监听返回值的 stop() 清理；Vue 使用对应卸载钩子，消息页销毁也要清理。
+
+前端主动触发时，先等待 waitGlobalInitialized('KatTaskAPI')，为每次操作生成新的 requestId，并使用该操作绑定的消息楼层：
+
+\`\`\`ts
+await eventEmit(EVENT_NAME, { requestId, messageId });
+\`\`\`
+
+这里的 EVENT_NAME、requestId、messageId 必须接入实际前端逻辑，不能留下未定义变量。事件参数用于关联请求和定位楼层，不会自动注入模型提示词；要让模型读取业务内容，需沿用任务现有的变量、宏或模板输入方式。
+
+主动请求按 requestId 关联返回；被动接收常规任务时不要求匹配某次前端请求。两者都要核对当前界面绑定的 chatId、messageId、swipeId，忽略切换聊天、楼层或消息页后的迟到结果。消息楼层前端应使用自身绑定楼层，不要一律取聊天最后一楼。
+
+## 5. 等待与失败也要收口
+
+主动触发的前端还需监听 EVENT_NAME + ':result'，按 requestId 识别 RunResult 终态，结束等待并显示 busy、skipped、failed、cancelled 或 partial 的原因。没有成功广播时也必须能退出等待，不要把“发出触发事件”当作成功完成。
+
+业务内容由 :output 的 payload.text 更新界面；:result 用于运行状态反馈，避免同一次运行更新两遍业务内容。部分成功时保留已经收到的成功项，并显示失败项。接收回调自行捕获解析与界面更新异常，不要在其中无条件重新触发任务。
+
+常规链全部提交成功后才广播，事件任务按自身成功结算交付。广播不持久保存、不重放，已交付内容无法撤回；重新计算会生成新的 runId，可能再次交付。按业务用途决定覆盖或保留结果，并妥善清理去重记录。
+
+## 6. 交付与验证
+
+直接修改我提供的前端，给出完整可用代码或明确的文件修改，并说明助手侧要填写的 EVENT_NAME 和广播目标设置。
+
+至少检查：正常触发并更新界面、连续两次请求、无成功广播的失败终态、被动收到结果、切换聊天或消息页后拒绝迟到结果，以及角色卡换一个脚本安装实例后仍按同一事件名联动。只修改联动所需部分，保留已有界面和业务行为。
 `;
 }

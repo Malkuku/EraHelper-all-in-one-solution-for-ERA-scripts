@@ -1892,6 +1892,115 @@ const useEraEditStore = (0,pinia__WEBPACK_IMPORTED_MODULE_0__.defineStore)('KatE
 });
 
 
+/***/ },
+
+/***/ "./src/MVU助手/utils/MvuEditTarget.ts"
+/*!******************************************!*\
+  !*** ./src/MVU助手/utils/MvuEditTarget.ts ***!
+  \******************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   assertEditBaseline: () => (/* binding */ assertEditBaseline),
+/* harmony export */   assertEditIdentity: () => (/* binding */ assertEditIdentity),
+/* harmony export */   captureEditTarget: () => (/* binding */ captureEditTarget),
+/* harmony export */   saveEditTarget: () => (/* binding */ saveEditTarget),
+/* harmony export */   targetDescription: () => (/* binding */ targetDescription)
+/* harmony export */ });
+/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lodash */ "./node_modules/.pnpm/lodash@4.17.21/node_modules/lodash/lodash.js");
+/* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var vue__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! vue */ "./node_modules/.pnpm/vue@3.5.26_typescript@6.0.0-dev.20250807/node_modules/vue/dist/vue.runtime.esm-bundler.js");
+/* harmony import */ var _TargetLocks__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./TargetLocks */ "./src/MVU助手/utils/TargetLocks.ts");
+
+
+
+function context() {
+    return window.parent.SillyTavern.getContext();
+}
+function chatKey(ctx = context()) {
+    return JSON.stringify([ctx.getCurrentChatId(), ctx.groupId ?? '', ctx.characters[ctx.characterId]?.avatar ?? '']);
+}
+function targetDescription(target) {
+    return `聊天 ${target.chatId} · 楼层 ${target.messageId} · 消息页 ${target.swipeId + 1}`;
+}
+function assertEditIdentity(target) {
+    const ctx = context();
+    if (chatKey(ctx) !== target.chatKey || getLastMessageId() !== target.messageId ||
+        ctx.chat[target.messageId] !== target.message || (ctx.chat[target.messageId]?.swipe_id ?? 0) !== target.swipeId) {
+        throw new Error('聊天、最后楼层或消息页已变化，已停止操作。草稿 / 预览仍保留；请导出备份后重新加载目标。');
+    }
+}
+function assertEditBaseline(target) {
+    assertEditIdentity(target);
+    const data = Mvu.getMvuData({ type: 'message', message_id: target.messageId });
+    if (!(0,lodash__WEBPACK_IMPORTED_MODULE_0__.isEqual)(data.stat_data ?? {}, target.baseline)) {
+        throw new Error('目标变量已被外部更新，已禁止旧快照覆盖。草稿 / 预览仍保留；请导出备份并重新加载比较。');
+    }
+    return data;
+}
+async function captureEditTarget() {
+    const ctx = context();
+    const messageId = getLastMessageId();
+    const message = ctx.chat[messageId];
+    if (!message)
+        throw new Error('当前没有可编辑的消息，请先选择聊天并生成消息。');
+    const target = (0,vue__WEBPACK_IMPORTED_MODULE_1__.markRaw)({ chatKey: chatKey(ctx), chatId: String(ctx.getCurrentChatId()), messageId,
+        swipeId: message.swipe_id ?? 0, message, baseline: {} });
+    await waitGlobalInitialized('Mvu');
+    assertEditIdentity(target);
+    const data = Mvu.getMvuData({ type: 'message', message_id: messageId });
+    if (data.stat_data !== undefined && !(0,lodash__WEBPACK_IMPORTED_MODULE_0__.isPlainObject)(data.stat_data))
+        throw new Error('目标 stat_data 不是 JSON 对象，无法安全编辑。');
+    target.baseline = (0,lodash__WEBPACK_IMPORTED_MODULE_0__.cloneDeep)(data.stat_data ?? {});
+    return target;
+}
+/** Checks again after every asynchronous boundary; never redirects to the new last message. */
+async function saveEditTarget(target, value) {
+    if (!(0,lodash__WEBPACK_IMPORTED_MODULE_0__.isPlainObject)(value))
+        throw new Error('变量数据必须是 JSON 对象，不能是数组、null 或标量。');
+    const draft = (0,lodash__WEBPACK_IMPORTED_MODULE_0__.cloneDeep)(value);
+    assertEditIdentity(target);
+    await waitGlobalInitialized('Mvu');
+    const { previous, next } = await (0,_TargetLocks__WEBPACK_IMPORTED_MODULE_2__.withTargetLocks)([`message:${target.chatKey}:${target.messageId}:${target.swipeId}`], async () => {
+        const previous = (0,lodash__WEBPACK_IMPORTED_MODULE_0__.cloneDeep)(assertEditBaseline(target));
+        const next = { ...(0,lodash__WEBPACK_IMPORTED_MODULE_0__.cloneDeep)(previous), stat_data: draft };
+        try {
+            await Mvu.replaceMvuData(next, { type: 'message', message_id: target.messageId });
+        }
+        catch (cause) {
+            throw new Error(`保存未能确认完成，可能已有部分写入。草稿 / 预览仍保留，请重新加载核对后再操作。${cause instanceof Error ? cause.message : String(cause)}`);
+        }
+        try {
+            assertEditIdentity(target);
+            if (!(0,lodash__WEBPACK_IMPORTED_MODULE_0__.isEqual)(Mvu.getMvuData({ type: 'message', message_id: target.messageId }).stat_data, next.stat_data)) {
+                throw new Error('保存后的数据与提交内容不同');
+            }
+        }
+        catch (cause) {
+            throw new Error(`写入已发出，但完成确认失败。请核对原目标，禁止直接覆盖重试；草稿 / 预览仍保留。${cause instanceof Error ? cause.message : String(cause)}`);
+        }
+        return { previous, next };
+    });
+    // Notify outside the shared target lock: listeners may start their own target writes.
+    try {
+        assertEditIdentity(target);
+        if (!(0,lodash__WEBPACK_IMPORTED_MODULE_0__.isEqual)(Mvu.getMvuData({ type: 'message', message_id: target.messageId }).stat_data, next.stat_data)) {
+            throw new Error('保存后的数据与提交内容不同');
+        }
+        await eventEmit('mag_variable_update_ended', (0,lodash__WEBPACK_IMPORTED_MODULE_0__.cloneDeep)(next), previous);
+        assertEditIdentity(target);
+        if (!(0,lodash__WEBPACK_IMPORTED_MODULE_0__.isEqual)(Mvu.getMvuData({ type: 'message', message_id: target.messageId }).stat_data, next.stat_data)) {
+            throw new Error('保存通知期间目标变量已变化');
+        }
+    }
+    catch (cause) {
+        throw new Error(`写入已发出，但完成确认失败。请核对原目标，禁止直接覆盖重试；草稿 / 预览仍保留。${cause instanceof Error ? cause.message : String(cause)}`);
+    }
+    return (0,vue__WEBPACK_IMPORTED_MODULE_1__.markRaw)({ ...target, baseline: (0,lodash__WEBPACK_IMPORTED_MODULE_0__.cloneDeep)(next.stat_data) });
+}
+
+
 /***/ }
 
 }]);

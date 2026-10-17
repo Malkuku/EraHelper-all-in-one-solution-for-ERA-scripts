@@ -54,7 +54,7 @@ function resetChat(name, text = 'BODY') {
   host.chat = [{ mes: 'USER', is_user: true, name: 'Player' }, { mes: text, is_user: false, name: 'Char' }];
   onStateSaved = async () => {}; onMessageSaved = async () => {};
 }
-function task(id, overrides = {}) { return TaskSchema.parse({ id, name: id, enabled: true, eventName: '', historyDepth: 0, prompt: id, connectionId: id, candidateBooks: [], scan: {}, regexRules: [], output: { mode: 'return' }, ...overrides }); }
+function task(id, overrides = {}) { return TaskSchema.parse({ id, name: id, enabled: true, eventName: 'fixture', historyDepth: 0, prompt: id, connectionId: id, candidateBooks: [], scan: {}, regexRules: [], output: { writes: [{ id: 'broadcast', target: { kind: 'event' }, extract: [] }] }, ...overrides }); }
 async function configure(tasks, minimum = 0) {
   const settings = emptySettings(); settings.automatic.minReceivedChars = minimum;
   settings.groups = [{ id: 'group', name: 'group', comment: '', taskIds: tasks.map(value => value.id) }]; settings.activeGroupId = 'group'; settings.tasks = tasks;
@@ -66,7 +66,7 @@ async function configure(tasks, minimum = 0) {
 }
 async function until(predicate) { const deadline = Date.now() + 5000; while (!predicate()) { if (Date.now() > deadline) throw new Error('fixture progress deadline exceeded'); await new Promise(resolve => setImmediate(resolve)); } }
 const eventRun = (name, requestId) => runTaskChain({ messageId: 1, trigger: { kind: 'event', eventName: name }, requestId });
-const messageWrite = pattern => ({ mode: 'write', writes: [{ id: 'write', target: { kind: 'message' }, extract: [], operation: pattern ? { kind: 'replace', regex: { pattern, flags: '' } } : { kind: 'append' } }] });
+const messageWrite = pattern => ({ writes: [{ id: 'write', target: { kind: 'message' }, extract: [], operation: pattern ? { kind: 'replace', regex: { pattern, flags: '' } } : { kind: 'append' } }] });
 async function main() {
   resetChat('busy'); await configure([task('A', { eventName: 'same' }), task('B', { eventName: 'other' })]);
   const gate = deferred(); model = async body => { await gate.promise; return success(body.model); };
@@ -142,11 +142,201 @@ async function main() {
   await notificationChecks();
   await failureDiagnosticChecks();
   await eventContractChecks();
+  await processedBroadcastChecks();
+  await independentDeliveryChecks();
   console.log('PASS: explicit busy and independent event/regular runs, enable/threshold/interval, isolated cancellation, commit-order rollback and reserved rerun lifecycle');
+}
+async function processedBroadcastChecks() {
+  resetChat('processed-broadcast');
+  const output = { writes: [{ id: 'one', target: { kind: 'event' }, extract: [{ pattern: '<value>.*?</value>', flags: '' }] }] };
+  await configure([task('A', { output, regexRules: [{ id: 'response', stage: 'response', enabled: true, pattern: 'RAW', flags: '', replacement: 'PROCESSED' }] })]);
+  model = async () => success('prefix<value>RAW</value>suffix');
+  const result = await runTaskChain({ messageId: 1, trigger: { kind: 'manual' }, requestId: 'processed-request' });
+  const delivered = events.find(event => event.name === 'fixture:output').result;
+  assert.equal(result.tasks[0].writes[0].status, 'delivered');
+  assert.deepEqual(delivered, { version: 1, scriptId: 'runtime-script', runId: result.runId, requestId: 'processed-request', taskId: 'A', writeId: 'one', chatId: 'processed-broadcast', messageId: 1, swipeId: 0, text: '<value>PROCESSED</value>' });
+  assert(chatVariables['kat_async_task_state:runtime-script'].A, 'state committed before delivery');
+  resetChat('broadcast-chain-rollback');
+  await configure([task('A', { output: { writes: [...output.writes, ...messageWrite().writes] } }), task('FAIL', { order: 1 })]);
+  model = async body => body.model === 'FAIL' ? { ok: false, status: 500 } : success('<value>KEEP</value>');
+  const failed = await runTaskChain({ messageId: 1, trigger: { kind: 'manual' } });
+  assert.equal(failed.status, 'failed'); assert.equal(host.chat[1].mes, 'BODY');
+  assert.equal(events.some(event => event.name === 'fixture:output'), false, 'rolled back chain must never deliver business success');
+  assert.equal(failed.tasks[0].writes.find(write => write.writeId === 'one').status, 'not_delivered');
+  for (const eventName of ['', 'kat_task_chain:result', ' A ', 'reserved-trigger']) {
+    resetChat('invalid-broadcast-channel');
+    await configure([task('A', { eventName, output: { writes: [{ id: 'bad', target: { kind: 'event' }, extract: [] }] } }), task('OFF', { eventName: 'reserved-trigger:output', enabled: false })]);
+    const fetch = global.fetch; let httpCalls = 0;
+    global.fetch = (...args) => { httpCalls++; return fetch(...args); };
+    try {
+      const invalid = await runTaskChain({ messageId: 1, trigger: { kind: 'task', taskId: 'A' } });
+      assert.equal(invalid.status, 'failed'); assert.equal(httpCalls, 0, 'invalid channel must fail before token-counting or generation HTTP');
+    } finally { global.fetch = fetch; }
+  }
+  console.log('PASS: explicit business payload follows response regex and per-write extraction, complete-chain rollback suppresses delivery, invalid/recursive channels use zero HTTP');
+}
+async function independentDeliveryChecks() {
+  const broadcast = (id, pattern) => ({ id, target: { kind: 'event' }, extract: pattern ? [{ pattern, flags: '' }] : [] });
+  const business = () => events.filter(item => item.name.endsWith(':output'));
+  const emitter = global.eventEmit;
+  const variableSetter = global.updateVariablesWith;
+  const scriptReader = global.getScriptId;
+  const channel = 'distributed-card';
+  try {
+    for (const scriptId of ['author-installation', 'recipient-installation']) {
+      global.getScriptId = () => scriptId;
+      resetChat(`distributed-${scriptId}`);
+      await configure([task('A', { eventName: channel })]);
+      model = async () => success('SHARED_CARD_TEXT');
+      const result = await runTaskChain({ messageId: 1, trigger: { kind: 'manual' } });
+      assert.equal(result.status, 'succeeded');
+      assert.equal(business().length, 1);
+      assert.equal(business()[0].name, channel + ':output', 'installation identity must never change the receiving channel');
+      assert.equal(business()[0].result.scriptId, scriptId, 'source identity is read at runtime');
+    }
+    global.getScriptId = scriptReader;
+
+    for (const mode of ['return', 'event_result']) {
+      resetChat(`retired-mode-${mode}`);
+      await configure([task('A')]);
+      const historical = store.snapshot(); historical.schemaVersion = 3; historical.tasks[0].output = { mode };
+      await store.replaceSettings(historical); await store.load();
+      const fetch = global.fetch; let httpCalls = 0;
+      global.fetch = (...args) => { httpCalls++; return fetch(...args); };
+      try {
+        const result = await runTaskChain({ messageId: 1, trigger: { kind: 'manual' } });
+        assert.equal(result.status, 'failed');
+        assert.equal(result.tasks[0].error.phase, 'prepare');
+        assert.match(result.tasks[0].error.message, /补选.*正文.*世界书.*事件广播/);
+        assert.equal(httpCalls, 0, 'historical modes cannot silently continue as raw return or guessed broadcast');
+        assert.equal(business().length, 0);
+      } finally { global.fetch = fetch; }
+    }
+
+    resetChat('mixed-all-targets');
+    let entries = [{ uid: 7, name: 'summary', content: 'OLD_BOOK' }];
+    const bookReader = global.getWorldbook, bookWriter = global.updateWorldbookWith;
+    global.getWorldbook = async () => structuredClone(entries);
+    global.updateWorldbookWith = async (_name, update) => { entries = await update(structuredClone(entries)); };
+    try {
+      await configure([task('A', { output: { writes: [
+        { ...messageWrite().writes[0], extract: [{ pattern: '<body>.*?</body>', flags: '' }] },
+        { id: 'book', target: { kind: 'worldbook', bookName: 'book', entryUid: 7, entryName: 'summary' }, extract: [{ pattern: '<book>.*?</book>', flags: '' }], operation: { kind: 'append' } },
+        broadcast('left', '<left>.*?</left>'), broadcast('right', '<right>.*?</right>'),
+      ] }, regexRules: [{ id: 'response', stage: 'response', enabled: true, pattern: 'RAW', flags: 'g', replacement: 'DONE' }] })]);
+      model = async () => success('<body>RAW</body><book>RAW</book><left>RAW</left><right>RAW</right>');
+      const result = await runTaskChain({ messageId: 1, trigger: { kind: 'manual' } });
+      assert.equal(result.status, 'succeeded');
+      assert.equal(host.chat[1].mes, 'BODY\n<body>DONE</body>');
+      assert.equal(entries[0].content, 'OLD_BOOK\n<book>DONE</book>');
+      assert.deepEqual(business().map(item => [item.result.writeId, item.result.text]), [['left', '<left>DONE</left>'], ['right', '<right>DONE</right>']]);
+    } finally { global.getWorldbook = bookReader; global.updateWorldbookWith = bookWriter; }
+
+    resetChat('extraction-failure-no-delivery');
+    await configure([task('A', { output: { writes: [broadcast('matched'), broadcast('missing', 'ABSENT')] } })]);
+    model = async () => success('ACTUAL_TEXT');
+    const extracted = await runTaskChain({ messageId: 1, trigger: { kind: 'manual' } });
+    assert.equal(extracted.status, 'failed');
+    assert.equal(extracted.tasks[0].error.code, 'extraction_failed');
+    assert.equal(business().length, 0, 'one failed extraction prevents all deliveries from the task');
+
+    for (const trigger of [{ kind: 'manual' }, { kind: 'event', eventName: 'fixture' }]) {
+      resetChat(`state-rejection-${trigger.kind}`);
+      await configure([task('A', { output: { writes: [...messageWrite().writes, broadcast('event')] } })]);
+      global.updateVariablesWith = async (...args) => {
+        if (args[1]?.type === 'chat') throw Error('STATE_PERSISTENCE_REJECTED');
+        return variableSetter(...args);
+      };
+      const result = await runTaskChain({ messageId: 1, trigger });
+      assert.equal(result.status, 'failed');
+      assert.equal(host.chat[1].mes, 'BODY');
+      assert.equal(business().length, 0, 'state persistence failure cannot announce successful delivery');
+      assert.equal(result.tasks[0].writes.find(item => item.writeId === 'event').status, 'not_delivered');
+      global.updateVariablesWith = variableSetter;
+    }
+
+    resetChat('cancel-after-first-commit');
+    await configure([task('A', { output: { writes: [...messageWrite().writes, broadcast('event')] } }), task('B', { order: 1 })]);
+    const second = deferred();
+    model = async (body, signal) => body.model === 'A' ? success('COMMITTED_FIRST') : (second.resolve(), new Promise((_resolve, reject) => signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true })));
+    const pending = runTaskChain({ messageId: 1, trigger: { kind: 'manual' } });
+    await second.promise;
+    assert.equal(business().length, 0, 'regular chain must defer even a fully committed first task');
+    cancelTaskRun([...activeTaskRuns.values()].find(item => item.identity.chatId === 'cancel-after-first-commit').id);
+    assert.equal((await pending).status, 'cancelled');
+    assert.equal(business().length, 0);
+    assert.equal(host.chat[1].mes, 'BODY');
+
+    resetChat('listener-partial-delivery');
+    await configure([task('A', { retryCount: 3, output: { writes: [...messageWrite().writes, broadcast('first'), broadcast('second')] } })]);
+    model = async () => success('DELIVERED_CONTENT');
+    global.eventEmit = async (name, payload) => {
+      await emitter(name, structuredClone(payload));
+      if (name.endsWith(':output')) {
+        payload.text = 'LISTENER_MUTATION';
+        if (payload.writeId === 'second') throw Error('LISTENER_ACK_LOST_AFTER_RECEIVE');
+      }
+    };
+    const delivered = await runTaskChain({ messageId: 1, trigger: { kind: 'manual' } });
+    assert.equal(delivered.status, 'failed');
+    assert.equal(calls.length, 1, 'listener exceptions never retry paid generation');
+    assert.deepEqual(delivered.tasks[0].writes.map(item => item.status), ['committed', 'delivered', 'delivery_failed']);
+    assert.equal(host.chat[1].mes, 'BODY\nDELIVERED_CONTENT', 'delivery failure cannot pretend prior text was rolled back');
+    assert(chatVariables['kat_async_task_state:runtime-script'].A);
+    assert.equal(delivered.tasks[0].text, 'DELIVERED_CONTENT');
+    assert.deepEqual(business().map(item => item.result.text), ['DELIVERED_CONTENT', 'DELIVERED_CONTENT']);
+    assert.match(delivered.tasks[0].error.message, /部分送达/);
+    const rerun = await rerunCurrentTasks();
+    assert(rerun.warnings.some(item => item.code === 'broadcast_cannot_rollback'), 'explicit recompute reports irreversible prior delivery');
+    assert.equal(calls.length, 2, 'only explicit recompute can regenerate after failed delivery');
+    global.eventEmit = emitter;
+
+    for (const action of ['cancel', 'switch']) {
+      resetChat(`delivery-reentrant-${action}`);
+      await configure([task('A', { output: { writes: [...messageWrite().writes, broadcast('first'), broadcast('second')] } })]);
+      model = async () => success('DURABLE_CONTENT');
+      global.eventEmit = async (name, payload) => {
+        await emitter(name, payload);
+        if (name.endsWith(':output') && payload.writeId === 'first') {
+          if (action === 'cancel') cancelTaskRun(payload.runId);
+          else chatId = 'different-chat';
+        }
+      };
+      const result = await runTaskChain({ messageId: 1, trigger: { kind: 'manual' } });
+      assert.equal(result.status, action === 'cancel' ? 'cancelled' : 'failed');
+      assert.equal(business().length, 1, 'stop further deliveries after cancellation or chat change');
+      assert.deepEqual(result.tasks[0].writes.map(item => item.status), ['committed', 'delivered', 'not_delivered']);
+      assert.equal(host.chat[1].mes, 'BODY\nDURABLE_CONTENT');
+      assert.match(result.tasks[0].error.message, /已提交.*无法撤回/);
+      assert.equal(calls.length, 1);
+      global.eventEmit = emitter;
+    }
+
+    resetChat('event-partial-business-delivery');
+    await configure([task('OK', { eventName: 'partial' }), task('FAIL', { eventName: 'partial' })]);
+    model = async body => body.model === 'FAIL' ? { ok: false, status: 500 } : success('INDEPENDENT_SUCCESS');
+    const partial = await eventRun('partial');
+    assert.equal(partial.status, 'partial');
+    assert.deepEqual(business().map(item => [item.result.taskId, item.result.text]), [['OK', 'INDEPENDENT_SUCCESS']]);
+
+    resetChat('event-listener-failure-keeps-peer');
+    await configure([task('A', { eventName: 'peers', retryCount: 2 }), task('B', { eventName: 'peers' })]);
+    model = async body => success(body.model);
+    global.eventEmit = async (name, payload) => {
+      await emitter(name, payload);
+      if (name.endsWith(':output') && payload.taskId === 'A') throw Error('A_LISTENER_FAILED');
+    };
+    const peers = await eventRun('peers');
+    assert.equal(peers.status, 'partial');
+    assert.equal(calls.length, 2);
+    assert.deepEqual(peers.tasks.map(item => item.writes[0].status), ['delivery_failed', 'delivered']);
+    assert.deepEqual(business().map(item => item.result.taskId).sort(), ['A', 'B']);
+    console.log('PASS: independent broadcast acceptance covers distributed identity, three mixed targets, extraction/state/cancellation suppression, irreversible partial delivery and independent event settlement');
+  } finally { global.eventEmit = emitter; global.updateVariablesWith = variableSetter; global.getScriptId = scriptReader; }
 }
 async function currentLinkRuntimeChecks() {
   resetChat('active-link-credentials');
-  await configure([task('A', { output: { mode: 'event_result' } })]);
+  await configure([task('A', { output: { writes: [{ id: 'broadcast', target: { kind: 'event' }, extract: [] }] } })]);
   const config = store.snapshot();
   config.connections[0].links.push({ id: 'backup', name: 'backup', baseUrl: 'https://backup.invalid/v1', model: 'backup-model', secretRef: 'backup-ref' });
   config.connections[0].activeLinkId = 'backup';
@@ -191,10 +381,10 @@ async function eventContractChecks() {
   resetChat('event-listener-contract');
   await configure([
     task('REG'), task('NEG', { order: -1, triggerInterval: 20 }), task('REG_EVENT', { eventName: 'regular:also' }),
-    task('EV', { enabled: false, eventName: 'frontend:event', output: { mode: 'event_result' } }),
+    task('EV', { enabled: false, eventName: 'frontend:event', output: { writes: [{ id: 'broadcast', target: { kind: 'event' }, extract: [] }] } }),
     task('OFF', { enabled: false, eventName: 'frontend:off' }),
-    task('PEER', { enabled: false, eventName: 'frontend:event', output: { mode: 'event_result' } }),
-    task('OTHER', { enabled: false, eventName: 'frontend:other', output: { mode: 'event_result' } }),
+    task('PEER', { enabled: false, eventName: 'frontend:event', output: { writes: [{ id: 'broadcast', target: { kind: 'event' }, extract: [] }] } }),
+    task('OTHER', { enabled: false, eventName: 'frontend:other', output: { writes: [{ id: 'broadcast', target: { kind: 'event' }, extract: [] }] } }),
   ]);
   const handlers = new Map();
   global.tavern_events = { MESSAGE_SENT: 'sent', MESSAGE_RECEIVED: 'received', CHAT_CHANGED: 'changed' };
@@ -216,8 +406,8 @@ async function eventContractChecks() {
     assert.equal(stringResult.requestId, 'literal-request');
     assert.equal(events.filter(item => item.name === 'frontend:event:result' && item.result.requestId === 'literal-request').length, 1);
     assert.equal(stringResult.tasks.length, 2);
-    assert.deepEqual(events.find(item => item.result.runId === stringResult.runId).result, stringResult, 'broadcast and Promise expose the same terminal result');
-    for (const item of stringResult.tasks) { assert.equal(item.text, `FULL_RESPONSE_${item.taskId}`); assert.deepEqual(item.writes, []); }
+    assert.deepEqual(events.find(item => Array.isArray(item.result.tasks) && item.result.runId === stringResult.runId).result, stringResult, 'broadcast and Promise expose the same terminal result');
+    for (const item of stringResult.tasks) { assert.equal(item.text, `FULL_RESPONSE_${item.taskId}`); assert.equal(item.writes[0].status, 'delivered'); }
     assert.equal(host.chat[1].mes, 'BODY', 'event broadcast never appends to the message');
     assert.deepEqual(Object.keys(chatVariables), ['kat_async_task_state:runtime-script'], 'broadcast creates only existing task history, no result storage');
     host.chat.push({ mes: 'SECOND_BODY', name: 'Char', is_user: false, swipe_id: 2 });
@@ -246,14 +436,14 @@ async function eventContractChecks() {
 
   resetChat('event-result-concurrency');
   chatVariables.other_frontend = { retained: ['USER_DATA'] };
-  await configure([task('A', { eventName: 'alpha', output: { mode: 'event_result' } }), task('B', { eventName: 'beta', output: { mode: 'event_result' } })]);
+  await configure([task('A', { eventName: 'alpha', output: { writes: [{ id: 'broadcast', target: { kind: 'event' }, extract: [] }] } }), task('B', { eventName: 'beta', output: { writes: [{ id: 'broadcast', target: { kind: 'event' }, extract: [] }] } })]);
   const gate = deferred(); model = async body => { await gate.promise; return success(body.model); };
   const alpha = eventRun('alpha', 'alpha-req'), beta = eventRun('beta', 'beta-req');
   await until(() => calls.length === 2); gate.resolve();
   const both = await Promise.all([alpha, beta]);
   assert(both.every(value => value.status === 'succeeded'));
   for (const result of both) {
-    const published = events.filter(item => item.result.runId === result.runId);
+    const published = events.filter(item => Array.isArray(item.result.tasks) && item.result.runId === result.runId);
     assert.equal(published.length, 1); assert.deepEqual(published[0].result, result);
     assert.equal(result.tasks[0].text, result.tasks[0].taskId);
   }
@@ -261,39 +451,39 @@ async function eventContractChecks() {
   assert.deepEqual(chatVariables.other_frontend, { retained: ['USER_DATA'] });
 
   resetChat('event-result-partial');
-  await configure([task('A', { eventName: 'partial-result', output: { mode: 'event_result' } }), task('FAIL', { eventName: 'partial-result', output: { mode: 'event_result' } })]);
+  await configure([task('A', { eventName: 'partial-result', output: { writes: [{ id: 'broadcast', target: { kind: 'event' }, extract: [] }] } }), task('FAIL', { eventName: 'partial-result', output: { writes: [{ id: 'broadcast', target: { kind: 'event' }, extract: [] }] } })]);
   model = async body => body.model === 'FAIL' ? { ok: false, status: 500 } : success('KEEP_SUCCESS');
   const partial = await eventRun('partial-result');
   assert.equal(partial.status, 'partial');
   assert.equal(partial.tasks.find(item => item.taskId === 'A').text, 'KEEP_SUCCESS');
-  assert.equal(events.filter(item => item.result.runId === partial.runId).length, 1);
+  assert.equal(events.filter(item => Array.isArray(item.result.tasks) && item.result.runId === partial.runId).length, 1);
 
   for (const kind of ['manual', 'received', 'sent', 'task']) {
     resetChat(`broadcast-from-${kind}`);
-    await configure([task('A', { order: kind === 'sent' ? -1 : 0, output: { mode: 'event_result' } })]);
+    await configure([task('A', { order: kind === 'sent' ? -1 : 0, output: { writes: [{ id: 'broadcast', target: { kind: 'event' }, extract: [] }] } })]);
     const trigger = { kind, ...(kind === 'task' ? { taskId: 'A' } : {}) };
     const result = await runTaskChain({ messageId: 1, trigger, ...(kind === 'task' ? { taskId: 'A' } : {}) });
-    assert.equal(result.status, 'succeeded', `${kind} supports broadcast output without an event name`);
+    assert.equal(result.status, 'succeeded', `${kind} supports broadcast using the task event name`);
     assert.equal(calls.length, 1);
     assert.equal(result.tasks[0].text, 'KEEP_SUCCESS');
-    const published = events.filter(item => item.result.runId === result.runId);
+    const published = events.filter(item => Array.isArray(item.result.tasks) && item.result.runId === result.runId);
     assert.equal(published.length, 1, 'one terminal broadcast per run');
-    assert.equal(published[0].name, 'kat_task_chain:result');
+    assert.equal(published[0].name, result.trigger.kind === 'event' ? result.trigger.eventName + ':result' : 'kat_task_chain:result');
     assert.deepEqual(published[0].result, result);
     assert.equal(host.chat[1].mes, 'BODY');
     assert.deepEqual(Object.keys(chatVariables), ['kat_async_task_state:runtime-script']);
   }
 
   resetChat('event-result-listener-failure');
-  await configure([task('A', { eventName: 'listener-failure', output: { mode: 'event_result' } })]);
+  await configure([task('A', { eventName: 'listener-failure', output: { writes: [{ id: 'broadcast', target: { kind: 'event' }, extract: [] }] } })]);
   const emitter = global.eventEmit;
   let broadcasts = 0;
-  global.eventEmit = async () => { broadcasts++; throw Error('OTHER_FRONTEND_LISTENER_FAILURE'); };
+  global.eventEmit = async name => { if (name === 'listener-failure:output') { broadcasts++; throw Error('OTHER_FRONTEND_LISTENER_FAILURE'); } };
   try {
     const result = await eventRun('listener-failure', 'listener-request');
-    assert.equal(result.status, 'succeeded');
+    assert.equal(result.status, 'failed');
     assert.equal(broadcasts, 1, 'a failing listener must not cause duplicate broadcasts or paid retries');
-    assert(result.warnings.some(item => item.code === 'result_listener_failed'));
+    assert(result.warnings.some(item => item.code === 'broadcast_delivery_failed'));
     assert.equal(result.tasks[0].text, 'KEEP_SUCCESS');
     assert.equal(activeTaskRuns.size, 0);
   } finally { global.eventEmit = emitter; }
@@ -347,7 +537,7 @@ async function notificationChecks() {
   try {
     const result = await eventRun('notice');
     assert.equal(result.status, 'succeeded');
-    assert.equal(events.filter(item => item.result.runId === result.runId).length, 1, 'toast failure must preserve the result event');
+    assert.equal(events.filter(item => Array.isArray(item.result.tasks) && item.result.runId === result.runId).length, 1, 'toast failure must preserve the result event');
     assert.equal(activeTaskRuns.size, 0);
     assert.equal(warnings.length, 2);
   } finally { diagnostics.showTaskNotice = previousNotice; console.warn = previousWarn; }
@@ -435,7 +625,7 @@ async function independentRuntimeChecks() {
   assert.equal(returned.tasks[0].attempts, 2);
   assert.equal(returned.status, 'succeeded');
   assert.equal(host.chat[1].mes, 'BODY');
-  assert.deepEqual(returned.tasks[0].writes, []);
+  assert.equal(returned.tasks[0].writes[0].status, 'delivered');
   resetChat('commit-conflict-no-retry'); await configure([task('A', { eventName: 'conflict', retryCount: 2, output: messageWrite('ABSENT') })]);
   model = async () => success('UNMATCHED');
   const conflict = await eventRun('conflict');
@@ -491,6 +681,7 @@ async function independentRuntimeChecks() {
     assert.equal(stateFailure.status, 'failed');
     assert.equal(stateFailure.tasks[0].status, 'rollback_failed');
     assert.equal(stateFailure.rollback.status, 'failed');
+    assert.equal(events.some(item => item.name === 'state-save:output'), false, 'a persisted state with a lost acknowledgement still cannot broadcast success');
     const stateEvidence = getUnrecoveredJournals().find(record => record.runId === stateFailure.runId);
     assert(stateEvidence && stateEvidence.stateUndo?.taskId === 'A');
     assert.equal(stateEvidence.stateUndo.after.ownerRunId, stateFailure.runId);
@@ -508,6 +699,7 @@ async function independentRuntimeChecks() {
   try {
     const switched = await eventRun('state-switch');
     assert.equal(switched.tasks[0].status, 'rollback_failed');
+    assert.equal(events.some(item => item.name === 'state-switch:output'), false, 'message identity loss before delivery suppresses business output');
     assert.equal(writesAcrossSwitch, 1, 'identity loss after persisted state must forbid compensation against the new chat');
     const diagnostic = getUnrecoveredJournals().find(record => record.runId === switched.runId);
     assert(diagnostic?.stateUndo && diagnostic.chatId === 'state-saved-before-switch', 'the original state journal must remain diagnosable after identity loss');
@@ -519,10 +711,10 @@ async function independentRuntimeChecks() {
   model = async () => success('APPENDED');
   const terminal = await runTaskChain({ messageId: 1, trigger: { kind: 'manual' } });
   const terminalBefore = structuredClone(terminal);
-  const publishedBefore = structuredClone(events.find(value => value.result.runId === terminal.runId).result);
+  const publishedBefore = structuredClone(events.find(value => Array.isArray(value.result.tasks) && value.result.runId === terminal.runId).result);
   assert.equal((await rerunCurrentTasks()).status, 'succeeded');
   assert.deepEqual(terminal, terminalBefore, 'a later rerun cannot rewrite an already-returned terminal result');
-  assert.deepEqual(events.find(value => value.result.runId === terminal.runId).result, publishedBefore);
+  assert.deepEqual(events.find(value => Array.isArray(value.result.tasks) && value.result.runId === terminal.runId).result, publishedBefore);
   assert.deepEqual(JSON.parse(JSON.stringify(taskRunResults.value.find(value => value.runId === terminal.runId))), terminalBefore, 'cached history is also a terminal snapshot');
 
   resetChat('registered-lifecycle'); await configure([task('A', { eventName: 'scoped', output: messageWrite() })]);

@@ -1,4 +1,4 @@
-import { eventNameIsValid, RegexSpec, TaskConfig, TaskFailure, TaskSettings } from './TaskSchema';
+import { eventNameIsValid, eventOutputChannel, RegexSpec, TaskConfig, TaskFailure, TaskSettings } from './TaskSchema';
 import { assertTextFeatures, orderedPrompts, parseNativePreset } from './generation/NativePreset';
 import { klona } from 'klona';
 
@@ -47,13 +47,19 @@ export function validateTaskReadiness(settings: TaskSettings, task: TaskConfig) 
     if (!book.bookName.trim()) fail('任务候选世界书尚未选择');
     book.nameRegexes.forEach(regex);
   }
-  if (task.output.mode === 'write') {
-    if (!task.output.writes.length) fail('写入模式尚未配置写入目标');
+  {
+    if (!task.output.writes.length) fail('尚未配置结果写入目标，请补选正文、世界书或事件广播');
     for (const write of task.output.writes) {
       if (write.target.kind === 'worldbook' && (!write.target.bookName.trim() || !write.target.entryName.trim()))
         fail('世界书写入目标尚未填写书名或条目名');
+      if (write.target.kind === 'event') {
+        if (!task.eventName) fail('事件广播需要填写任务原有的事件名，结果将发送到该事件名加 :output');
+        const name = eventOutputChannel(task.eventName);
+        if (!eventNameIsValid(name)) fail('广播频道与内部或宿主频道冲突');
+        if (settings.tasks.some(item => item.eventName === name)) fail('派生广播频道不能与本配置任务的触发事件名相同，以免递归触发');
+      }
       write.extract.forEach(regex);
-      if (write.operation.kind === 'replace') regex(write.operation.regex);
+      if ('operation' in write && write.operation.kind === 'replace') regex(write.operation.regex);
     }
   }
   return { connection, link, preset };
