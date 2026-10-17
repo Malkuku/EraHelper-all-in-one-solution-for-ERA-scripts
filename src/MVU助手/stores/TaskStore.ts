@@ -3,7 +3,7 @@ import { ref } from 'vue';
 import { klona } from 'klona';
 import { ConfigSchema, emptySettings, TaskSettings } from '../AsyncAnalyze/TaskSchema';
 
-const legacyKeys = ['async_analyze_setting', 'task_config_settings', 'api_config_settings', 'active_rule_name', 'saved_regex_configs', 'saved_analyze_backup'];
+const legacyKeys = ['async_analyze_setting', 'task_config_settings', 'api_config_settings', 'active_rule_name', 'saved_analyze_backup'];
 export const useTaskStore = defineStore('KatTasks', () => {
   const settings = ref<TaskSettings>(emptySettings());
   const configurationError = ref('');

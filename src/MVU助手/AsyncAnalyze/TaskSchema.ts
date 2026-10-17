@@ -7,6 +7,33 @@ export const RegexSpecSchema = z.object({ pattern: z.string(), flags: z.string()
   }
 });
 export type RegexSpec = z.infer<typeof RegexSpecSchema>;
+export const RegexPresetSchema = RegexSpecSchema.safeExtend({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  replacement: z.string().default(''),
+});
+export type RegexPreset = z.infer<typeof RegexPresetSchema>;
+/** Flags control one/all matches, shared by the runtime and tester. */
+export function matchTaskRegex(text: string, spec: RegexSpec): RegExpMatchArray[] {
+  const regex = new RegExp(spec.pattern, spec.flags);
+  return regex.global
+    ? [...text.matchAll(regex)]
+    : [text.match(regex)].filter((match): match is RegExpMatchArray => match !== null);
+}
+/** Import saved expressions only; retired task/API configuration is never converted. */
+export function parseRegexPresets(value: unknown): RegexPreset[] {
+  if (!Array.isArray(value)) throw new Error('正则库必须是数组');
+  return value.map(item => {
+    if (!item || typeof item !== 'object') throw new Error('正则配置格式无效');
+    let { pattern, flags } = item;
+    if (typeof item.regex === 'string') {
+      const literal = item.regex.match(/^\/(.*)\/([a-z]*)$/s);
+      pattern = literal ? literal[1] : item.regex;
+      flags = literal ? literal[2] : '';
+    }
+    return RegexPresetSchema.parse({ ...item, id: item.id || crypto.randomUUID(), pattern, flags: flags ?? '' });
+  });
+}
 export const ScanSchema = z.object({
   depth: integer.max(1000).default(2), minActivations: integer.default(0), minActivationDepthMax: integer.default(0),
   budgetPercent: z.number().min(0).max(100).default(25), budgetCap: integer.default(0),
@@ -47,13 +74,14 @@ export const ConfigSchema = z.object({
   schemaVersion: z.literal(1), activeGroupId: z.string().nullable(), automatic: z.object({ minReceivedChars: integer.default(300) }),
   groups: z.array(z.object({ id: z.string().min(1), name: z.string().min(1), comment: z.string(), taskIds: z.array(z.string()) })),
   tasks: z.array(TaskSchema),
+  regexPresets: z.array(RegexPresetSchema).default([]),
   connections: z.array(z.object({ id: z.string().min(1), name: z.string().min(1), comment: z.string(), baseUrl: z.url().refine(value => {
     const url = new URL(value);
     return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password;
   }, '连接仅支持无内嵌凭据的 HTTP/HTTPS 地址'), model: z.string().min(1), secretRef: z.string().min(1) })),
   presets: z.array(z.object({ id: z.string().min(1), name: z.string().min(1), raw: z.record(z.string(), z.unknown()) })),
 }).superRefine((config, ctx) => {
-  for (const field of ['groups', 'tasks', 'connections', 'presets'] as const) {
+  for (const field of ['groups', 'tasks', 'connections', 'presets', 'regexPresets'] as const) {
     const ids = new Set<string>();
     config[field].forEach((entity, index) => {
       if (ids.has(entity.id)) ctx.addIssue({ code: 'custom', path: [field, index, 'id'], message: 'ID 重复' });
@@ -75,7 +103,7 @@ export const ConfigSchema = z.object({
   });
 });
 export type TaskSettings = z.infer<typeof ConfigSchema>;
-export const emptySettings = (): TaskSettings => ({ schemaVersion: 1, activeGroupId: null, automatic: { minReceivedChars: 300 }, groups: [], tasks: [], connections: [], presets: [] });
+export const emptySettings = (): TaskSettings => ({ schemaVersion: 1, activeGroupId: null, automatic: { minReceivedChars: 300 }, groups: [], tasks: [], connections: [], presets: [], regexPresets: [] });
 export type Trigger = { kind: 'event' | 'sent' | 'received' | 'manual'; eventName?: string };
 export type TaskError = { code: string; message: string; phase: 'prepare' | 'scan' | 'template' | 'request' | 'extract' | 'commit' | 'rollback' };
 export type WriteResult = { writeId: string; target: string; status: 'committed' | 'failed' | 'rolled_back' | 'rollback_failed'; error?: string };

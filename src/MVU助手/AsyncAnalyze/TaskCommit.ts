@@ -1,5 +1,5 @@
 import { MessageIdentity, assertMessage } from './generation/GenerationHost';
-import { RunResult, TaskConfig, TaskFailure, TaskResult, WriteResult, WriteSpec } from './TaskSchema';
+import { matchTaskRegex, RunResult, TaskConfig, TaskFailure, TaskResult, WriteResult, WriteSpec } from './TaskSchema';
 
 const locks = new Map<string, Promise<void>>();
 export async function withTargetLocks<T>(keys: string[], action: () => Promise<T>): Promise<T> {
@@ -65,8 +65,7 @@ function recordText(journal: Journal, edit: TextEdit, result: Pick<RunResult, 'w
 function extract(text: string, write: WriteSpec): string {
   if (!write.extract.length) return text;
   const matches = write.extract.flatMap(spec => {
-    const regex = new RegExp(spec.pattern, spec.flags);
-    return regex.global ? [...text.matchAll(regex)].map(match => match[0]) : [text.match(regex)?.[0]].filter((match): match is string => match !== undefined);
+    return matchTaskRegex(text, spec).map(match => match[0]);
   });
   if (!matches.length) throw new TaskFailure('extraction_failed', `写入 ${write.id} 的提取正则均未匹配`, 'extract');
   return matches.join('\n');
@@ -79,8 +78,7 @@ export function validateTaskOutput(task: TaskConfig, text: string) {
 }
 function editsFor(text: string, content: string, write: WriteSpec) {
   if (write.operation.kind === 'append') return [{ start: text.length, before: '', after: (text ? '\n' : '') + content }];
-  const regex = new RegExp(write.operation.regex.pattern, write.operation.regex.flags);
-  const matches = regex.global ? [...text.matchAll(regex)] : [text.match(regex)].filter((match): match is RegExpMatchArray => match !== null);
+  const matches = matchTaskRegex(text, write.operation.regex);
   if (!matches.length) throw new TaskFailure('conflict', `写入 ${write.id} 的目标替换条件已失效`, 'commit');
   return matches.map(match => ({ start: match.index!, before: match[0], after: content })).reverse();
 }

@@ -113,6 +113,10 @@ async function independentCommitChecks() {
   await commitTask(task([extracted]), '<v>A</v><v>B</v>', identity, extraction, taskResult(), runResult(), signal);
   assert(host.chat[0].mes.endsWith('\n<v>A</v>\n<v>B</v>'), 'extract preserves match[0] and joins global matches');
   assert.deepEqual(await rollbackJournal(extraction, []), []);
+  const firstExtraction = { runId: 'first-match', edits: [] };
+  await commitTask(task([{ ...extracted, extract: [{ pattern: '<v>(.*?)</v>', flags: '' }] }]), '<v>A</v><v>B</v>', identity, firstExtraction, taskResult(), runResult(), signal);
+  assert(host.chat[0].mes.endsWith('\n<v>A</v>'), 'non-global extraction uses the whole first match, consistent with the UI preview');
+  assert.deepEqual(await rollbackJournal(firstExtraction, []), []);
   const unmatched = { runId: 'extract-none', edits: [] };
   await assert.rejects(commitTask(task([extracted]), 'NO_TAG', identity, unmatched, taskResult(), runResult(), signal), error => error.code === 'extraction_failed');
   assert.equal(unmatched.edits.length, 0);
