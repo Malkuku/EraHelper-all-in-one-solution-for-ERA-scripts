@@ -125,7 +125,7 @@ async function rejected(mutate) {
   });
 }
 
-for (const version of ['', 'v2.0.0', '2.0', '02.0.0', '2.0.0-beta.1', '../2.0.0']) {
+for (const version of ['', 'v2.0.0', '2.0', '02.0.0', '2.0.0-beta.1', '../2.0.0', '2.0.0\n']) {
   await rejected(({ sourceDir }) =>
     writeFile(path.join(sourceDir, 'release.json'), JSON.stringify({ ...metadata, version })),
   );
@@ -142,7 +142,7 @@ for (const changes of [[], [''], ['  '], ['valid', 123], 'not-array']) {
 }
 await rejected(({ sourceDir }) => writeFile(path.join(sourceDir, 'release.json'), '{broken json'));
 await rejected(({ sourceDir }) => rm(path.join(sourceDir, 'release.json')));
-for (const sourceShaValue of ['', '1234567', 'g'.repeat(40)]) {
+for (const sourceShaValue of ['', '1234567', 'g'.repeat(40), 'a'.repeat(40) + '\n']) {
   await rejected(({ options }) => {
     options.sourceSha = sourceShaValue;
   });
@@ -244,6 +244,7 @@ for (const suite of [
   'tests/async-tasks/configuration.cjs',
   'tests/mvu-editing.cjs',
   'tests/release/prepare.mjs',
+  'tests/release/distribute.mjs',
 ]) {
   assert(commands.includes(suite), `CI executes ${suite}`);
 }
@@ -258,6 +259,10 @@ const artifact = steps.find(step => step.uses?.startsWith('actions/upload-artifa
 assert(artifact.with.name.includes('${{ steps.candidate.outputs.source_sha }}'));
 assert(artifact.with.name.includes('${{ steps.candidate.outputs.version }}'));
 assert(!artifact.with.name.includes('github.sha'), 'workflow identity must not label a different checkout');
+const loaderArtifact = steps.find(step => step.uses?.startsWith('actions/upload-artifact@') && step.with?.path === 'dist/MVU加载器/');
+assert(loaderArtifact, 'candidate workflow delivers the installed loader alongside the core candidate');
+assert.equal(loaderArtifact.with.name, 'mvu-loader-${{ steps.candidate.outputs.source_sha }}');
+assert.equal(loaderArtifact.with['if-no-files-found'], 'error');
 
 // Run the actual identity extraction against a fixture manifest. The workflow's
 // own SHA deliberately differs from the checked-out source recorded in the package.
