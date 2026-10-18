@@ -27,6 +27,9 @@ global.getChatMessages = index => [{ message: host.chat[index].mes }];
 let onMessageSaved = async () => {};
 global.setChatMessages = async messages => { for (const message of messages) if (message.message !== undefined) { host.chat[message.message_id].mes = message.message; await onMessageSaved(message); } };
 global.waitGlobalInitialized = async () => {};
+const fixtureBooks = new Map();
+global.getWorldbook = async name => structuredClone(fixtureBooks.get(name) ?? [{ uid: 1, name: 'result', content: '' }]);
+global.updateWorldbookWith = async (name, update) => { fixtureBooks.set(name, await update(await global.getWorldbook(name))); };
 global.Mvu = { getMvuData: () => ({ stat_data: {} }), parseMessage: async () => undefined, replaceMvuData: async () => {} };
 const events = [];
 const notifications = [];
@@ -51,11 +54,12 @@ global.fetch = async (input, init) => {
   return { ok: true, json: async () => url.pathname.endsWith('/encode') ? { ids: Array.from({ length: body.text.length }) } : { token_count: JSON.stringify(body).length + 2 } };
 };
 function resetChat(name, text = 'BODY') {
+  fixtureBooks.clear();
   chatId = name; chatVariables = {}; calls.length = 0; events.length = 0; notifications.length = 0;
   host.chat = [{ mes: 'USER', is_user: true, name: 'Player' }, { mes: text, is_user: false, name: 'Char' }];
   onStateSaved = async () => {}; onMessageSaved = async () => {};
 }
-function task(id, overrides = {}) { return TaskSchema.parse({ id, name: id, enabled: true, eventName: 'fixture', historyDepth: 0, prompt: id, connectionId: id, candidateBooks: [], scan: {}, regexRules: [], output: { writes: [{ id: 'broadcast', target: { kind: 'event' }, extract: [] }] }, ...overrides }); }
+function task(id, overrides = {}) { return TaskSchema.parse({ id, name: id, enabled: true, eventName: '', historyDepth: 0, prompt: id, connectionId: id, candidateBooks: [], scan: {}, regexRules: [], output: { writes: overrides.eventName ? [{ id: 'broadcast', target: { kind: 'event' }, extract: [] }] : [{ id: 'write', target: { kind: 'worldbook', bookName: id, entryUid: 1, entryName: 'result' }, extract: [], operation: { kind: 'append' } }] }, ...overrides }); }
 async function configure(tasks, minimum = 0) {
   const settings = emptySettings(); settings.automatic.minReceivedChars = minimum;
   settings.groups = [{ id: 'group', name: 'group', comment: '', taskIds: tasks.map(value => value.id) }]; settings.activeGroupId = 'group'; settings.tasks = tasks;
@@ -84,12 +88,20 @@ async function main() {
   assert.equal(notifications.filter(item => item.running).length, 2, 'busy request must not report a new start');
   assert.equal(events.filter(value => value.result.requestId === 'caller-2').length, 1);
 
-  resetChat('regular-event-name'); await configure([task('A', { eventName: 'regular' })]);
+  resetChat('regular-event-name');
+  await configure([task('A', { enabled: true, eventName: 'regular' }), task('REGULAR')]);
+  assert.equal(store.snapshot().tasks[0].enabled, false, 'event tasks cannot retain regular-chain participation');
+  const forced = store.snapshot(); forced.tasks[0].enabled = true; await store.replaceSettings(forced);
+  assert.equal(store.snapshot().tasks[0].enabled, false, 'saving cannot enable a dual entry');
   const regularGate = deferred(); model = async body => { await regularGate.promise; return success(body.model); };
   const common = runTaskChain({ messageId: 1, trigger: { kind: 'received' } }); await until(() => calls.length === 1);
   const literalRegular = eventRun('regular', 'literal-event'); await until(() => calls.length === 2);
   regularGate.resolve(); assert.equal((await common).status, 'succeeded'); assert.equal((await literalRegular).status, 'succeeded');
-  assert.deepEqual(calls.map(value => value.model), ['A', 'A'], 'enabled event task also participates in the regular chain as in the original behavior');
+  assert.deepEqual(calls.map(value => value.model), ['REGULAR', 'A']);
+  for (const kind of ['manual', 'sent', 'received', 'rerun']) {
+    const result = kind === 'rerun' ? await rerunCurrentTasks() : await runTaskChain({ messageId: 1, trigger: { kind } });
+    assert(!result.tasks.some(item => item.taskId === 'A'), kind + ' excludes event tasks');
+  }
 
   resetChat('enabled-threshold'); await configure([task('A', { enabled: false, eventName: 'disabled' }), task('B', { eventName: 'manual-event' })], 300);
   assert.equal((await eventRun('disabled')).status, 'succeeded', 'event trigger bypasses the regular-chain enabled switch');
@@ -150,20 +162,13 @@ async function main() {
 async function processedBroadcastChecks() {
   resetChat('processed-broadcast');
   const output = { writes: [{ id: 'one', target: { kind: 'event' }, extract: [{ pattern: '<value>.*?</value>', flags: '' }] }] };
-  await configure([task('A', { output, regexRules: [{ id: 'response', stage: 'response', enabled: true, pattern: 'RAW', flags: '', replacement: 'PROCESSED' }] })]);
+  await configure([task('A', { eventName: 'fixture', output, regexRules: [{ id: 'response', stage: 'response', enabled: true, pattern: 'RAW', flags: '', replacement: 'PROCESSED' }] })]);
   model = async () => success('prefix<value>RAW</value>suffix');
-  const result = await runTaskChain({ messageId: 1, trigger: { kind: 'manual' }, requestId: 'processed-request' });
+  const result = await eventRun('fixture', 'processed-request');
   const delivered = events.find(event => event.name === 'fixture:output').result;
   assert.equal(result.tasks[0].writes[0].status, 'delivered');
   assert.deepEqual(delivered, { version: 1, scriptId: 'runtime-script', runId: result.runId, requestId: 'processed-request', taskId: 'A', writeId: 'one', chatId: 'processed-broadcast', messageId: 1, swipeId: 0, text: '<value>PROCESSED</value>' });
   assert(chatVariables['kat_async_task_state:runtime-script'].A, 'state committed before delivery');
-  resetChat('broadcast-chain-rollback');
-  await configure([task('A', { output: { writes: [...output.writes, ...messageWrite().writes] } }), task('FAIL', { order: 1 })]);
-  model = async body => body.model === 'FAIL' ? { ok: false, status: 500 } : success('<value>KEEP</value>');
-  const failed = await runTaskChain({ messageId: 1, trigger: { kind: 'manual' } });
-  assert.equal(failed.status, 'failed'); assert.equal(host.chat[1].mes, 'BODY');
-  assert.equal(events.some(event => event.name === 'fixture:output'), false, 'rolled back chain must never deliver business success');
-  assert.equal(failed.tasks[0].writes.find(write => write.writeId === 'one').status, 'not_delivered');
   for (const eventName of ['', 'kat_task_chain:result', ' A ', 'reserved-trigger']) {
     resetChat('invalid-broadcast-channel');
     await configure([task('A', { eventName, output: { writes: [{ id: 'bad', target: { kind: 'event' }, extract: [] }] } }), task('OFF', { eventName: 'reserved-trigger:output', enabled: false })]);
@@ -174,7 +179,7 @@ async function processedBroadcastChecks() {
       assert.equal(invalid.status, 'failed'); assert.equal(httpCalls, 0, 'invalid channel must fail before token-counting or generation HTTP');
     } finally { global.fetch = fetch; }
   }
-  console.log('PASS: explicit business payload follows response regex and per-write extraction, complete-chain rollback suppresses delivery, invalid/recursive channels use zero HTTP');
+  console.log('PASS: explicit business payload follows response regex and per-write extraction, invalid/recursive channels use zero HTTP');
 }
 async function independentDeliveryChecks() {
   const broadcast = (id, pattern) => ({ id, target: { kind: 'event' }, extract: pattern ? [{ pattern, flags: '' }] : [] });
@@ -189,7 +194,7 @@ async function independentDeliveryChecks() {
       resetChat(`distributed-${scriptId}`);
       await configure([task('A', { eventName: channel })]);
       model = async () => success('SHARED_CARD_TEXT');
-      const result = await runTaskChain({ messageId: 1, trigger: { kind: 'manual' } });
+      const result = await eventRun(channel);
       assert.equal(result.status, 'succeeded');
       assert.equal(business().length, 1);
       assert.equal(business()[0].name, channel + ':output', 'installation identity must never change the receiving channel');
@@ -220,13 +225,13 @@ async function independentDeliveryChecks() {
     global.getWorldbook = async () => structuredClone(entries);
     global.updateWorldbookWith = async (_name, update) => { entries = await update(structuredClone(entries)); };
     try {
-      await configure([task('A', { output: { writes: [
+      await configure([task('A', { eventName: 'fixture', output: { writes: [
         { ...messageWrite().writes[0], extract: [{ pattern: '<body>.*?</body>', flags: '' }] },
         { id: 'book', target: { kind: 'worldbook', bookName: 'book', entryUid: 7, entryName: 'summary' }, extract: [{ pattern: '<book>.*?</book>', flags: '' }], operation: { kind: 'append' } },
         broadcast('left', '<left>.*?</left>'), broadcast('right', '<right>.*?</right>'),
       ] }, regexRules: [{ id: 'response', stage: 'response', enabled: true, pattern: 'RAW', flags: 'g', replacement: 'DONE' }] })]);
       model = async () => success('<body>RAW</body><book>RAW</book><left>RAW</left><right>RAW</right>');
-      const result = await runTaskChain({ messageId: 1, trigger: { kind: 'manual' } });
+      const result = await eventRun('fixture');
       assert.equal(result.status, 'succeeded');
       assert.equal(host.chat[1].mes, 'BODY\n<body>DONE</body>');
       assert.equal(entries[0].content, 'OLD_BOOK\n<book>DONE</book>');
@@ -234,16 +239,16 @@ async function independentDeliveryChecks() {
     } finally { global.getWorldbook = bookReader; global.updateWorldbookWith = bookWriter; }
 
     resetChat('extraction-failure-no-delivery');
-    await configure([task('A', { output: { writes: [broadcast('matched'), broadcast('missing', 'ABSENT')] } })]);
+    await configure([task('A', { eventName: 'fixture', output: { writes: [broadcast('matched'), broadcast('missing', 'ABSENT')] } })]);
     model = async () => success('ACTUAL_TEXT');
-    const extracted = await runTaskChain({ messageId: 1, trigger: { kind: 'manual' } });
+    const extracted = await eventRun('fixture');
     assert.equal(extracted.status, 'failed');
     assert.equal(extracted.tasks[0].error.code, 'extraction_failed');
     assert.equal(business().length, 0, 'one failed extraction prevents all deliveries from the task');
 
-    for (const trigger of [{ kind: 'manual' }, { kind: 'event', eventName: 'fixture' }]) {
+    for (const trigger of [{ kind: 'event', eventName: 'fixture' }]) {
       resetChat(`state-rejection-${trigger.kind}`);
-      await configure([task('A', { output: { writes: [...messageWrite().writes, broadcast('event')] } })]);
+      await configure([task('A', { eventName: 'fixture', output: { writes: [...messageWrite().writes, broadcast('event')] } })]);
       global.updateVariablesWith = async (...args) => {
         if (args[1]?.type === 'chat') throw Error('STATE_PERSISTENCE_REJECTED');
         return variableSetter(...args);
@@ -256,20 +261,8 @@ async function independentDeliveryChecks() {
       global.updateVariablesWith = variableSetter;
     }
 
-    resetChat('cancel-after-first-commit');
-    await configure([task('A', { output: { writes: [...messageWrite().writes, broadcast('event')] } }), task('B', { order: 1 })]);
-    const second = deferred();
-    model = async (body, signal) => body.model === 'A' ? success('COMMITTED_FIRST') : (second.resolve(), new Promise((_resolve, reject) => signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true })));
-    const pending = runTaskChain({ messageId: 1, trigger: { kind: 'manual' } });
-    await second.promise;
-    assert.equal(business().length, 0, 'regular chain must defer even a fully committed first task');
-    cancelTaskRun([...activeTaskRuns.values()].find(item => item.identity.chatId === 'cancel-after-first-commit').id);
-    assert.equal((await pending).status, 'cancelled');
-    assert.equal(business().length, 0);
-    assert.equal(host.chat[1].mes, 'BODY');
-
     resetChat('listener-partial-delivery');
-    await configure([task('A', { retryCount: 3, output: { writes: [...messageWrite().writes, broadcast('first'), broadcast('second')] } })]);
+    await configure([task('A', { eventName: 'fixture', retryCount: 3, output: { writes: [...messageWrite().writes, broadcast('first'), broadcast('second')] } })]);
     model = async () => success('DELIVERED_CONTENT');
     global.eventEmit = async (name, payload) => {
       await emitter(name, structuredClone(payload));
@@ -278,7 +271,7 @@ async function independentDeliveryChecks() {
         if (payload.writeId === 'second') throw Error('LISTENER_ACK_LOST_AFTER_RECEIVE');
       }
     };
-    const delivered = await runTaskChain({ messageId: 1, trigger: { kind: 'manual' } });
+    const delivered = await eventRun('fixture');
     assert.equal(delivered.status, 'failed');
     assert.equal(calls.length, 1, 'listener exceptions never retry paid generation');
     assert.deepEqual(delivered.tasks[0].writes.map(item => item.status), ['committed', 'delivered', 'delivery_failed']);
@@ -288,13 +281,13 @@ async function independentDeliveryChecks() {
     assert.deepEqual(business().map(item => item.result.text), ['DELIVERED_CONTENT', 'DELIVERED_CONTENT']);
     assert.match(delivered.tasks[0].error.message, /部分送达/);
     const rerun = await rerunCurrentTasks();
-    assert(rerun.warnings.some(item => item.code === 'broadcast_cannot_rollback'), 'explicit recompute reports irreversible prior delivery');
-    assert.equal(calls.length, 2, 'only explicit recompute can regenerate after failed delivery');
+    assert.equal(rerun.status, 'skipped', 'regular rerun excludes event history');
+    assert.equal(calls.length, 1);
     global.eventEmit = emitter;
 
     for (const action of ['cancel', 'switch']) {
       resetChat(`delivery-reentrant-${action}`);
-      await configure([task('A', { output: { writes: [...messageWrite().writes, broadcast('first'), broadcast('second')] } })]);
+      await configure([task('A', { eventName: 'fixture', output: { writes: [...messageWrite().writes, broadcast('first'), broadcast('second')] } })]);
       model = async () => success('DURABLE_CONTENT');
       global.eventEmit = async (name, payload) => {
         await emitter(name, payload);
@@ -303,7 +296,7 @@ async function independentDeliveryChecks() {
           else chatId = 'different-chat';
         }
       };
-      const result = await runTaskChain({ messageId: 1, trigger: { kind: 'manual' } });
+      const result = await eventRun('fixture');
       assert.equal(result.status, action === 'cancel' ? 'cancelled' : 'failed');
       assert.equal(business().length, 1, 'stop further deliveries after cancellation or chat change');
       assert.deepEqual(result.tasks[0].writes.map(item => item.status), ['committed', 'delivered', 'not_delivered']);
@@ -337,7 +330,7 @@ async function independentDeliveryChecks() {
 }
 async function currentLinkRuntimeChecks() {
   resetChat('active-link-credentials');
-  await configure([task('A', { output: { writes: [{ id: 'broadcast', target: { kind: 'event' }, extract: [] }] } })]);
+  await configure([task('A')]);
   const config = store.snapshot();
   config.connections[0].links.push({ id: 'backup', name: 'backup', baseUrl: 'https://backup.invalid/v1', model: 'backup-model', secretRef: 'backup-ref' });
   config.connections[0].activeLinkId = 'backup';
@@ -398,7 +391,7 @@ async function eventContractChecks() {
     const fired = async (name, payload) => handlers.get(name)(payload);
     assert.deepEqual((await fired('sent', 1)).tasks.map(item => item.taskId), ['NEG']);
     const regular = await fired('received', 1);
-    assert(regular.tasks.some(item => item.taskId === 'REG_EVENT' && item.status === 'succeeded'), 'enabled event tasks remain eligible in the regular chain');
+    assert.deepEqual(regular.tasks.map(item => item.taskId), ['REG'], 'registered regular entry excludes event tasks');
     await api.run({ messageId: 1 });
     const beforeOff = calls.length;
     assert.equal((await fired('frontend:off', 'off-request')).status, 'succeeded');
@@ -459,21 +452,12 @@ async function eventContractChecks() {
   assert.equal(partial.tasks.find(item => item.taskId === 'A').text, 'KEEP_SUCCESS');
   assert.equal(events.filter(item => Array.isArray(item.result.tasks) && item.result.runId === partial.runId).length, 1);
 
-  for (const kind of ['manual', 'received', 'sent', 'task']) {
-    resetChat(`broadcast-from-${kind}`);
-    await configure([task('A', { order: kind === 'sent' ? -1 : 0, output: { writes: [{ id: 'broadcast', target: { kind: 'event' }, extract: [] }] } })]);
-    const trigger = { kind, ...(kind === 'task' ? { taskId: 'A' } : {}) };
-    const result = await runTaskChain({ messageId: 1, trigger, ...(kind === 'task' ? { taskId: 'A' } : {}) });
-    assert.equal(result.status, 'succeeded', `${kind} supports broadcast using the task event name`);
-    assert.equal(calls.length, 1);
-    assert.equal(result.tasks[0].text, 'KEEP_SUCCESS');
-    const published = events.filter(item => Array.isArray(item.result.tasks) && item.result.runId === result.runId);
-    assert.equal(published.length, 1, 'one terminal broadcast per run');
-    assert.equal(published[0].name, result.trigger.kind === 'event' ? result.trigger.eventName + ':result' : 'kat_task_chain:result');
-    assert.deepEqual(published[0].result, result);
-    assert.equal(host.chat[1].mes, 'BODY');
-    assert.deepEqual(Object.keys(chatVariables), ['kat_async_task_state:runtime-script']);
-  }
+  resetChat('single-event-broadcast');
+  await configure([task('A', { eventName: 'fixture' })]);
+  const debugEvent = await runTaskChain({ messageId: 1, trigger: { kind: 'task', taskId: 'A' }, taskId: 'A' });
+  assert.equal(debugEvent.status, 'succeeded');
+  assert.deepEqual(debugEvent.trigger, { kind: 'event', eventName: 'fixture', taskId: 'A' });
+  assert.equal(events.filter(item => item.name === 'fixture:output').length, 1);
 
   resetChat('event-result-listener-failure');
   await configure([task('A', { eventName: 'listener-failure', output: { writes: [{ id: 'broadcast', target: { kind: 'event' }, extract: [] }] } })]);
@@ -490,7 +474,7 @@ async function eventContractChecks() {
   } finally { global.eventEmit = emitter; }
 
   await originalIntervalChecks();
-  console.log('PASS: actual registered event payloads and original enabled semantics, single-task/negative-order/unbound rejection, broadcast metadata/concurrency and no result persistence');
+  console.log('PASS: actual registered event payloads and exclusive event-entry semantics, single-task/negative-order/unbound rejection, broadcast metadata/concurrency and no result persistence');
 }
 async function originalIntervalChecks() {
   model = async body => success(body.model);
@@ -512,6 +496,7 @@ async function originalIntervalChecks() {
   resetChat('original-one-interval'); await configure([task('A', { eventName: 'one', triggerInterval: 1 })]);
   assert.equal((await eventRun('one')).status, 'succeeded');
   assert.equal((await eventRun('one')).status, 'succeeded', 'interval one allows repeated same-floor events');
+  resetChat('regular-one-interval'); await configure([task('A', { triggerInterval: 1 })]);
   assert.equal((await runTaskChain({ messageId: 1, trigger: { kind: 'manual' } })).status, 'succeeded');
   assert.equal((await runTaskChain({ messageId: 1, trigger: { kind: 'manual' } })).status, 'succeeded', 'interval one also allows repeated regular runs');
 }
@@ -767,7 +752,7 @@ async function independentRuntimeChecks() {
   } finally { disposeTaskRuntime(); }
   assert.equal(handlers.size, 0);
 
-  resetChat('reload-high-water'); await configure([task('A', { eventName: 'reload' })]);
+  resetChat('reload-high-water'); await configure([task('A')]);
   const stateKey = 'kat_async_task_state:runtime-script';
   chatVariables[stateKey] = { A: { lastSuccessfulFloor: 1, sequence: 500, ownerRunId: 'persisted-old-runtime', effects: {
     'sticky:missing.1': { value: { hash: 1, start: 0, end: 1, protected: true }, settledFloor: 1, sequence: 500, ownerRunId: 'persisted-old-runtime' },
@@ -775,7 +760,7 @@ async function independentRuntimeChecks() {
   const runtimePath = path.join(root, 'AsyncAnalyze/TaskRuntime.ts');
   delete require.cache[require.resolve(runtimePath)];
   const freshRuntime = require(runtimePath);
-  const afterReload = await freshRuntime.runTaskChain({ messageId: 1, trigger: { kind: 'event', eventName: 'reload' } });
+  const afterReload = await freshRuntime.runTaskChain({ messageId: 1, trigger: { kind: 'manual' } });
   assert.equal(afterReload.status, 'succeeded');
   assert.equal(chatVariables[stateKey].A.ownerRunId, afterReload.runId, 'new runtime admission must inherit persisted sequence high water at the same floor');
   assert.equal(chatVariables[stateKey].A.effects['sticky:missing.1'].value, null, 'fresh successful cleanup must supersede a persisted effect, rather than be ignored as an old run');

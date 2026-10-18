@@ -1,64 +1,186 @@
-﻿/** Task integration instructions, shared across output targets and installations. */
-export const taskIntegrationPrompt = `# 为前端接入 MVU助手任务
+﻿/** Self-contained task integration contract copied from the workbench. */
+export const taskIntegrationPrompt = `# MVU助手前端任务联动接口说明
 
-请结合我提供的前端代码、任务配置和业务用途，实现“发起任务 → 等待结算 → 按结果更新界面”。沿用现有组件、数据解析和状态管理，只修改联动需要的部分。
+本文面向在 SillyTavern 酒馆助手环境中运行的角色卡前端。MVU助手负责调用模型、处理响应并写入目标；前端负责触发任务、显示执行状态和刷新界面。eventOn、eventEmit、waitGlobalInitialized、getLastMessageId 等函数由酒馆助手提供，无需导入。
 
-## 1. 一个事件名，一次请求
+请根据本文和用户提供的前端代码完成联动，沿用现有组件与数据管理，只实现实际使用的功能。
 
-EVENT_NAME 对应任务配置的“附加事件名”；从已有代码或我提供的配置取得，缺少时向我确认，不要编造。
+## 1. 助手侧配置
 
-- EVENT_NAME：触发任务。
-- EVENT_NAME + ':result'：本次请求的最终结算，适用于所有写入目标。
-- EVENT_NAME + ':output'：配置了“事件广播”目标时，交付处理后的业务文本。
+1. 创建任务，填写“附加事件名”，例如 Chat_On_WeChat。
+2. 将任务关联到当前活动规则组，保存配置，并确保任务的 API、预设和写入目标已经配置。
+3. 按用途选择正文、世界书或事件广播目标，可以同时选择多个。仅需更新正文、世界书或 MVU 数据时，不必添加广播目标。
 
-角色卡分发后沿用相同事件名，不硬编码作者的脚本 ID、任务 ID 或写入 ID。
+填写事件名后任务仅由事件触发，“参加常规链”自动关闭且不可开启。一次事件会选择活动组内同事件名的任务，并检查各任务的触发间隔；同一事件已有运行时返回 busy，不重复启动。
 
-## 2. 发起和等待
+只约定一个事件名 EVENT_NAME。角色卡分发后沿用此名称，不需要作者或使用者的脚本 ID。
 
-先注册 :result 监听；需要广播文本时同时注册 :output 监听，再允许触发。等待 waitGlobalInitialized('KatTaskAPI')，为每次操作生成新的 requestId，记录界面绑定的聊天、消息楼层及消息页，然后调用：
+## 2. 三个事件的职责
+
+| 事件 | 发送方 → 接收方 | 内容 |
+| --- | --- | --- |
+| EVENT_NAME | 前端 → 助手 | 运行请求 |
+| EVENT_NAME + ':result' | 助手 → 前端 | RunResult，整次请求的最终结算 |
+| EVENT_NAME + ':output' | 助手 → 前端 | OutputPayload，某个广播目标处理后的文本 |
+
+例如触发 Chat_On_WeChat，结算频道为 Chat_On_WeChat:result，业务广播频道为 Chat_On_WeChat:output。后缀固定，不另外配置广播名称。
+
+result 适用于所有写入目标，是结束等待、判断执行结果的依据。output 只在广播目标成功进入交付阶段时发送；一次请求可以有多条 output，也可以没有。对应请求的 output 在 result 之前发送。本文的 :result 频道用于事件入口；自动消息或手动常规链的终态频道为 kat_task_chain:result，有事件名的任务只通过事件入口运行，广播目标使用任务事件名加 :output。
+
+## 3. 发起请求
+
+先注册结果监听，再等待助手初始化并触发：
 
 \`\`\`ts
-await eventEmit(EVENT_NAME, { requestId, messageId });
+await waitGlobalInitialized('KatTaskAPI');
+await eventEmit(EVENT_NAME, {
+  requestId: crypto.randomUUID(),
+  messageId: getLastMessageId(),
+});
 \`\`\`
 
-requestId 用于把结果对应回这次操作，messageId 使用当前界面实际绑定的楼层。事件参数不自动注入模型提示词，模型需要的业务输入沿用任务的变量、宏或模板方式。
+请求对象字段：
 
-发起后显示等待，避免同一操作重复点击。发送调用抛错时结束等待并显示错误；正常执行由匹配 requestId 的 :result 结束等待。
+| 字段 | 类型 | 含义 |
+| --- | --- | --- |
+| requestId | string，可省略 | 本次操作的关联标识；前端主动请求应生成并保存，结果原样带回 |
+| messageId | number，可省略 | 目标消息楼层，必须为非负整数；省略时使用触发时最后一楼 |
+| taskId | string，可省略 | 只执行活动组内的指定任务，必须属于该事件；通常省略以运行该事件全部任务；显式指定时跳过楼层间隔 |
 
-## 3. 用 result 判断操作结果
+消息楼层前端应传自身绑定楼层，例如 getCurrentMessageId()；上面的 getLastMessageId() 示例用于操作最新楼层。不要把示例楼层选择直接用于所有界面。
 
-:result 的 RunResult 含 requestId、runId、chatId、messageId、swipeId、status、tasks、warnings、rollback。tasks 中每项含 taskId、status、error、reason、writes；writes 中每项含 writeId、target、status、error。
+事件参数只用于请求关联和目标选择，不会自动成为模型提示词。模型业务输入通过任务原有的变量、宏或模板提供。
 
-收到与当前操作匹配的 result 后，先结束等待，再按结算处理：
+## 4. result 的完整结构
 
-- succeeded：任务完成，按实际写入目标刷新界面。
-- partial：逐任务处理成功项和失败项，保留成功结果并显示失败原因。
-- failed / cancelled：显示错误或取消状态；结合 writes 与 rollback 告知已保留或回滚的修改，不把所有失败都当作“什么也没发生”。
-- busy / skipped：本次未执行，显示占用或跳过原因，让用户继续操作。
+以下是前端可使用的返回类型，所有可省略字段均以 ? 标出：
 
-具体原因取 result.reason、tasks[].error.message、tasks[].reason.message；warnings 和 rollback 的错误按需显示。写入状态 committed 表示文本已写入，delivered 表示广播已交付，delivery_failed / not_delivered 表示广播交付失败或未交付，rolled_back / rollback_failed 表示回滚结果。
+\`\`\`ts
+type WriteStatus = 'committed' | 'failed' | 'rolled_back' | 'rollback_failed'
+  | 'pending' | 'delivered' | 'delivery_failed' | 'not_delivered';
+type RequestDiagnostic = {
+  connectionName: string; model: string; endpoint: string; elapsedMs: number;
+  httpStatus?: number; statusText?: string; backendCode?: string;
+  backendType?: string; response?: string;
+};
+type TaskResult = {
+  taskId: string; taskName: string;
+  status: 'succeeded' | 'failed' | 'cancelled' | 'skipped' | 'rolled_back' | 'rollback_failed';
+  attempts: number;
+  text?: string; // 完整响应诊断文本，不是某个写入目标提取后的业务文本
+  error?: {
+    code: string; message: string;
+    phase: 'prepare' | 'scan' | 'template' | 'request' | 'extract' | 'commit' | 'rollback';
+    details?: RequestDiagnostic;
+  };
+  reason?: {
+    code: string; message: string; currentFloor?: number;
+    lastSuccessfulFloor?: number; lastTriggerFloor?: number;
+  };
+  writes: { writeId: string; target: string; status: WriteStatus; error?: string }[];
+};
+type RunResult = {
+  version: 1;
+  requestId: string; runId: string; activeRunId?: string;
+  trigger: {
+    kind: 'event' | 'sent' | 'received' | 'manual' | 'task';
+    eventName?: string; taskId?: string;
+  };
+  chatId: string; messageId: number; swipeId?: number;
+  status: 'succeeded' | 'partial' | 'failed' | 'cancelled' | 'busy' | 'skipped';
+  reason?: string;
+  tasks: TaskResult[];
+  warnings: { code: string; message: string; target?: string }[];
+  rollback: { status: 'not_needed' | 'completed' | 'partial' | 'failed'; errors: string[] };
+};
+\`\`\`
 
-## 4. 按任务的实际目标刷新
+requestId 由前端提供并原样返回，用于关联操作；runId 由助手为本次运行分配；busy 时 activeRunId 指向占用者。taskId 与 writeId 分别标识配置中的任务和写入目标，taskName 用于显示。writes.target 是目标诊断字符串，前端无需解析其内部格式。
 
-正文、世界书或 MVU 更新任务：根据 result 中对应任务和写入的状态，调用前端已有的数据读取或刷新逻辑。此类前端可以只使用 :result，无需为联动另外添加广播目标。
+运行被拒绝时 tasks 可以为空；尚未绑定目标时 chatId 可以为空、messageId 可以为 -1。主动请求先按 requestId 认领结算并结束等待，再检查目标身份和逐项状态，不能因错误结果缺少目标信息而一直等待。
 
-事件广播任务：从 :output 的 payload.text 取得业务文本。payload 还含 version=1、requestId、runId、scriptId、taskId、writeId、chatId、messageId、swipeId；这些 ID 来自本次运行，不作为作者安装实例的固定白名单。
+### 结算状态怎样使用
 
-payload.text 已经过任务响应正则和该广播目标的提取规则。按业务约定解析它，不重复执行助手的提取规则，也不使用 result.tasks[].text 的诊断全文代替。解析失败保留原界面数据并显示错误。
+| result.status | 含义与前端处理 |
+| --- | --- |
+| succeeded | 任务完成；按实际成功目标刷新界面 |
+| partial | 部分任务成功；逐任务保留成功项、显示失败项 |
+| failed | 执行失败；展示具体错误，并检查 writes、rollback 中已提交或回滚的结果 |
+| cancelled | 本次运行已取消；仍需检查哪些修改保留、哪些已经撤销 |
+| busy | 同事件已有运行，本次未启动；结束本次等待，activeRunId 指向占用者 |
+| skipped | 没有执行任务，例如未达触发间隔或没有匹配任务；显示 reason 或各任务 reason |
 
-:output 更新业务内容，:result 负责本次操作的结算和等待状态，避免两处重复应用同一份文本。一次事件可执行多个任务，按各任务、各写入的结算处理，不能凭一条广播判定整次操作全部成功。
+writes.status 的含义：committed 是文本写入完成；delivered 是广播交付完成；failed 是写入失败；delivery_failed 是广播交付失败、可能已有接收方收到；not_delivered 是未广播；rolled_back 是已撤销；rollback_failed 是撤销失败；pending 是广播等待交付。
 
-例如事件名为 Chat_On_WeChat，触发 Chat_On_WeChat，监听 Chat_On_WeChat:result 获取结算；需要广播文本时再监听 Chat_On_WeChat:output。
+错误说明读取 result.reason、tasks[].error.message、tasks[].reason.message 和 writes[].error。warnings 提供运行提醒；rollback.errors 描述未完成的回滚。不要只根据整体 failed 就清空数据或认定所有目标均未写入。
 
-## 5. 保持实现简单
+## 5. 怎样取得业务结果
 
-结果按 requestId 关联主动操作，并核对界面绑定的聊天、楼层、消息页；界面切换后清理本页等待状态，忽略旧页面的迟到结果。被动接收任务广播时按当前页面绑定处理，不要求存在主动请求。
+正文、世界书、MVU：根据 result 中相关任务和写入的状态，调用前端已有的数据读取/刷新方法，读取该目标的最新数据。这类前端只需要 result，不需要为了获取完成通知再增加广播。
 
-监听在挂载时注册、卸载时调用 stop() 清理。复用前端已有的刷新和错误展示方式，不引入额外的确认回执、自动重试、轮询、补偿事务或持久队列。失败由用户核对后决定再次执行；不要因为没有收到广播就自动重发任务。
+事件广播：监听 EVENT_NAME + ':output'，收到下面的对象：
 
-## 6. 交付
+\`\`\`ts
+type OutputPayload = {
+  version: 1;
+  requestId: string; runId: string; scriptId: string;
+  taskId: string; writeId: string;
+  chatId: string; messageId: number; swipeId: number;
+  text: string;
+};
+\`\`\`
 
-直接修改已有前端，给出完整代码或明确的文件修改，说明助手侧需要配置的事件名、活动规则组和实际写入目标。
+payload.text 已依次执行响应阶段正则和该广播写入的提取规则。按业务格式使用或解析这段文本，不重复提取，也不改用 result.tasks[].text 的诊断全文。scriptId、taskId、writeId 是本次运行的来源标识，不硬编码作者的安装 ID 作为接收条件。
 
-检查正常完成、失败/忙碌/跳过时结束等待、部分成功保留成功项、切换页面后忽略旧结果，以及分发到另一安装实例后仍按同一事件名联动。不要为本次没有使用的输出目标增加代码。
+output 用于应用业务文本，result 用于最终结算；不要在两个回调中重复应用同一份内容。收到一条 output 只说明该目标已有交付，仍用 result 判断其他任务、目标是否成功。
+
+## 6. 可直接运行的事件调用示例
+
+下面示例主动运行最新楼层任务，把业务文本和最终结算输出到控制台。修改 EVENT_NAME 即可用于对应事件；实际前端将 console.log 替换为现有的界面更新/错误展示方法。
+
+\`\`\`ts
+await waitGlobalInitialized('KatTaskAPI');
+const EVENT_NAME = 'Chat_On_WeChat';
+const requestId = crypto.randomUUID();
+const messageId = getLastMessageId();
+const chatId = SillyTavern.getCurrentChatId();
+const swipeId = getChatMessages(messageId, { include_swipes: true })[0]?.swipe_id;
+
+const outputListener = eventOn(EVENT_NAME + ':output', payload => {
+  if (payload.requestId !== requestId) return;
+  if (payload.chatId !== chatId || payload.messageId !== messageId || payload.swipeId !== swipeId) return;
+  if (SillyTavern.getCurrentChatId() !== chatId) return;
+  if (getChatMessages(messageId, { include_swipes: true })[0]?.swipe_id !== swipeId) return;
+  console.log('处理后的业务文本', payload.text);
+});
+const resultListener = eventOn(EVENT_NAME + ':result', result => {
+  if (result.requestId !== requestId) return;
+  outputListener.stop();
+  resultListener.stop();
+  // 此处结束本次请求的等待状态；即使 tasks 为空，也完成本次结算。
+  console.log('最终状态', result.status, result.reason);
+  console.log('逐任务与逐目标结果', result.tasks);
+  console.log('运行提醒与回滚', result.warnings, result.rollback);
+  // 对当前页面仍绑定的成功目标，调用已有的数据刷新方法。
+});
+const cleanup = () => { outputListener.stop(); resultListener.stop(); };
+$(window).one('pagehide', cleanup);
+try {
+  await eventEmit(EVENT_NAME, { requestId, messageId });
+} catch (error) {
+  cleanup();
+  // 此处结束等待并展示发送错误，不自动重发。
+  console.error('任务调用失败', error);
+}
+\`\`\`
+
+这是一份单次主动请求示例。持续被动接收时，在页面挂载注册 output 监听，按该页绑定的聊天、楼层、消息页筛选，在卸载时 stop()；不要求存在主动 requestId。主动请求则用 requestId 区分每次操作。
+
+也可直接调用 await KatTaskAPI.run({ eventName: EVENT_NAME, requestId, messageId }) 取得同样的 RunResult；该入口仍发送对应事件，前端选择一条结算消费路径，避免重复刷新。
+
+## 7. 实现与交付要求
+
+沿用已有界面的等待、数据刷新和错误展示。result 到达后结束对应请求的等待；切换页面时清理本页状态和监听，忽略旧目标的迟到业务内容。只接入实际使用的目标，不增加额外回执、自动重试、轮询、补偿事务或持久队列。
+
+根据本文修改用户提供的前端代码，交付完整可用代码或明确文件修改，并列出助手侧的事件名与写入目标设置。验证正常完成、失败/忙碌/跳过、部分成功、页面切换及角色卡分发后的联动。
 `;

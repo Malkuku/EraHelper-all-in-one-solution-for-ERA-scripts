@@ -143,13 +143,20 @@
                       + 新建并关联
                     </button>
                   </div>
-                  <article v-for="item in groupTasks(group)" :key="item.id" class="linked-task">
+                  <article
+                    v-for="item in groupTasks(group)"
+                    :key="item.id"
+                    class="linked-task"
+                    :class="{ 'event-task': item.eventName }"
+                  >
                     <div class="linked-task-content">
                       <div class="linked-task-heading">
                         <strong>{{ item.name || '未命名任务' }}</strong>
-                        <span class="task-status" :class="{ enabled: item.enabled }">{{
-                          item.enabled ? '参加常规链' : '不参加常规链'
-                        }}</span>
+                        <span
+                          class="task-status"
+                          :class="{ enabled: item.enabled && !item.eventName, 'event-status': item.eventName }"
+                          >{{ item.eventName ? '⚡ 仅事件触发' : item.enabled ? '参加常规链' : '不参加常规链' }}</span
+                        >
                       </div>
                       <div class="linked-task-trigger">
                         <span>顺序 {{ item.order }}</span
@@ -157,7 +164,7 @@
                         <span class="task-event">{{
                           item.eventName ? '附加事件：' + item.eventName : '无附加事件'
                         }}</span>
-                        <span v-if="item.eventName && !item.enabled">常规链已关闭，事件仍可执行</span>
+                        <span v-if="item.eventName">不参加常规链</span>
                       </div>
                       <dl class="linked-task-binding">
                         <div v-for="binding in taskBindings(item)" :key="binding.label">
@@ -522,12 +529,25 @@
               <button class="primary" @click="addTask">+ 新建任务</button>
             </div>
             <div class="task-list" aria-label="任务列表">
-              <article v-for="item in filteredTasks" :key="item.id" class="task-row">
-                <label class="task-enable" title="只控制常规链；配置的附加事件仍可执行任务"
-                  ><input v-model="item.enabled" type="checkbox" :aria-label="'参加常规链 ' + item.name"
+              <article
+                v-for="item in filteredTasks"
+                :key="item.id"
+                class="task-row"
+                :class="{ 'event-task': item.eventName }"
+              >
+                <label
+                  class="task-enable"
+                  :title="item.eventName ? '事件任务仅由事件触发，不能参加常规链' : '参加常规链'"
+                  ><input
+                    v-model="item.enabled"
+                    :disabled="!!item.eventName"
+                    type="checkbox"
+                    :aria-label="'参加常规链 ' + item.name"
                 /></label>
                 <button class="task-row-main text-action" @click="editTask(item.id)">
                   <strong>{{ item.name || '未命名任务' }}</strong
+                  ><span v-if="item.eventName" class="task-status event-status"
+                    >⚡ 仅事件触发 · {{ item.eventName }}</span
                   ><span>{{
                     item.comment || draft.connections.find(api => api.id === item.connectionId)?.name || '未选择 API'
                   }}</span>
@@ -591,9 +611,12 @@
                   </ul>
                   <p v-if="notice" class="notice" role="status">{{ notice }}</p>
                   <section v-show="taskTab === 'basic'">
+                    <p v-if="task.eventName" class="task-status event-status">
+                      ⚡ 仅事件触发 · {{ task.eventName }} · 不参加常规链
+                    </p>
                     <p class="binding-summary">
                       常规链：{{
-                        !task.enabled
+                        !task.enabled || task.eventName
                           ? '不参加'
                           : task.order < 0
                             ? '发送前，等待任务结束再继续正文'
@@ -603,8 +626,12 @@
                     </p>
                     <div class="toolbar">
                       <label
-                        ><input v-model="task.enabled" data-config-key="enabled" type="checkbox" />参加常规链<Tooltip
-                          content="仅控制任务是否参加活动规则组的常规任务链。配置事件名后，即使关闭此开关，匹配的事件仍可执行任务。" /></label
+                        ><input
+                          v-model="task.enabled"
+                          :disabled="!!task.eventName"
+                          data-config-key="enabled"
+                          type="checkbox" />参加常规链<Tooltip
+                          content="仅无事件名的任务可开启。填写事件名后自动关闭且不可开启；清空事件名后可手动启用常规链。" /></label
                       ><button @click="duplicateTask">复制任务</button
                       ><button class="danger" @click="removeTask(task.id)">删除任务</button>
                     </div>
@@ -641,14 +668,17 @@
                     <details>
                       <summary>触发与高级参数</summary>
                       <p class="hint">
-                        常规开关只控制常规链，事件名是独立的附加触发入口。负顺序在发送前执行，非负顺序在正文接收后执行。同一顺序可并发，数值越小越先执行。常规与事件触发都检查楼层间隔；单任务测试绕过间隔。失败重试不重试写入冲突。
+                        填写事件名后任务仅由事件触发，不参加常规链，常规开关不可开启。负顺序在发送前执行，非负顺序在正文接收后执行。同一顺序可并发，数值越小越先执行。常规与事件触发都检查楼层间隔；单任务测试绕过间隔。失败重试不重试写入冲突。
                       </p>
                       <div class="fields">
                         <label
                           ><span class="field-label"
                             >附加事件名<Tooltip
-                              content="监听额外的自定义事件。事件匹配忽略“参加常规链”开关；要配置只由事件运行的任务，请关闭该开关。事件入口仍检查楼层间隔。" /></span
-                          ><input v-model="task.eventName" aria-label="附加事件名" data-config-key="eventName" /></label
+                              content="填写后仅监听该自定义事件，自动关闭常规链参与且不可开启。清空事件名后可手动启用常规链。事件入口仍检查楼层间隔。" /></span
+                          ><input v-model="task.eventName" aria-label="附加事件名" data-config-key="eventName" />
+                          <button type="button" class="text-action" @click="tab = 'integration'">
+                            查看任务联动说明 →
+                          </button></label
                         ><label
                           ><span class="field-label"
                             >执行顺序<Tooltip
@@ -876,6 +906,9 @@
                             aria-label="广播使用的附加事件名"
                             placeholder="先填写任务附加事件名"
                           />
+                          <button type="button" class="text-action" @click="tab = 'integration'">
+                            查看任务联动说明 →
+                          </button>
                         </label>
                         <p class="hint" role="status">
                           {{
@@ -1201,6 +1234,13 @@ watch(
     if (!draft.value.presets.some(item => item.id === selectedPreset.value))
       selectedPreset.value = draft.value.presets[0]?.id ?? '';
   },
+);
+watch(
+  () => draft.value.tasks.map(item => [item.eventName, item.enabled] as const),
+  () => {
+    for (const item of draft.value.tasks) if (item.eventName) item.enabled = false;
+  },
+  { immediate: true, flush: 'sync' },
 );
 const task = computed(() => draft.value.tasks.find(item => item.id === selectedTask.value));
 useDialogFocus(
@@ -2124,6 +2164,17 @@ summary {
 .task-status.enabled {
   color: var(--mvu-accent);
   border-color: currentColor;
+}
+.event-task {
+  border-left: 3px solid var(--mvu-accent);
+  padding-left: 10px;
+  background: var(--soft);
+}
+.task-status.event-status {
+  color: var(--text);
+  border: 1px dashed var(--mvu-accent);
+  background: var(--soft);
+  overflow-wrap: anywhere;
 }
 .linked-task-trigger {
   margin: 6px 0 8px;

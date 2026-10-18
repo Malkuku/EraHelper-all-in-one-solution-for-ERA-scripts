@@ -262,7 +262,7 @@ export async function runTaskChain(options: { messageId: number; trigger: Trigge
         latestChains.delete(identity.chatKey);
       } else if ((group?.taskIds ?? []).some(id => {
         const task = snapshot.tasks.find(item => item.id === id)!;
-        return task.enabled && task.order >= 0 && readTaskHistory(id, identity).lastSuccessfulFloor === identity.messageId;
+        return !task.eventName && task.enabled && task.order >= 0 && readTaskHistory(id, identity).lastSuccessfulFloor === identity.messageId;
       })) {
         throw new TaskFailure('rollback_unavailable', '当前楼层已有成功历史，但本会话没有可用的回滚日志；未恢复原数据或重新生成。', 'rollback');
       }
@@ -270,7 +270,7 @@ export async function runTaskChain(options: { messageId: number; trigger: Trigge
     const tasks = (group?.taskIds ?? []).map(id => snapshot.tasks.find(task => task.id === id)!);
     const selected = tasks.filter(task => taskId !== undefined ? task.id === taskId
       : options.trigger.kind === 'event' ? task.eventName === options.trigger.eventName
-      : options.trigger.kind === 'sent' ? task.order < 0 : task.order >= 0);
+      : !task.eventName && (options.trigger.kind === 'sent' ? task.order < 0 : task.order >= 0));
     const ready: { task: TaskConfig; result: TaskResult }[] = [];
     for (const task of selected) {
       const taskResult: TaskResult = { taskId: task.id, taskName: task.name, status: 'skipped', attempts: 0, writes: [] };

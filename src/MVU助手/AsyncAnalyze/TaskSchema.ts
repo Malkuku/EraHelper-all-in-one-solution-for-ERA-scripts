@@ -85,7 +85,7 @@ export const TaskSchema = z.object({
     const ids = list.map(item => item.id);
     if (new Set(ids).size !== ids.length) ctx.addIssue({ code: 'custom', path: field === 'writes' ? ['output', field] : [field], message: 'ID 重复' });
   }
-});
+}).transform(task => ({ ...task, enabled: task.eventName ? false : task.enabled }));
 export type TaskConfig = z.infer<typeof TaskSchema>;
 export const ApiLinkSchema = z.object({ id: z.string().min(1), name: z.string(), baseUrl: z.string(), model: z.string(), secretRef: z.string().min(1) });
 export type ApiLink = z.infer<typeof ApiLinkSchema>;

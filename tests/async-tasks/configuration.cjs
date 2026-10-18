@@ -131,6 +131,10 @@ async function main() {
   await store.replaceSettings(sharedResultConfig); await store.load();
   assert.deepEqual(store.snapshot().tasks[0].output.writes[0].target, { kind: 'event' }, 'event target has no separate event name and survives saving/loading');
   assert.equal(JSON.parse(JSON.stringify(store.snapshot())).tasks[0].eventName, 'frontend:event');
+  assert.equal(store.snapshot().tasks[0].enabled, false, 'event tasks normalize across save/reload');
+  assert.equal(TaskSchema.parse({ ...boundTask, enabled: true, eventName: 'only:event' }).enabled, false);
+  assert.equal(TaskSchema.parse({ ...boundTask, enabled: true, eventName: '' }).enabled, true);
+  assert.equal(parseTaskSettings({ ...sharedResultConfig, tasks: [{ ...sharedResultConfig.tasks[0], enabled: true }] }).tasks[0].enabled, false);
   assert.deepEqual(store.snapshot().tasks[0].output, sharedResultConfig.tasks[0].output, 'per-write extraction survives persisted broadcast target reload');
   assert.equal(Object.hasOwn(boundTask, 'presetId'), false);
   assert.equal(ConfigSchema.parse({ ...config, connections: [{ ...config.connections[0], presetId: null }] }).connections[0].presetId, null);

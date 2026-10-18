@@ -47,10 +47,32 @@ const path = require('node:path');
     await nav('前端任务联动');
     await button('复制任务联动提示词').click();
     const taskRules = await page.evaluate(() => window.copied);
-    assert(taskRules.includes('用 result 判断操作结果'));
-    assert(taskRules.includes('此类前端可以只使用 :result'));
+    assert(taskRules.includes('result 的完整结构'));
+    assert(taskRules.includes('这类前端只需要 result'));
     assert(taskRules.includes('partial'));
-    assert(taskRules.includes('不引入额外的确认回执'));
+    assert(taskRules.includes('不增加额外回执'));
+    const example = [...taskRules.matchAll(/```ts\n([\s\S]*?)```/g)].map(match => match[1]).find(code => code.includes('const EVENT_NAME'));
+    assert(example, 'self-contained callable example is included');
+    for (const status of ['succeeded', 'busy']) {
+      const execution = await page.evaluate(async ({ code, status }) => {
+        const handlers = new Map(), logs = [], sent = [];
+        const mockEventOn = (name, handler) => { handlers.set(name, handler); return { stop: () => handlers.delete(name) }; };
+        const mockEventEmit = async (name, request) => {
+          sent.push({ name, request });
+          if (status === 'succeeded') handlers.get(name + ':output')({ ...request, chatId: 'example-chat', swipeId: 2, text: 'PROCESSED' });
+          handlers.get(name + ':result')({ ...request, status, tasks: [], warnings: [], rollback: { status: 'not_needed', errors: [] } });
+        };
+        const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+        await new AsyncFunction('eventOn', 'eventEmit', 'waitGlobalInitialized', 'getLastMessageId', 'getChatMessages', 'SillyTavern', '$', 'console', code)(
+          mockEventOn, mockEventEmit, async () => {}, () => 7, () => [{ swipe_id: 2 }], { getCurrentChatId: () => 'example-chat' }, () => ({ one: () => {} }), { log: (...args) => logs.push(args), error: (...args) => logs.push(args) });
+        return { logs, sent, remainingListeners: handlers.size };
+      }, { code: example, status });
+      assert.equal(execution.sent[0].name, 'Chat_On_WeChat');
+      assert.equal(execution.sent[0].request.messageId, 7);
+      assert.equal(execution.remainingListeners, 0);
+      assert(execution.logs.some(log => log[0] === '最终状态' && log[1] === status));
+      assert.equal(execution.logs.some(log => log[0] === '处理后的业务文本'), status === 'succeeded');
+    }
     assert(!taskRules.includes('full-ui-acceptance'));
     await page.evaluate(() => { window.getScriptId = () => 'another-installed-instance'; });
     await button('复制任务联动提示词').click();
@@ -158,8 +180,16 @@ const path = require('node:path');
     await button('基础与提示词').click();
     await page.getByText('触发与高级参数', { exact: true }).click();
     await page.getByLabel('附加事件名', { exact: true }).fill('frontend:changed');
+    await page.getByRole('button', { name: '查看任务联动说明 →', exact: true }).first().click();
+    await button('复制任务联动提示词').click();
+    assert.equal(await page.evaluate(() => window.copied), taskRules);
+    await nav('任务');
+    assert.equal(await page.getByLabel('附加事件名', { exact: true }).inputValue(), 'frontend:changed', 'jump keeps the event draft');
     await button('结果处理').click();
     await page.getByRole('status').filter({ hasText: '广播频道：frontend:changed:output' }).waitFor();
+    await button('查看任务联动说明 →').last().click();
+    await button('复制任务联动提示词').click();
+    await nav('任务');
     await button('关闭任务编辑').click();
     await save();
     await page.evaluate(async () => {
