@@ -2,11 +2,13 @@
 import { ref } from 'vue';
 import { useUiStore } from '@/MVU助手/stores/UIStore';
 import release from '../../release.json';
+import { getLoaderBridge } from '../../utils/LoaderBridge';
 
 const uiStore = useUiStore();
 
 // 当前版本号
 const currentVersion = `v${release.version}`;
+const loader = getLoaderBridge();
 
 // 作者信息
 const author = ref({
@@ -60,6 +62,9 @@ const versionHistory = ref([
       <p>
         <span class="version-badge">{{ currentVersion }}</span>
       </p>
+      <p v-if="loader">通过 CDN 加载器运行。切换版本会重载助手，请先保存草稿并结束任务。</p>
+      <p v-else>当前直接运行完整脚本。安装 CDN 加载器后，可在此管理版本。</p>
+      <button v-if="loader" type="button" @click="loader.open()">管理版本与检查更新</button>
     </div>
 
     <div class="section">

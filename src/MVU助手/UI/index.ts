@@ -4,7 +4,8 @@ import { useUiStore } from '../stores/UIStore';
 import { createMountPoint, destroyMountPoint, deteleportStyle, teleportStyle } from '../utils/dom';
 import App from './App.vue';
 
-import { initializeTaskRuntime, disposeTaskRuntime } from '@/MVU助手/AsyncAnalyze/TaskRuntime';
+import { initializeTaskRuntime, disposeTaskRuntime, activeTaskRuns } from '@/MVU助手/AsyncAnalyze/TaskRuntime';
+import { getLoaderBridge } from '../utils/LoaderBridge';
 import { MvuUtil } from '@/Utils/MvuUtil';
 import { useTaskStore } from '../stores/TaskStore';
 import { useEraEditStore } from '../stores/EraEditStore';
@@ -101,6 +102,9 @@ $(async () => {
 
   // 监听事件
   eventOn(tavern_events.MESSAGE_SWIPED,MvuUtil.backUpMvuData);
+
+  // Register only after initialization: the loader must not reload a partial core.
+  getLoaderBridge()?.registerCore({ canReload: () => activeTaskRuns.size === 0 });
 
   // 监听 `GENERATE_AFTER_DATA` 事件，在提示词发送前处理 ERA 宏
   //eventOn(tavern_events.GENERATE_AFTER_DATA, handleTestPrompt);

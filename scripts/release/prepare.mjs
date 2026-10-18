@@ -10,7 +10,11 @@ const defaultRoot = fileURLToPath(new URL('../../', import.meta.url));
 export function validateReleaseMetadata(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('release.json 必须为对象');
   const { version, date, changes } = value;
-  if (typeof version !== 'string' || !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version)) {
+  if (
+    typeof version !== 'string' ||
+    version !== version.trim() ||
+    !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version)
+  ) {
     throw new Error('version 必须为不含 v 的三段正式版本');
   }
   if (
@@ -28,7 +32,7 @@ export function validateReleaseMetadata(value) {
 
 function validateSource(repository, sourceSha, sourceDirty) {
   if (repository !== RELEASE_REPOSITORY) throw new Error(`repository 必须为 ${RELEASE_REPOSITORY}`);
-  if (typeof sourceSha !== 'string' || !/^[0-9a-f]{40}$/.test(sourceSha)) {
+  if (typeof sourceSha !== 'string' || sourceSha.length !== 40 || !/^[0-9a-f]{40}$/.test(sourceSha)) {
     throw new Error('sourceSha 必须为完整的 40 位 Git 提交标识');
   }
   if (typeof sourceDirty !== 'boolean') throw new Error('sourceDirty 必须明确为布尔值');

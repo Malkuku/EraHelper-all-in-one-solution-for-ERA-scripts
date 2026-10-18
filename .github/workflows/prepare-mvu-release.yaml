@@ -49,3 +49,9 @@ jobs:
           name: mvu-${{ steps.candidate.outputs.version }}-candidate-${{ steps.candidate.outputs.source_sha }}
           path: dist/mvu-release/
           if-no-files-found: error
+      - name: Upload installed loader
+        uses: actions/upload-artifact@v4
+        with:
+          name: mvu-loader-${{ steps.candidate.outputs.source_sha }}
+          path: dist/MVU加载器/
+          if-no-files-found: error

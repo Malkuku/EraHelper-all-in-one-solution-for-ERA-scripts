@@ -5,7 +5,7 @@ import { useUiStore } from './stores/UIStore';
 import { rerunCurrentTasks } from '@/MVU助手/AsyncAnalyze/TaskRuntime';
 
 $(() => {
-  replaceScriptButtons([
+  appendInexistentScriptButtons([
     { name: '🐱MVU助手', visible: true },
     { name: '🍬重算分步任务', visible: true },
   ]);
