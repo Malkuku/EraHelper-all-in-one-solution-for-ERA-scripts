@@ -721,7 +721,9 @@
                           @click="selectedBook = index"
                         >
                           {{ book.bookName || '请选择世界书'
-                          }}<small>{{ book.entryNames.length }} 个名称 · {{ book.nameRegexes.length }} 条名称正则</small>
+                          }}<small
+                            >{{ book.entryNames.length }} 个名称 · {{ book.nameRegexes.length }} 条名称正则</small
+                          >
                         </button>
                       </aside>
                       <div class="list-content">
@@ -885,7 +887,6 @@
                         <p class="hint">
                           成功提交后广播提取结果。广播不保存、不重放，已送达内容无法撤回；重新计算可能再次发送，接收方应去重。
                         </p>
-                        <PromptTools variant="event" />
                       </template>
                       <p class="hint">
                         提取规则分别匹配响应阶段正则处理后的全文，命中结果按列表顺序换行拼接；空列表使用处理后的全文。
@@ -970,6 +971,7 @@
             <p class="hint">默认 300 字，仅自动常规任务受此限制。</p>
             <slot name="settings" />
           </section>
+          <section v-if="tab === 'integration'"><PromptTools variant="task" /></section>
           <section v-if="tab === 'transfer'">
             <h3>配置文件</h3>
             <p class="hint">导入替换当前草稿，保存后生效。导出包含全部配置草稿，不包含密钥。</p>
@@ -1077,6 +1079,7 @@ const navigation = [
     label: '工具',
     items: [
       { id: 'regex', label: '正则库与测试' },
+      { id: 'integration', label: '前端任务联动' },
       { id: 'transfer', label: '导入与导出' },
     ],
   },

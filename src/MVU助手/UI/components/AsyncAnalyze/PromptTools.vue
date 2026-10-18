@@ -1,16 +1,16 @@
 <template>
   <section class="prompt-tools">
     <div class="prompt-actions">
-      <strong>{{ variant === 'preset' ? '故事预设转工作预设' : '前端接收广播结果' }}</strong>
+      <strong>{{ variant === 'preset' ? '故事预设转工作预设' : '前端任务联动' }}</strong>
       <button type="button" @click="copy">
-        {{ variant === 'preset' ? '复制预设转换提示词' : '复制前端联动提示词' }}
+        {{ variant === 'preset' ? '复制预设转换提示词' : '复制任务联动提示词' }}
       </button>
     </div>
     <p class="hint">
       {{
         variant === 'preset'
           ? '将提示词与原生预设 JSON 一起交给模型转换，再导入返回的 JSON。'
-          : '将这段提示词与前端代码交给模型，接入触发、等待、结果处理和界面更新；只需约定任务事件名，分发无需修改脚本 ID。'
+          : '将提示词与前端代码交给模型，按 result 完成任务结算和界面刷新；需要广播文本时再接入 output。'
       }}
     </p>
     <details>
@@ -24,11 +24,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { presetConversionPrompt } from '@/MVU助手/AsyncAnalyze/PresetConversionPrompt';
-import { createEventIntegrationRules } from '@/MVU助手/AsyncAnalyze/EventIntegrationRules';
+import { taskIntegrationPrompt } from '@/MVU助手/AsyncAnalyze/TaskIntegrationPrompt';
 
-const props = defineProps<{ variant: 'preset' | 'event' }>();
+const props = defineProps<{ variant: 'preset' | 'task' }>();
 const feedback = ref('');
-const content = computed(() => (props.variant === 'preset' ? presetConversionPrompt : createEventIntegrationRules()));
+const content = computed(() => (props.variant === 'preset' ? presetConversionPrompt : taskIntegrationPrompt));
 async function copy() {
   try {
     await navigator.clipboard.writeText(content.value);

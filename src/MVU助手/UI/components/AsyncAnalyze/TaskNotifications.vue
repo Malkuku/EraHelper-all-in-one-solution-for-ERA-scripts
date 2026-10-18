@@ -19,7 +19,7 @@
       >
         <details class="notice-details" @toggle="toggleDetails(notice.runId, $event)">
           <summary class="notice-heading">
-            <strong role="status" aria-live="polite"
+            <strong role="status" aria-live="polite" :title="notice.title"
               ><span v-if="notice.running" class="spinner" aria-hidden="true" />{{ notice.title }}</strong
             >
             <span class="expand-label">展开</span><span class="collapse-label">收起</span>

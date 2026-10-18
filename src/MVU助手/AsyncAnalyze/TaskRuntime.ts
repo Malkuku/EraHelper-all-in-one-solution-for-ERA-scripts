@@ -10,7 +10,7 @@ import { validateTaskReadiness } from './TaskConfiguration';
 import { readTaskHistory, resetTaskTriggerBaseline, rollbackTaskState, settleTaskState, StateUndo, timedSnapshot, stateSequenceHighWater, StateSaveFailure } from './TaskState';
 
 type Run = { id: string; key: string; identity: MessageIdentity; sequence: number; controller: AbortController; cancelled: boolean; failed: boolean; result: RunResult;
-  completed: { journal: Journal; state: StateUndo; result: TaskResult }[] };
+  completed: { journal: Journal; state: StateUndo; result: TaskResult }[]; runningTasks: Map<string, string> };
 export const activeTaskRuns = shallowReactive(new Map<string, Run>());
 export const taskRunResults = ref<RunResult[]>([]);
 const latestChains = new Map<string, Run>();
@@ -76,7 +76,14 @@ function notifyResult(result: RunResult) {
   const level = result.status === 'failed' || residue ? 'error'
     : result.status === 'succeeded' && !result.warnings.length ? 'success'
     : result.status === 'busy' || result.status === 'cancelled' ? 'info' : 'warning';
-  notifyRun(result.runId, level, titles[result.status], detail);
+  const names = result.tasks.map(task => task.taskName || '未命名任务').join('、');
+  notifyRun(result.runId, level, `${titles[result.status]}${names ? ' · ' + names : ''}`, detail);
+}
+function notifyRunningTasks(run: Run) {
+  if (!run.runningTasks.size) return;
+  const names = [...run.runningTasks.values()].join('、');
+  const context = `楼层 ${run.identity.messageId}${run.result.trigger.kind === 'event' ? ' · 事件 ' + run.result.trigger.eventName : ''}`;
+  notifyRun(run.id, 'info', `任务处理中 · ${names}`, `${context}：${names}`, true);
 }
 async function publish(result: RunResult) {
   const published = structuredClone(result);
@@ -114,6 +121,8 @@ async function undoRun(run: Run) {
 }
 async function executeTask(run: Run, task: TaskConfig, snapshot: ReturnType<ReturnType<typeof useTaskStore>['snapshot']>, result: TaskResult) {
   const started = Date.now();
+  run.runningTasks.set(task.id, task.name || '未命名任务');
+  notifyRunningTasks(run);
   const logIdentity = { runId: run.id, requestId: run.result.requestId, taskId: task.id, taskName: task.name, messageId: run.identity.messageId };
   taskLog('info', '开始执行任务', { ...logIdentity, order: task.order, targets: task.output.writes.map(write => write.target.kind), trigger: run.result.trigger });
   const journal: Journal = { runId: run.id, edits: [] };
@@ -187,6 +196,9 @@ async function executeTask(run: Run, task: TaskConfig, snapshot: ReturnType<Retu
         retainUnrecovered(run, task.id, journal, undefined, errors);
       }
     }
+  } finally {
+    run.runningTasks.delete(task.id);
+    notifyRunningTasks(run);
   }
 }
 export async function runTaskChain(options: { messageId: number; trigger: Trigger; requestId?: string; taskId?: string }, resetPrevious = false): Promise<RunResult> {
@@ -234,7 +246,7 @@ export async function runTaskChain(options: { messageId: number; trigger: Trigge
     const occupying = busy.get(key);
     if (occupying) { result.status = 'busy'; result.reason = 'already_running'; result.activeRunId = occupying; return await publish(result); }
     sequence = Math.max(sequence, stateSequenceHighWater(identity)) + 1;
-    run = { id: runId, key, identity, sequence, controller: new AbortController(), cancelled: false, failed: false, result, completed: [] };
+    run = { id: runId, key, identity, sequence, controller: new AbortController(), cancelled: false, failed: false, result, completed: [], runningTasks: new Map() };
     busy.set(key, runId); activeTaskRuns.set(runId, run);
     taskLog('info', '运行准入', { runId, requestId, trigger: options.trigger, chatId: identity.chatId, messageId: identity.messageId, swipeId: identity.swipeId, groupId: group?.id, groupName: group?.name });
     if (resetPrevious) {
@@ -282,7 +294,6 @@ export async function runTaskChain(options: { messageId: number; trigger: Trigge
       if (reason) { taskResult.reason = reason; taskLog('info', '任务跳过', { runId, taskId: task.id, taskName: task.name, reason }); }
       else ready.push({ task, result: taskResult });
     }
-    if (ready.length) notifyRun(runId, 'info', '任务处理中', `楼层 ${options.messageId}${options.trigger.kind === 'event' ? ` · 事件 ${options.trigger.eventName}` : ''}：${ready.map(item => item.task.name || '未命名任务').join('、')}`, true);
     const orders = [...new Set(ready.map(item => item.task.order))].sort((a, b) => a - b);
     for (const order of orders) {
       if (run.controller.signal.aborted) break;

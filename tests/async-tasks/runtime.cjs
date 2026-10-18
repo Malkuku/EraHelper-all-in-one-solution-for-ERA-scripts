@@ -516,6 +516,25 @@ async function originalIntervalChecks() {
   assert.equal((await runTaskChain({ messageId: 1, trigger: { kind: 'manual' } })).status, 'succeeded', 'interval one also allows repeated regular runs');
 }
 async function notificationChecks() {
+  resetChat('notification-current-task-names');
+  await configure([task('A', { name: '分析变量' }), task('B', { name: '检查规则' }), task('C', { name: '更新状态', order: 1 })]);
+  const gates = { A: deferred(), B: deferred(), C: deferred() };
+  model = async body => { await gates[body.model].promise; return success('OK'); };
+  const namedRun = runTaskChain({ messageId: 1, trigger: { kind: 'manual' } });
+  await until(() => calls.length === 2);
+  const namedRunId = [...activeTaskRuns.values()][0].id;
+  assert.match(diagnostics.taskNotices.get(namedRunId).title, /分析变量、检查规则/);
+  gates.A.resolve();
+  await until(() => diagnostics.taskNotices.get(namedRunId).title.endsWith('任务处理中 · 检查规则'));
+  assert(!diagnostics.taskNotices.get(namedRunId).title.includes('分析变量'), 'completed parallel tasks leave the compact running title');
+  gates.B.resolve();
+  await until(() => calls.length === 3);
+  assert.match(diagnostics.taskNotices.get(namedRunId).title, /更新状态/);
+  assert(!diagnostics.taskNotices.get(namedRunId).title.includes('检查规则'));
+  gates.C.resolve();
+  assert.equal((await namedRun).status, 'succeeded');
+  assert.match(diagnostics.taskNotices.get(namedRunId).title, /任务完成.*分析变量、检查规则、更新状态/);
+
   resetChat('notification-partial');
   await configure([task('<b>A</b>', { eventName: 'notice' }), task('FAIL', { eventName: 'notice' })]);
   model = async body => body.model === 'FAIL' ? { ok: false, status: 500 } : success('OK');
